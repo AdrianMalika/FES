@@ -18,11 +18,17 @@
             #fes-auth-shell {
                 min-height: 0 !important;
                 flex-direction: column !important;
+                width: 100% !important;
             }
 
             #fes-auth-left,
             #fes-auth-right {
                 padding: 28px 18px !important;
+            }
+
+            #fes-auth-left {
+                justify-content: flex-start !important;
+                gap: 18px !important;
             }
         }
     </style>

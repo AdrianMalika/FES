@@ -1,4 +1,4 @@
-<aside class="hidden md:flex w-64 flex-col bg-fes-dark text-white">
+<aside id="fes-dashboard-sidebar" class="fixed inset-y-0 left-0 z-40 w-64 flex flex-col bg-fes-dark text-white -translate-x-full transition-transform duration-200 ease-out md:translate-x-0 md:static md:flex">
     <div class="h-24 px-7 border-b border-white/10 flex items-center gap-3">
         <i class="fas fa-user-cog text-xl"></i>
         <div class="font-semibold tracking-wide">FES OPERATOR</div>

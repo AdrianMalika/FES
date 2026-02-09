@@ -23,16 +23,42 @@ $pagesBase = $basePath . '/Pages';
             flex-wrap: wrap !important;
         }
 
+        #fes-nav-toggle {
+            display: inline-flex !important;
+        }
+
         #fes-nav-menu {
             width: 100% !important;
             justify-content: flex-start !important;
-            gap: 14px !important;
-            flex-wrap: wrap !important;
+            gap: 10px !important;
+            flex-wrap: nowrap !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            display: none !important;
+        }
+
+        #fes-nav.is-open #fes-nav-menu {
+            display: flex !important;
         }
 
         #fes-nav-menu a {
             font-size: 12px !important;
+            padding: 10px 12px !important;
+            border-radius: 8px !important;
         }
+    }
+
+    #fes-nav-toggle {
+        display: none;
+        height: 40px;
+        width: 40px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #ffffff;
+        color: #4b5563;
+        cursor: pointer;
     }
 </style>
 
@@ -47,6 +73,14 @@ $pagesBase = $basePath . '/Pages';
             </div>
         </a>
     </div>
+
+    <button id="fes-nav-toggle" type="button" aria-label="Toggle menu" aria-controls="fes-nav-menu" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
     
     <!-- Menu -->
     <div id="fes-nav-menu" style="display: flex; gap: 32px; align-items: center;">
@@ -70,3 +104,16 @@ $pagesBase = $basePath . '/Pages';
         <?php endif; ?>
     </div>
 </nav>
+
+<script>
+    (function () {
+        var nav = document.getElementById('fes-nav');
+        var toggle = document.getElementById('fes-nav-toggle');
+        if (!nav || !toggle) return;
+
+        toggle.addEventListener('click', function () {
+            var isOpen = nav.classList.toggle('is-open');
+            toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+    })();
+</script>

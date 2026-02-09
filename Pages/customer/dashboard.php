@@ -34,12 +34,14 @@
             <!-- Sidebar -->
             <?php include __DIR__ . '/include/sidebar.php'; ?>
 
+            <div id="fes-dashboard-overlay" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
+
             <!-- Main -->
             <div class="flex-1 flex flex-col min-w-0">
                 <!-- Top bar -->
                 <header class="bg-white px-6 py-7 flex items-center justify-between shadow-sm">
                     <div class="flex items-center gap-3">
-                        <button class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-600" aria-label="Open menu">
+                        <button id="fes-dashboard-menu-btn" class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-600" aria-label="Open menu" aria-controls="fes-dashboard-sidebar" aria-expanded="false">
                             <i class="fas fa-bars"></i>
                         </button>
                         <div>
@@ -188,6 +190,46 @@
             </div>
         </div>
     </div>
+
+    <script>
+        (function () {
+            var btn = document.getElementById('fes-dashboard-menu-btn');
+            var sidebar = document.getElementById('fes-dashboard-sidebar');
+            var overlay = document.getElementById('fes-dashboard-overlay');
+            if (!btn || !sidebar || !overlay) return;
+
+            function openSidebar() {
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.add('translate-x-0');
+                overlay.classList.remove('hidden');
+                btn.setAttribute('aria-expanded', 'true');
+            }
+
+            function closeSidebar() {
+                sidebar.classList.add('-translate-x-full');
+                sidebar.classList.remove('translate-x-0');
+                overlay.classList.add('hidden');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+
+            btn.addEventListener('click', function () {
+                var isOpen = sidebar.classList.contains('translate-x-0');
+                if (isOpen) closeSidebar();
+                else openSidebar();
+            });
+
+            overlay.addEventListener('click', closeSidebar);
+
+            window.addEventListener('resize', function () {
+                if (window.matchMedia('(min-width: 768px)').matches) {
+                    overlay.classList.add('hidden');
+                    btn.setAttribute('aria-expanded', 'false');
+                } else {
+                    closeSidebar();
+                }
+            });
+        })();
+    </script>
 
 </body>
 

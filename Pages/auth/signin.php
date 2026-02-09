@@ -21,11 +21,26 @@
             #fes-auth-shell {
                 height: auto !important;
                 flex-direction: column !important;
+                width: 100% !important;
             }
 
             #fes-auth-left,
             #fes-auth-right {
                 padding: 28px 18px !important;
+            }
+
+            #fes-auth-left {
+                justify-content: flex-start !important;
+                gap: 18px !important;
+            }
+
+            #fes-role-tabs {
+                flex-wrap: wrap !important;
+            }
+
+            #fes-role-tabs button {
+                flex: 1 1 120px !important;
+                padding: 10px 12px !important;
             }
 
             #fes-auth-left h1 {
@@ -66,7 +81,7 @@
                     credentials</p>
 
                 <!-- Account Type Tabs -->
-                <div
+                <div id="fes-role-tabs"
                     style="display: flex; gap: 10px; margin-bottom: 30px; background-color: #f5f5f5; padding: 5px; border-radius: 8px;">
                     <button type="button" id="tab-customer" onclick="switchRole('customer')"
                         style="flex: 1; padding: 12px 20px; background-color: #D32F2F; color: #ffffff; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.3s;">Customer</button>
