@@ -93,13 +93,13 @@ if (session_status() === PHP_SESSION_NONE) {
         }
 
         .filter-title i {
-            color: #D32F2F;
+            color: #2196F3;
             font-size: 14px;
         }
 
         .filter-divider {
             height: 2px;
-            background: linear-gradient(90deg, #D32F2F, transparent);
+            background: linear-gradient(90deg, #2196F3, transparent);
             margin-bottom: 15px;
         }
 
@@ -115,7 +115,7 @@ if (session_status() === PHP_SESSION_NONE) {
             height: 18px;
             margin-right: 10px;
             cursor: pointer;
-            accent-color: #D32F2F;
+            accent-color: #2196F3;
         }
 
         .filter-option label {
@@ -162,7 +162,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
         .clear-filters:hover {
             background-color: #eeeeee;
-            border-color: #D32F2F;
+            border-color: #2196F3;
         }
 
         /* Main Content Area */
@@ -201,8 +201,8 @@ if (session_status() === PHP_SESSION_NONE) {
 
         .search-box input:focus {
             outline: none;
-            border-color: #D32F2F;
-            box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
         }
 
         .search-box i {
@@ -226,7 +226,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
         .sort-select:focus {
             outline: none;
-            border-color: #D32F2F;
+            border-color: #2196F3;
         }
 
         .results-count {
@@ -262,7 +262,7 @@ if (session_status() === PHP_SESSION_NONE) {
         .equipment-image {
             width: 100%;
             height: 220px;
-            background: linear-gradient(135deg, #424242 0%, #D32F2F 100%);
+            background: linear-gradient(135deg, #1976D2 0%, #0D47A1 100%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -286,7 +286,7 @@ if (session_status() === PHP_SESSION_NONE) {
         }
 
         .equipment-badge.available {
-            background: #4CAF50;
+            background: #388E3C;
         }
 
         .equipment-badge.limited {
@@ -302,7 +302,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
         .equipment-category {
             font-size: 12px;
-            color: #D32F2F;
+            color: #1976D2;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -342,7 +342,7 @@ if (session_status() === PHP_SESSION_NONE) {
         }
 
         .spec-tag i {
-            color: #D32F2F;
+            color: #1976D2;
             font-size: 11px;
         }
 
@@ -394,8 +394,8 @@ if (session_status() === PHP_SESSION_NONE) {
 
         .btn-view:hover {
             background-color: #eeeeee;
-            border-color: #D32F2F;
-            color: #D32F2F;
+            border-color: #1976D2;
+            color: #1976D2;
         }
 
         .btn-book {
@@ -414,7 +414,7 @@ if (session_status() === PHP_SESSION_NONE) {
         }
 
         .btn-book:hover {
-            background-color: #B71C1C;
+            background-color: #C62828;
             transform: translateY(-2px);
         }
 
@@ -429,7 +429,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
         .empty-state i {
             font-size: 64px;
-            color: #D32F2F;
+            color: #1976D2;
             margin-bottom: 20px;
             opacity: 0.3;
         }
@@ -818,7 +818,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
             <!-- Pagination or Load More -->
             <div style="text-align: center; margin-top: 40px;">
-                <button style="padding: 14px 40px; background-color: #D32F2F; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px; transition: all 0.3s;" onmouseover="this.style.backgroundColor='#B71C1C'" onmouseout="this.style.backgroundColor='#D32F2F'">
+                <button style="padding: 14px 40px; background-color: #D32F2F; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px; transition: all 0.3s;" onmouseover="this.style.backgroundColor='#C62828'" onmouseout="this.style.backgroundColor='#D32F2F'">
                     Load More Equipment
                 </button>
             </div>
@@ -833,28 +833,28 @@ if (session_status() === PHP_SESSION_NONE) {
             <h2 style="text-align: center; font-size: 32px; margin-bottom: 40px; color: #212121;">Why Choose FES Equipment?</h2>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px;">
                 <div style="text-align: center;">
-                    <div style="width: 60px; height: 60px; background-color: #ffebee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #D32F2F;">
+                    <div style="width: 60px; height: 60px; background-color: #E3F2FD; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #1976D2;">
                         <i class="fas fa-check"></i>
                     </div>
                     <h3 style="color: #212121; margin-bottom: 10px;">Well-Maintained</h3>
                     <p style="color: #757575; font-size: 14px;">All equipment is regularly serviced and maintained to the highest standards.</p>
                 </div>
                 <div style="text-align: center;">
-                    <div style="width: 60px; height: 60px; background-color: #ffebee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #D32F2F;">
+                    <div style="width: 60px; height: 60px; background-color: #F3E5F5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #7B1FA2;">
                         <i class="fas fa-headset"></i>
                     </div>
                     <h3 style="color: #212121; margin-bottom: 10px;">Expert Support</h3>
                     <p style="color: #757575; font-size: 14px;">Our trained operators provide professional support throughout your service.</p>
                 </div>
                 <div style="text-align: center;">
-                    <div style="width: 60px; height: 60px; background-color: #ffebee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #D32F2F;">
+                    <div style="width: 60px; height: 60px; background-color: #E0F2F1; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #00796B;">
                         <i class="fas fa-clock"></i>
                     </div>
                     <h3 style="color: #212121; margin-bottom: 10px;">Quick Booking</h3>
                     <p style="color: #757575; font-size: 14px;">Book equipment online in minutes and get instant confirmation.</p>
                 </div>
                 <div style="text-align: center;">
-                    <div style="width: 60px; height: 60px; background-color: #ffebee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #D32F2F;">
+                    <div style="width: 60px; height: 60px; background-color: #FCE4EC; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #C2185B;">
                         <i class="fas fa-map-marker-alt"></i>
                     </div>
                     <h3 style="color: #212121; margin-bottom: 10px;">Multiple Locations</h3>
