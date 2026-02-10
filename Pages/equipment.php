@@ -262,7 +262,7 @@ if (session_status() === PHP_SESSION_NONE) {
         .equipment-image {
             width: 100%;
             height: 220px;
-            background: linear-gradient(135deg, #424242 0%, #212121 100%);
+            background: linear-gradient(135deg, #424242 0%, #D32F2F 100%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -286,7 +286,7 @@ if (session_status() === PHP_SESSION_NONE) {
         }
 
         .equipment-badge.available {
-            background: #558B2F;
+            background: #4CAF50;
         }
 
         .equipment-badge.limited {
@@ -414,7 +414,7 @@ if (session_status() === PHP_SESSION_NONE) {
         }
 
         .btn-book:hover {
-            background-color: #C62828;
+            background-color: #B71C1C;
             transform: translateY(-2px);
         }
 
@@ -818,7 +818,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
             <!-- Pagination or Load More -->
             <div style="text-align: center; margin-top: 40px;">
-                <button style="padding: 14px 40px; background-color: #D32F2F; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px; transition: all 0.3s;" onmouseover="this.style.backgroundColor='#C62828'" onmouseout="this.style.backgroundColor='#D32F2F'">
+                <button style="padding: 14px 40px; background-color: #D32F2F; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px; transition: all 0.3s;" onmouseover="this.style.backgroundColor='#B71C1C'" onmouseout="this.style.backgroundColor='#D32F2F'">
                     Load More Equipment
                 </button>
             </div>
@@ -833,28 +833,28 @@ if (session_status() === PHP_SESSION_NONE) {
             <h2 style="text-align: center; font-size: 32px; margin-bottom: 40px; color: #212121;">Why Choose FES Equipment?</h2>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px;">
                 <div style="text-align: center;">
-                    <div style="width: 60px; height: 60px; background-color: #FFEBEE; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #D32F2F;">
+                    <div style="width: 60px; height: 60px; background-color: #ffebee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #D32F2F;">
                         <i class="fas fa-check"></i>
                     </div>
                     <h3 style="color: #212121; margin-bottom: 10px;">Well-Maintained</h3>
                     <p style="color: #757575; font-size: 14px;">All equipment is regularly serviced and maintained to the highest standards.</p>
                 </div>
                 <div style="text-align: center;">
-                    <div style="width: 60px; height: 60px; background-color: #F5F5F5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #424242;">
+                    <div style="width: 60px; height: 60px; background-color: #ffebee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #D32F2F;">
                         <i class="fas fa-headset"></i>
                     </div>
                     <h3 style="color: #212121; margin-bottom: 10px;">Expert Support</h3>
                     <p style="color: #757575; font-size: 14px;">Our trained operators provide professional support throughout your service.</p>
                 </div>
                 <div style="text-align: center;">
-                    <div style="width: 60px; height: 60px; background-color: #FFEBEE; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #D32F2F;">
+                    <div style="width: 60px; height: 60px; background-color: #ffebee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #D32F2F;">
                         <i class="fas fa-clock"></i>
                     </div>
                     <h3 style="color: #212121; margin-bottom: 10px;">Quick Booking</h3>
                     <p style="color: #757575; font-size: 14px;">Book equipment online in minutes and get instant confirmation.</p>
                 </div>
                 <div style="text-align: center;">
-                    <div style="width: 60px; height: 60px; background-color: #F5F5F5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #424242;">
+                    <div style="width: 60px; height: 60px; background-color: #ffebee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; color: #D32F2F;">
                         <i class="fas fa-map-marker-alt"></i>
                     </div>
                     <h3 style="color: #212121; margin-bottom: 10px;">Multiple Locations</h3>
