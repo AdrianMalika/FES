@@ -25,8 +25,8 @@ if (session_status() === PHP_SESSION_NONE) {
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #F8F6F1;
-            color: #2C2C2C;
+            background-color: #f5f5f5;
+            color: #424242;
             line-height: 1.6;
         }
 
@@ -42,7 +42,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
         /* Hero Section */
         #fes-hero {
-            background: linear-gradient(135deg, #1B4332 0%, #2C5F4F 100%);
+            background-color: #424242;
             color: #ffffff;
             padding: 100px 50px;
             min-height: 600px;
@@ -85,13 +85,13 @@ if (session_status() === PHP_SESSION_NONE) {
         }
 
         .hero-accent {
-            color: #D4623B;
+            color: #D32F2F;
         }
 
         #fes-hero-subtitle {
             margin: 0 0 20px 0;
             text-transform: uppercase;
-            color: #D4623B;
+            color: #D32F2F;
             font-size: 14px;
             font-weight: 700;
             letter-spacing: 2px;
@@ -101,7 +101,7 @@ if (session_status() === PHP_SESSION_NONE) {
             margin: 0 0 40px 0;
             font-size: 18px;
             line-height: 1.7;
-            color: #E8E4DC;
+            color: #cccccc;
             font-weight: 300;
         }
 
@@ -126,13 +126,13 @@ if (session_status() === PHP_SESSION_NONE) {
         }
 
         .btn-primary-hero {
-            background-color: #D4623B;
+            background-color: #D32F2F;
             color: #ffffff;
-            box-shadow: 0 4px 6px rgba(212, 98, 59, 0.2);
+            box-shadow: 0 4px 6px rgba(211, 47, 47, 0.2);
         }
 
         .btn-primary-hero:hover {
-            background-color: #B84D2A;
+            background-color: #B71C1C;
             transform: translateY(-2px);
         }
 
@@ -155,7 +155,7 @@ if (session_status() === PHP_SESSION_NONE) {
         /* Services Section */
         #fes-services {
             padding: 90px 50px;
-            background-color: #ffffff;
+            background-color: #f5f5f5;
         }
 
         #fes-services-header {
@@ -167,13 +167,13 @@ if (session_status() === PHP_SESSION_NONE) {
             margin: 0 0 15px 0;
             font-size: 36px;
             font-weight: 700;
-            color: #2C2C2C;
+            color: #212121;
         }
 
         .section-divider {
             width: 40px;
             height: 4px;
-            background-color: #D4623B;
+            background-color: #D32F2F;
             margin: 0 auto;
         }
 
@@ -191,7 +191,7 @@ if (session_status() === PHP_SESSION_NONE) {
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             transition: all 0.3s;
-            border: 1px solid #E8E4DC;
+            border: 1px solid #f3f4f6;
         }
 
         .service-card:hover {
@@ -202,13 +202,13 @@ if (session_status() === PHP_SESSION_NONE) {
         .service-icon {
             width: 60px;
             height: 60px;
-            background-color: #1B4332;
+            background-color: #ffebee;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 25px;
-            color: #ffffff;
+            color: #D32F2F;
             font-size: 24px;
         }
 
@@ -216,21 +216,21 @@ if (session_status() === PHP_SESSION_NONE) {
             margin: 0 0 15px 0;
             font-size: 20px;
             font-weight: 700;
-            color: #2C2C2C;
+            color: #212121;
         }
 
         .service-card p {
             margin: 0;
             font-size: 15px;
-            color: #6B5B45;
+            color: #757575;
             line-height: 1.6;
         }
 
         /* How It Works Section */
         #fes-how {
             padding: 90px 50px;
-            background: linear-gradient(135deg, #1B4332 0%, #2C5F4F 100%);
-            color: #ffffff;
+            background-color: #ffffff;
+            color: #424242;
         }
 
         #fes-how-header {
@@ -242,7 +242,7 @@ if (session_status() === PHP_SESSION_NONE) {
             margin: 0 0 15px 0;
             font-size: 36px;
             font-weight: 700;
-            color: #ffffff;
+            color: #212121;
         }
 
         #fes-how-header .section-divider {
@@ -264,7 +264,7 @@ if (session_status() === PHP_SESSION_NONE) {
         .step-number {
             width: 80px;
             height: 80px;
-            background-color: #D4623B;
+            background-color: #424242;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -279,13 +279,13 @@ if (session_status() === PHP_SESSION_NONE) {
             margin: 0 0 10px 0;
             font-size: 20px;
             font-weight: 700;
-            color: #ffffff;
+            color: #212121;
         }
 
         .how-step p {
             margin: 0;
             font-size: 15px;
-            color: #E8E4DC;
+            color: #757575;
             line-height: 1.6;
         }
 
@@ -297,7 +297,7 @@ if (session_status() === PHP_SESSION_NONE) {
         /* Benefits Section */
         #fes-benefits {
             padding: 90px 50px;
-            background-color: #ffffff;
+            background-color: #f5f5f5;
         }
 
         #fes-benefits-header {
@@ -309,7 +309,7 @@ if (session_status() === PHP_SESSION_NONE) {
             margin: 0 0 15px 0;
             font-size: 36px;
             font-weight: 700;
-            color: #2C2C2C;
+            color: #212121;
         }
 
         #fes-benefits-grid {
@@ -334,7 +334,7 @@ if (session_status() === PHP_SESSION_NONE) {
         .benefit-check {
             width: 24px;
             height: 24px;
-            background-color: #1B4332;
+            background-color: #D32F2F;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -348,18 +348,18 @@ if (session_status() === PHP_SESSION_NONE) {
             margin: 0 0 4px 0;
             font-size: 16px;
             font-weight: 700;
-            color: #2C2C2C;
+            color: #212121;
         }
 
         .benefit-text p {
             margin: 0;
             font-size: 14px;
-            color: #6B5B45;
+            color: #757575;
             line-height: 1.5;
         }
 
         .benefits-visual {
-            background: linear-gradient(135deg, #1B4332 0%, #D4623B 100%);
+            background: linear-gradient(135deg, #424242 0%, #D32F2F 100%);
             border-radius: 12px;
             padding: 60px;
             text-align: center;
@@ -385,14 +385,14 @@ if (session_status() === PHP_SESSION_NONE) {
 
         .benefits-visual-desc {
             font-size: 16px;
-            color: #E8E4DC;
+            color: #cccccc;
         }
 
         /* CTA Section */
         #fes-cta {
             padding: 90px 50px;
-            background: linear-gradient(135deg, #1B4332 0%, #2C5F4F 100%);
-            color: #ffffff;
+            background-color: #ffffff;
+            color: #424242;
             text-align: center;
         }
 
@@ -410,7 +410,7 @@ if (session_status() === PHP_SESSION_NONE) {
         #fes-cta p {
             margin: 0 0 40px 0;
             font-size: 18px;
-            color: #E8E4DC;
+            color: #757575;
             line-height: 1.7;
         }
 
