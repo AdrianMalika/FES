@@ -1,4 +1,86 @@
+<?php
+session_start();
+require_once '../../includes/database.php';
+
+$error = '';
+$success = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $fullname = trim($_POST['fullname'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    
+    // Validation
+    if (empty($fullname) || empty($email) || empty($password)) {
+        $error = 'All fields are required.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = 'Please enter a valid email address.';
+    } elseif (strlen($password) < 6) {
+        $error = 'Password must be at least 6 characters long.';
+    } else {
+        $conn = getDBConnection();
+        $stmt = null;
+        
+        // Start transaction
+        $conn->begin_transaction();
+        
+        try {
+            // Check if email already exists
+            $stmt = $conn->prepare("SELECT user_id FROM users WHERE email = ?");
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows > 0) {
+                throw new Exception('An account with this email already exists.');
+            }
+            
+            // Hash password
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            
+            // Insert new user
+            $stmt = $conn->prepare("INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'customer')");
+            $stmt->bind_param("sss", $fullname, $email, $hashed_password);
+            
+            if (!$stmt->execute()) {
+                throw new Exception('An error occurred creating your account.');
+            }
+            
+            // Get the newly created user_id
+            $user_id = $conn->insert_id;
+            
+            // Create customer record
+            $stmt = $conn->prepare("INSERT INTO customers (user_id) VALUES (?)");
+            $stmt->bind_param("i", $user_id);
+            
+            if (!$stmt->execute()) {
+                throw new Exception('An error occurred setting up your customer profile.');
+            }
+            
+            // Commit transaction
+            $conn->commit();
+            
+            $success = 'Account created successfully! Redirecting to sign in...';
+            // Redirect after 2 seconds
+            header("refresh:2;url=signin.php");
+            
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            $conn->rollback();
+            $error = $e->getMessage();
+        }
+        
+        // Clean up resources
+        if ($stmt !== null) {
+            $stmt->close();
+        }
+        $conn->close();
+    }
+}
+?>
+
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
@@ -65,6 +147,19 @@
                 <h2 style="margin: 0 0 10px 0; font-size: 32px; font-weight: 700; color: #212121;">Create Account</h2>
                 <p style="margin: 0 0 30px 0; font-size: 14px; color: #757575;">Please fill in your details to get
                     started</p>
+
+                <?php if (!empty($error)): ?>
+                    <div style="padding: 12px 16px; background-color: #FFEBEE; border-left: 4px solid #D32F2F; border-radius: 4px; margin-bottom: 20px;">
+                        <p style="margin: 0; color: #C62828; font-size: 14px; font-weight: 500;"><?php echo htmlspecialchars($error); ?></p>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($success)): ?>
+                    <div style="padding: 12px 16px; background-color: #E8F5E9; border-left: 4px solid #4CAF50; border-radius: 4px; margin-bottom: 20px;">
+                        <p style="margin: 0; color: #2E7D32; font-size: 14px; font-weight: 500;"><?php echo htmlspecialchars($success); ?></p>
+                    </div>
+                <?php endif; ?>
+
 
                 <form method="POST" action="">
                     <!-- Full Name -->

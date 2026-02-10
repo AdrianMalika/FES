@@ -86,12 +86,12 @@ $pagesBase = $basePath . '/Pages';
         
         <?php if ($isLoggedIn): ?>
             <!-- Profile Button (when logged in) -->
-            <a href="<?php echo htmlspecialchars($pagesBase . '/profile.php'); ?>" style="text-decoration: none; background-color: #fef2f2; color: #d32f2f; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; border: 1px solid #fee2e2;" onmouseover="this.style.backgroundColor='#fee2e2'" onmouseout="this.style.backgroundColor='#fef2f2'">
+            <a href="<?php echo htmlspecialchars($pagesBase . '/customer/dashboard.php'); ?>" style="text-decoration: none; background-color: #fef2f2; color: #d32f2f; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; border: 1px solid #fee2e2;" onmouseover="this.style.backgroundColor='#fee2e2'" onmouseout="this.style.backgroundColor='#fef2f2'">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
                 </svg>
-                PROFILE
+               My Account
             </a>
         <?php else: ?>
             <!-- Login Button (when not logged in) -->

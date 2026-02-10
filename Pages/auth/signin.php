@@ -1,3 +1,93 @@
+<?php
+session_start();
+require_once '../../includes/database.php';
+
+$error = '';
+
+// Redirect if already logged in
+if (isset($_SESSION['user_id'])) {
+    $role = $_SESSION['role'] ?? 'customer';
+    switch($role) {
+        case 'admin':
+            header("Location: ../../admin/dashboard.php");
+            exit();
+        case 'staff':
+        case 'operator':
+            header("Location: ../../staff/dashboard.php");
+            exit();
+        default:
+            header("Location: ../customer/dashboard.php");
+            exit();
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $role = $_POST['role'] ?? 'customer';
+    
+    // Validation
+    if (empty($email) || empty($password)) {
+        $error = 'Please enter both email and password.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = 'Please enter a valid email address.';
+    } else {
+        $conn = getDBConnection();
+        $stmt = null;
+        
+        try {
+            // Get user by email
+            $stmt = $conn->prepare("SELECT user_id, name, email, password_hash, role FROM users WHERE email = ?");
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows === 0) {
+                $error = 'Invalid email or password.';
+            } else {
+                $user = $result->fetch_assoc();
+                
+                // Verify password
+                if (!password_verify($password, $user['password_hash'])) {
+                    $error = 'Invalid email or password.';
+                } elseif ($user['role'] !== $role) {
+                    // Check if user is trying to login with correct role
+                    $error = 'You do not have access to this account type. Please select the correct account type.';
+                } else {
+                    // Login successful - create session
+                    $_SESSION['user_id'] = $user['user_id'];
+                    $_SESSION['name'] = $user['name'];
+                    $_SESSION['email'] = $user['email'];
+                    $_SESSION['role'] = $user['role'];
+                    
+                    // Redirect based on role
+                    switch($user['role']) {
+                        case 'admin':
+                            header("Location: ../../admin/dashboard.php");
+                            exit();
+                        case 'staff':
+                        case 'operator':
+                            header("Location: ../../staff/dashboard.php");
+                            exit();
+                        default:
+                            header("Location: ../customer/dashboard.php");
+                            exit();
+                    }
+                }
+            }
+            
+        } catch (Exception $e) {
+            error_log("Login error: " . $e->getMessage());
+            $error = 'An error occurred during login. Please try again.';
+        }
+        
+        if ($stmt !== null) {
+            $stmt->close();
+        }
+        $conn->close();
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -90,6 +180,12 @@
                     <button type="button" id="tab-admin" onclick="switchRole('admin')"
                         style="flex: 1; padding: 12px 20px; background-color: transparent; color: #757575; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.3s;">Admin</button>
                 </div>
+
+                <?php if (!empty($error)): ?>
+                    <div style="padding: 12px 16px; background-color: #FFEBEE; border-left: 4px solid #D32F2F; border-radius: 4px; margin-bottom: 20px;">
+                        <p style="margin: 0; color: #C62828; font-size: 14px; font-weight: 500;"><?php echo htmlspecialchars($error); ?></p>
+                    </div>
+                <?php endif; ?>
 
                 <form method="POST" action="">
                     <!-- Hidden field to track selected role -->

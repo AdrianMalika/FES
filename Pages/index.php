@@ -618,13 +618,6 @@ if (session_status() === PHP_SESSION_NONE) {
                 <h3>Track & Monitor</h3>
                 <p>Monitor equipment usage, receive notifications, and track maintenance schedules in real-time.</p>
             </div>
-
-            <!-- Step 4 -->
-            <div class="how-step">
-                <div class="step-number">4</div>
-                <h3>View Reports & Feedback</h3>
-                <p>Access detailed reports, provide feedback, and make data-driven decisions for your farm.</p>
-            </div>
         </div>
          
         <div id="fes-how-cta">
