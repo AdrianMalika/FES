@@ -1,3 +1,9 @@
+<?php
+// Start session at the very beginning, before any output
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
