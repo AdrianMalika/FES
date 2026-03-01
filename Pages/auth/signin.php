@@ -24,7 +24,6 @@ if (isset($_SESSION['user_id'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $role = $_POST['role'] ?? 'customer';
     
     // Validation
     if (empty($email) || empty($password)) {
@@ -50,9 +49,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Verify password
                 if (!password_verify($password, $user['password_hash'])) {
                     $error = 'Invalid email or password.';
-                } elseif ($user['role'] !== $role) {
-                    // Check if user is trying to login with correct role
-                    $error = 'You do not have access to this account type. Please select the correct account type.';
                 } else {
                     // Login successful - create session
                     $_SESSION['user_id'] = $user['user_id'];
@@ -167,19 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div id="fes-auth-right" style="flex: 1; padding: 60px 50px; display: flex; flex-direction: column; justify-content: center;">
             <div style="max-width: 400px; width: 100%;">
                 <h2 style="margin: 0 0 10px 0; font-size: 32px; font-weight: 700; color: #212121;">Sign in</h2>
-                <p style="margin: 0 0 40px 0; font-size: 14px; color: #757575;">Choose your account type and enter your
-                    credentials</p>
-
-                <!-- Account Type Tabs -->
-                <div id="fes-role-tabs"
-                    style="display: flex; gap: 10px; margin-bottom: 30px; background-color: #f5f5f5; padding: 5px; border-radius: 8px;">
-                    <button type="button" id="tab-customer" onclick="switchRole('customer')"
-                        style="flex: 1; padding: 12px 20px; background-color: #D32F2F; color: #ffffff; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.3s;">Customer</button>
-                    <button type="button" id="tab-operator" onclick="switchRole('operator')"
-                        style="flex: 1; padding: 12px 20px; background-color: transparent; color: #757575; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.3s;">Operator</button>
-                    <button type="button" id="tab-admin" onclick="switchRole('admin')"
-                        style="flex: 1; padding: 12px 20px; background-color: transparent; color: #757575; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.3s;">Admin</button>
-                </div>
+                <p style="margin: 0 0 40px 0; font-size: 14px; color: #757575;">Enter your credentials to continue</p>
 
                 <?php if (!empty($error)): ?>
                     <div style="padding: 12px 16px; background-color: #FFEBEE; border-left: 4px solid #D32F2F; border-radius: 4px; margin-bottom: 20px;">
@@ -188,8 +172,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
 
                 <form method="POST" action="">
-                    <!-- Hidden field to track selected role -->
-                    <input type="hidden" name="role" id="selected-role" value="customer">
                     
                     <!-- Email -->
                     <div style="margin-bottom: 20px;">
@@ -210,10 +192,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <!-- Submit Button -->
-                    <button type="submit" id="login-button"
+                    <button type="submit"
                         style="width: 100%; padding: 16px; background-color: #424242; color: #ffffff; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.3s; margin-bottom: 25px;"
                         onmouseover="this.style.backgroundColor='#303030'"
-                        onmouseout="this.style.backgroundColor='#424242'">Login as Customer</button>
+                        onmouseout="this.style.backgroundColor='#424242'">Sign In</button>
                 </form>
 
                 <!-- Sign Up Link -->
@@ -226,30 +208,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
     </div>
-
-    <script>
-        function switchRole(role) {
-            // Reset all tabs
-            document.getElementById('tab-customer').style.backgroundColor = 'transparent';
-            document.getElementById('tab-customer').style.color = '#757575';
-            document.getElementById('tab-operator').style.backgroundColor = 'transparent';
-            document.getElementById('tab-operator').style.color = '#757575';
-            document.getElementById('tab-admin').style.backgroundColor = 'transparent';
-            document.getElementById('tab-admin').style.color = '#757575';
-
-            // Activate selected tab
-            const activeTab = document.getElementById('tab-' + role);
-            activeTab.style.backgroundColor = '#D32F2F';
-            activeTab.style.color = '#ffffff';
-
-            // Update hidden input
-            document.getElementById('selected-role').value = role;
-
-            // Update button text
-            const roleName = role.charAt(0).toUpperCase() + role.slice(1);
-            document.getElementById('login-button').textContent = 'Login as ' + roleName;
-        }
-    </script>
 
 </body>
 

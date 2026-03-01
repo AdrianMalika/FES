@@ -21,6 +21,10 @@
             <i class="fas fa-users w-5"></i>
             Users
         </a>
+        <a href="add_operator.php" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:text-white hover:bg-white/5 transition">
+            <i class="fas fa-users w-5"></i>
+            Add Operator
+        </a>
         <a href="#" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:text-white hover:bg-white/5 transition">
             <i class="fas fa-chart-line w-5"></i>
             Reports
