@@ -1,3 +1,28 @@
+<?php
+session_start();
+
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ../auth/signin.php');
+    exit();
+}
+
+// Check if user has operator role
+if ($_SESSION['role'] !== 'operator') {
+    // Redirect based on actual role
+    switch($_SESSION['role']) {
+        case 'admin':
+            header('Location: ../admin/dashboard.php');
+            exit();
+        case 'customer':
+            header('Location: ../customer/dashboard.php');
+            exit();
+        default:
+            header('Location: ../auth/signin.php');
+            exit();
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 

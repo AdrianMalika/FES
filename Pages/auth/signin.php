@@ -9,11 +9,10 @@ if (isset($_SESSION['user_id'])) {
     $role = $_SESSION['role'] ?? 'customer';
     switch($role) {
         case 'admin':
-            header("Location: ../../admin/dashboard.php");
+            header("Location: ../admin/dashboard.php");
             exit();
-        case 'staff':
         case 'operator':
-            header("Location: ../../staff/dashboard.php");
+            header("Location: ../operator/dashboard.php");
             exit();
         default:
             header("Location: ../customer/dashboard.php");
@@ -59,11 +58,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Redirect based on role
                     switch($user['role']) {
                         case 'admin':
-                            header("Location: ../../admin/dashboard.php");
+                            header("Location: ../../pages/admin/dashboard.php");
                             exit();
-                        case 'staff':
                         case 'operator':
-                            header("Location: ../../staff/dashboard.php");
+                            header("Location: ../../pages/operator/dashboard.php");
                             exit();
                         default:
                             header("Location: ../customer/dashboard.php");

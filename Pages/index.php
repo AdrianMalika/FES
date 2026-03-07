@@ -12,683 +12,255 @@ if (session_status() === PHP_SESSION_NONE) {
     <title>FES - Farm Equipment System</title>
     <link rel="icon" type="image/png" href="../assets/images/logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f5f5f5;
-            color: #424242;
-            line-height: 1.6;
-        }
-
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Playfair Display', serif;
-            font-weight: 700;
-        }
-
-        .btn-primary, button[type="submit"], .cta-button {
-            font-family: 'Poppins', sans-serif;
-            font-weight: 700;
-        }
-
-        /* Hero Section */
-        #fes-hero {
-            background-color: #424242;
-            color: #ffffff;
-            padding: 100px 50px;
-            min-height: 600px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        #fes-hero::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: -100px;
-            width: 400px;
-            height: 400px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 50%;
-            z-index: 0;
-        }
-
-        #fes-hero-grid {
-            max-width: 1200px;
-            width: 100%;
-            display: grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 80px;
-            align-items: center;
-            position: relative;
-            z-index: 1;
-        }
-
-        #fes-hero-title {
-            margin: 0 0 25px 0;
-            font-size: 56px;
-            font-weight: 900;
-            line-height: 1.1;
-            letter-spacing: -1px;
-        }
-
-        .hero-accent {
-            color: #D32F2F;
-        }
-
-        #fes-hero-subtitle {
-            margin: 0 0 20px 0;
-            text-transform: uppercase;
-            color: #D32F2F;
-            font-size: 14px;
-            font-weight: 700;
-            letter-spacing: 2px;
-        }
-
-        #fes-hero-description {
-            margin: 0 0 40px 0;
-            font-size: 18px;
-            line-height: 1.7;
-            color: #cccccc;
-            font-weight: 300;
-        }
-
-        #fes-hero-actions {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .btn-hero {
-            display: inline-block;
-            text-decoration: none;
-            padding: 16px 40px;
-            border-radius: 6px;
-            font-weight: 700;
-            font-size: 15px;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border: none;
-            cursor: pointer;
-        }
-
-        .btn-primary-hero {
-            background-color: #D32F2F;
-            color: #ffffff;
-            box-shadow: 0 4px 6px rgba(211, 47, 47, 0.2);
-        }
-
-        .btn-primary-hero:hover {
-            background-color: #B71C1C;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary-hero {
-            background-color: transparent;
-            color: #ffffff;
-            border: 1px solid #ffffff;
-        }
-
-        .btn-secondary-hero:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            transform: translateY(-2px);
-        }
-
-        #fes-hero-icon {
-            text-align: center;
-            opacity: 0.15;
-        }
-
-        /* Services Section */
-        #fes-services {
-            padding: 90px 50px;
-            background-color: #f5f5f5;
-        }
-
-        #fes-services-header {
-            text-align: center;
-            margin-bottom: 60px;
-        }
-
-        #fes-services-header h2 {
-            margin: 0 0 15px 0;
-            font-size: 36px;
-            font-weight: 700;
-            color: #212121;
-        }
-
-        .section-divider {
-            width: 40px;
-            height: 4px;
-            background-color: #D32F2F;
-            margin: 0 auto;
-        }
-
-        #fes-services-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 30px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .service-card {
-            background: #ffffff;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s;
-            border: 1px solid #f3f4f6;
-        }
-
-        .service-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-        }
-
-        .service-icon {
-            width: 60px;
-            height: 60px;
-            background-color: #ffebee;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 25px;
-            color: #D32F2F;
-            font-size: 24px;
-        }
-
-        .service-card h3 {
-            margin: 0 0 15px 0;
-            font-size: 20px;
-            font-weight: 700;
-            color: #212121;
-        }
-
-        .service-card p {
-            margin: 0;
-            font-size: 15px;
-            color: #757575;
-            line-height: 1.6;
-        }
-
-        /* How It Works Section */
-        #fes-how {
-            padding: 90px 50px;
-            background-color: #ffffff;
-            color: #424242;
-        }
-
-        #fes-how-header {
-            text-align: center;
-            margin-bottom: 60px;
-        }
-
-        #fes-how-header h2 {
-            margin: 0 0 15px 0;
-            font-size: 36px;
-            font-weight: 700;
-            color: #212121;
-        }
-
-        #fes-how-header .section-divider {
-            background-color: #D4623B;
-        }
-
-        #fes-how-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 50px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .how-step {
-            text-align: center;
-        }
-
-        .step-number {
-            width: 80px;
-            height: 80px;
-            background-color: #424242;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 25px auto;
-            color: #ffffff;
-            font-size: 32px;
-            font-weight: 700;
-        }
-
-        .how-step h3 {
-            margin: 0 0 10px 0;
-            font-size: 20px;
-            font-weight: 700;
-            color: #212121;
-        }
-
-        .how-step p {
-            margin: 0;
-            font-size: 15px;
-            color: #757575;
-            line-height: 1.6;
-        }
-
-        #fes-how-cta {
-            margin-top: 60px;
-            text-align: center;
-        }
-
-        /* Benefits Section */
-        #fes-benefits {
-            padding: 90px 50px;
-            background-color: #f5f5f5;
-        }
-
-        #fes-benefits-header {
-            text-align: center;
-            margin-bottom: 60px;
-        }
-
-        #fes-benefits-header h2 {
-            margin: 0 0 15px 0;
-            font-size: 36px;
-            font-weight: 700;
-            color: #212121;
-        }
-
-        #fes-benefits-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 60px;
-            max-width: 1200px;
-            margin: 0 auto;
-            align-items: center;
-        }
-
-        .benefits-list {
-            space-y: 24px;
-        }
-
-        .benefit-item {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .benefit-check {
-            width: 24px;
-            height: 24px;
-            background-color: #D32F2F;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #ffffff;
-            flex-shrink: 0;
-            font-size: 14px;
-        }
-
-        .benefit-text h3 {
-            margin: 0 0 4px 0;
-            font-size: 16px;
-            font-weight: 700;
-            color: #212121;
-        }
-
-        .benefit-text p {
-            margin: 0;
-            font-size: 14px;
-            color: #757575;
-            line-height: 1.5;
-        }
-
-        .benefits-visual {
-            background: linear-gradient(135deg, #424242 0%, #D32F2F 100%);
-            border-radius: 12px;
-            padding: 60px;
-            text-align: center;
-            color: #ffffff;
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .benefits-visual-number {
-            font-size: 64px;
-            font-weight: 700;
-            margin-bottom: 16px;
-        }
-
-        .benefits-visual-title {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .benefits-visual-desc {
-            font-size: 16px;
-            color: #cccccc;
-        }
-
-        /* CTA Section */
-        #fes-cta {
-            padding: 90px 50px;
-            background-color: #ffffff;
-            color: #424242;
-            text-align: center;
-        }
-
-        #fes-cta-content {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        #fes-cta h2 {
-            margin: 0 0 20px 0;
-            font-size: 36px;
-            font-weight: 700;
-        }
-
-        #fes-cta p {
-            margin: 0 0 40px 0;
-            font-size: 18px;
-            color: #757575;
-            line-height: 1.7;
-        }
-
-        #fes-cta-buttons {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            #fes-hero {
-                padding: 70px 16px !important;
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        fes: {
+                            red: '#D32F2F',
+                            dark: '#424242'
+                        }
+                    },
+                    fontFamily: {
+                        'playfair': ['Playfair Display', 'serif'],
+                        'inter': ['Inter', 'sans-serif'],
+                        'poppins': ['Poppins', 'sans-serif']
+                    }
+                }
             }
-
-            #fes-hero-grid {
-                grid-template-columns: 1fr !important;
-                gap: 30px !important;
-            }
-
-            #fes-hero-title {
-                font-size: 38px !important;
-            }
-
-            #fes-hero-actions {
-                flex-direction: column !important;
-                align-items: stretch !important;
-            }
-
-            #fes-services {
-                padding: 60px 16px !important;
-            }
-
-            #fes-services-grid {
-                grid-template-columns: 1fr !important;
-            }
-
-            #fes-how {
-                padding: 60px 16px !important;
-            }
-
-            #fes-how-grid {
-                grid-template-columns: 1fr !important;
-                gap: 30px !important;
-            }
-
-            #fes-benefits {
-                padding: 60px 16px !important;
-            }
-
-            #fes-benefits-grid {
-                grid-template-columns: 1fr !important;
-                gap: 30px !important;
-            }
-
-            #fes-cta {
-                padding: 60px 16px !important;
-            }
-
-            #fes-cta h2 {
-                font-size: 28px !important;
-            }
-
-            #fes-cta-buttons {
-                flex-direction: column !important;
-            }
-
-            .btn-hero {
-                width: 100%;
-                text-align: center;
-            }
-        }
-    </style>
+        };
+    </script>
 </head>
 
-<body>
-    
+<body class="font-inter bg-gray-50 text-gray-900">
     <?php include '../includes/header.php'; ?>
     
     <!-- Hero Section -->
-    <section id="fes-hero">
-        <div id="fes-hero-grid">
+    <section class="bg-fes-dark text-white py-24 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center relative z-10">
             <!-- Left Side: Content -->
             <div>
-                <div id="fes-hero-subtitle">
+                <div class="text-sm font-bold text-fes-red uppercase tracking-wider mb-5">
                     Smart Farm Equipment Management
                 </div>
-                <h1 id="fes-hero-title">
+                <h1 class="text-5xl lg:text-6xl font-black mb-6 leading-tight">
                     Smart Farm Equipment<br>
-                    <span class="hero-accent">Management Made Easy</span>
+                    <span class="text-fes-red">Management Made Easy</span>
                 </h1>
 
-                <p id="fes-hero-description">
+                <p class="text-lg text-gray-300 leading-relaxed mb-10">
                     FES streamlines equipment booking, monitoring, maintenance, and reporting for agricultural stakeholders. Improve utilization, reduce downtime, and make data-driven decisions.
                 </p>
                 
-                <div id="fes-hero-actions">
-                    <a href="auth/register.php" class="btn-hero btn-primary-hero">
+                <div class="flex flex-col sm:flex-row gap-5 items-center">
+                    <a href="auth/register.php" class="inline-flex items-center justify-center px-10 py-4 bg-fes-red hover:bg-red-700 text-white font-bold rounded-lg shadow-lg transition-all duration-300 text-base uppercase tracking-wide">
                         Get Started
                     </a>
 
-                    <a href="auth/signin.php" class="btn-hero btn-secondary-hero">
+                    <a href="auth/signin.php" class="inline-flex items-center justify-center px-10 py-4 border-2 border-white text-white hover:bg-white hover:bg-opacity-10 font-bold rounded-lg transition-all duration-300 text-base uppercase tracking-wide">
                         Login
                     </a>
                 </div>
             </div>
 
             <!-- Right Side: Icon -->
-            <div id="fes-hero-icon">
-                <i class="fas fa-tractor" style="font-size: 300px;"></i>
+            <div class="text-center opacity-15">
+                <i class="fas fa-tractor text-[300px]"></i>
             </div>
         </div>
     </section>
     
-    <!-- Key Features Section -->
-    <section id="fes-services">
-        <div id="fes-services-header">
-            <h2>Powerful Features for Modern Farming</h2>
-            <div class="section-divider"></div>
+    <!-- Services Section -->
+    <section class="py-24 bg-gray-50">
+        <div class="max-w-7xl mx-auto text-center mb-16">
+            <h2 class="text-4xl font-playfair font-bold text-gray-900 mb-4">Powerful Features for Modern Farming</h2>
+            <div class="w-10 h-1 bg-fes-red mx-auto"></div>
         </div>
         
-        <div id="fes-services-grid">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             <!-- Feature 1 -->
-            <div class="service-card">
-                <div class="service-icon">
+            <div class="bg-white p-10 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100">
+                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 text-fes-red text-2xl">
                     <i class="fas fa-calendar-check"></i>
                 </div>
-                <h3>Equipment Booking & Scheduling</h3>
-                <p>Easily browse available equipment, check real-time availability, and book resources for your farming operations with an intuitive scheduling system.</p>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Equipment Booking & Scheduling</h3>
+                <p class="text-gray-600 leading-relaxed">Easily browse available equipment, check real-time availability, and book resources for your farming operations with an intuitive scheduling system.</p>
             </div>
             
             <!-- Feature 2 -->
-            <div class="service-card">
-                <div class="service-icon">
+            <div class="bg-white p-10 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100">
+                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 text-fes-red text-2xl">
                     <i class="fas fa-tools"></i>
                 </div>
-                <h3>Maintenance Monitoring & Alerts</h3>
-                <p>Track equipment health, receive maintenance alerts, and schedule preventive maintenance to minimize unexpected breakdowns and extend equipment lifespan.</p>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Maintenance Monitoring & Alerts</h3>
+                <p class="text-gray-600 leading-relaxed">Track equipment health, receive maintenance alerts, and schedule preventive maintenance to minimize unexpected breakdowns and extend equipment lifespan.</p>
             </div>
             
             <!-- Feature 3 -->
-            <div class="service-card">
-                <div class="service-icon">
+            <div class="bg-white p-10 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100">
+                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 text-fes-red text-2xl">
                     <i class="fas fa-chart-line"></i>
                 </div>
-                <h3>Usage Tracking & Reports</h3>
-                <p>Generate comprehensive reports on equipment usage, utilization rates, and operational metrics to make informed decisions and optimize resource allocation.</p>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Usage Tracking & Reports</h3>
+                <p class="text-gray-600 leading-relaxed">Generate comprehensive reports on equipment usage, utilization rates, and operational metrics to make informed decisions and optimize resource allocation.</p>
             </div>
 
             <!-- Feature 4 -->
-            <div class="service-card">
-                <div class="service-icon">
+            <div class="bg-white p-10 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100">
+                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 text-fes-red text-2xl">
                     <i class="fas fa-star"></i>
                 </div>
-                <h3>Ratings & Feedback System</h3>
-                <p>Share experiences and rate equipment quality. Collect feedback from users to continuously improve service quality and equipment performance.</p>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Ratings & Feedback System</h3>
+                <p class="text-gray-600 leading-relaxed">Share experiences and rate equipment quality. Collect feedback from users to continuously improve service quality and equipment performance.</p>
             </div>
 
             <!-- Feature 5 -->
-            <div class="service-card">
-                <div class="service-icon">
+            <div class="bg-white p-10 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100">
+                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 text-fes-red text-2xl">
                     <i class="fas fa-bell"></i>
                 </div>
-                <h3>Notifications & Alerts</h3>
-                <p>Stay informed with real-time notifications about bookings, maintenance schedules, equipment availability, and important system updates.</p>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Notifications & Alerts</h3>
+                <p class="text-gray-600 leading-relaxed">Stay informed with real-time notifications about bookings, maintenance schedules, equipment availability, and important system updates.</p>
             </div>
 
             <!-- Feature 6 -->
-            <div class="service-card">
-                <div class="service-icon">
+            <div class="bg-white p-10 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100">
+                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 text-fes-red text-2xl">
                     <i class="fas fa-lock"></i>
                 </div>
-                <h3>Data Security & Privacy</h3>
-                <p>Your farm data is protected with enterprise-grade security measures and compliance with agricultural data protection standards.</p>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Data Security & Privacy</h3>
+                <p class="text-gray-600 leading-relaxed">Your farm data is protected with enterprise-grade security measures and compliance with agricultural data protection standards.</p>
             </div>
+
+            <!-- Equipment Catalogue Feature -->
+            <div class="bg-white p-10 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100">
+                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 text-fes-red text-2xl">
+                    <i class="fas fa-tractor"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Equipment Catalogue</h3>
+                <p class="text-gray-600 leading-relaxed mb-4">Browse our comprehensive catalogue of farming and engineering equipment available for booking.</p>
+                <a href="equipment.php" class="inline-flex items-center px-6 py-3 bg-fes-red hover:bg-red-700 text-white font-bold rounded-lg transition-all duration-300 text-sm">
+                    <i class="fas fa-arrow-right mr-2"></i>
+                    Browse Equipment
+                </a>
         </div>
     </section>
     
     <!-- How It Works Section -->
-    <section id="fes-how">
-        <div id="fes-how-header">
-            <h2>How It Works</h2>
-            <div class="section-divider"></div>
+    <section class="py-24 bg-white">
+        <div class="max-w-7xl mx-auto text-center mb-16">
+            <h2 class="text-4xl font-playfair font-bold text-gray-900 mb-4">How It Works</h2>
+            <div class="w-10 h-1 bg-orange-600 mx-auto"></div>
         </div>
 
-        <div id="fes-how-grid">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-3 gap-12">
             <!-- Step 1 -->
-            <div class="how-step">
-                <div class="step-number">1</div>
-                <h3>Register an Account</h3>
-                <p>Create your FES account with your farm details and contact information to get started.</p>
+            <div class="text-center">
+                <div class="w-20 h-20 bg-fes-dark rounded-full flex items-center justify-center mx-auto mb-6 text-white text-3xl font-bold">
+                    1
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-3">Register an Account</h3>
+                <p class="text-gray-600 leading-relaxed">Create your FES account with your farm details and contact information to get started.</p>
             </div>
             
             <!-- Step 2 -->
-            <div class="how-step">
-                <div class="step-number">2</div>
-                <h3>Browse & Book Equipment</h3>
-                <p>Explore available equipment, check schedules, and book resources for your farming needs.</p>
+            <div class="text-center">
+                <div class="w-20 h-20 bg-fes-dark rounded-full flex items-center justify-center mx-auto mb-6 text-white text-3xl font-bold">
+                    2
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-3">Browse & Book Equipment</h3>
+                <p class="text-gray-600 leading-relaxed">Explore available equipment, check schedules, and book resources for your farming needs.</p>
             </div>
             
             <!-- Step 3 -->
-            <div class="how-step">
-                <div class="step-number">3</div>
-                <h3>Track & Monitor</h3>
-                <p>Monitor equipment usage, receive notifications, and track maintenance schedules in real-time.</p>
+            <div class="text-center">
+                <div class="w-20 h-20 bg-fes-dark rounded-full flex items-center justify-center mx-auto mb-6 text-white text-3xl font-bold">
+                    3
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-3">Track & Monitor</h3>
+                <p class="text-gray-600 leading-relaxed">Monitor equipment usage, receive notifications, and track maintenance schedules in real-time.</p>
             </div>
         </div>
          
-        <div id="fes-how-cta">
-            <a href="auth/register.php" class="btn-hero btn-primary-hero">
+        <div class="text-center mt-12">
+            <a href="auth/register.php" class="inline-flex items-center justify-center px-8 py-4 bg-fes-red hover:bg-red-700 text-white font-bold rounded-lg shadow-lg transition-all duration-300 text-base uppercase tracking-wide">
                 Create Account
             </a>
         </div>
     </section>
 
     <!-- Benefits Section -->
-    <section id="fes-benefits">
-        <div id="fes-benefits-header">
-            <h2>Why Choose FES?</h2>
-            <div class="section-divider"></div>
+    <section class="py-24 bg-gray-50">
+        <div class="max-w-7xl mx-auto text-center mb-16">
+            <h2 class="text-4xl font-playfair font-bold text-gray-900 mb-4">Why Choose FES?</h2>
+            <div class="w-10 h-1 bg-fes-red mx-auto"></div>
         </div>
 
-        <div id="fes-benefits-grid">
+        <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
             <!-- Benefits List -->
-            <div class="benefits-list">
-                <div class="benefit-item">
-                    <div class="benefit-check">✓</div>
-                    <div class="benefit-text">
-                        <h3>Improved Equipment Utilization</h3>
-                        <p>Maximize equipment usage and reduce idle time with smart scheduling and real-time availability tracking.</p>
+            <div class="space-y-6">
+                <div class="flex gap-4 items-start">
+                    <div class="w-6 h-6 bg-fes-red rounded-full flex items-center justify-center flex-shrink-0 text-white text-sm font-bold">
+                        ✓
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 mb-2">Improved Equipment Utilization</h3>
+                        <p class="text-gray-600 leading-relaxed">Maximize equipment usage and reduce idle time with smart scheduling and real-time availability tracking.</p>
                     </div>
                 </div>
 
-                <div class="benefit-item">
-                    <div class="benefit-check">✓</div>
-                    <div class="benefit-text">
-                        <h3>Reduced Equipment Downtime</h3>
-                        <p>Prevent unexpected breakdowns with proactive maintenance monitoring and timely alerts.</p>
+                <div class="flex gap-4 items-start">
+                    <div class="w-6 h-6 bg-fes-red rounded-full flex items-center justify-center flex-shrink-0 text-white text-sm font-bold">
+                        ✓
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 mb-2">Reduced Equipment Downtime</h3>
+                        <p class="text-gray-600 leading-relaxed">Prevent unexpected breakdowns with proactive maintenance monitoring and timely alerts.</p>
                     </div>
                 </div>
 
-                <div class="benefit-item">
-                    <div class="benefit-check">✓</div>
-                    <div class="benefit-text">
-                        <h3>Transparency & Accountability</h3>
-                        <p>Track equipment usage, maintenance history, and user feedback for complete visibility and accountability.</p>
+                <div class="flex gap-4 items-start">
+                    <div class="w-6 h-6 bg-fes-red rounded-full flex items-center justify-center flex-shrink-0 text-white text-sm font-bold">
+                        ✓
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 mb-2">Transparency & Accountability</h3>
+                        <p class="text-gray-600 leading-relaxed">Track equipment usage, maintenance history, and user feedback for complete visibility and accountability.</p>
                     </div>
                 </div>
 
-                <div class="benefit-item">
-                    <div class="benefit-check">✓</div>
-                    <div class="benefit-text">
-                        <h3>Data-Driven Decision Making</h3>
-                        <p>Access comprehensive reports and analytics to optimize resource allocation and improve farm operations.</p>
+                <div class="flex gap-4 items-start">
+                    <div class="w-6 h-6 bg-fes-red rounded-full flex items-center justify-center flex-shrink-0 text-white text-sm font-bold">
+                        ✓
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 mb-2">Data-Driven Decision Making</h3>
+                        <p class="text-gray-600 leading-relaxed">Access comprehensive reports and analytics to optimize resource allocation and improve farm operations.</p>
                     </div>
                 </div>
             </div>
 
             <!-- Benefits Visual -->
-            <div class="benefits-visual">
-                <div class="benefits-visual-number">4+</div>
-                <div class="benefits-visual-title">Core Benefits</div>
-                <div class="benefits-visual-desc">Transforming farm equipment management</div>
+            <div class="bg-gradient-to-br from-fes-dark to-fes-red rounded-2xl p-16 text-center text-white">
+                <div class="text-6xl font-black mb-4">4+</div>
+                <div class="text-2xl font-bold mb-2">Core Benefits</div>
+                <div class="text-gray-200">Transforming farm equipment management</div>
             </div>
         </div>
     </section>
 
     <!-- Call to Action Section -->
-    <section id="fes-cta">
-        <div id="fes-cta-content">
-            <h2>Ready to Transform Your Farm Operations?</h2>
-            <p>Join agricultural stakeholders who are already using FES to streamline equipment management, reduce downtime, and make smarter decisions.</p>
-            <div id="fes-cta-buttons">
-                <a href="auth/register.php" class="btn-hero btn-primary-hero">
+    <section class="py-24 bg-white">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-4xl font-playfair font-bold text-gray-900 mb-5">Ready to Transform Your Farm Operations?</h2>
+            <p class="text-lg text-gray-600 mb-10 leading-relaxed">Join agricultural stakeholders who are already using FES to streamline equipment management, reduce downtime, and make smarter decisions.</p>
+            <div class="flex flex-col sm:flex-row gap-5 justify-center">
+                <a href="auth/register.php" class="inline-flex items-center justify-center px-10 py-4 bg-fes-red hover:bg-red-700 text-white font-bold rounded-lg shadow-lg transition-all duration-300 text-base uppercase tracking-wide">
                     Get Started Now
                 </a>
-                <a href="#fes-services" class="btn-hero btn-secondary-hero">
+                <a href="#fes-services" class="inline-flex items-center justify-center px-10 py-4 border-2 border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50 font-bold rounded-lg transition-all duration-300 text-base uppercase tracking-wide">
                     Learn More
                 </a>
             </div>

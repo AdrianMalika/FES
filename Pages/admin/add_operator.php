@@ -1,34 +1,36 @@
 <?php
-session_start();
-
-// Check if user is logged in and has admin role
-
-
-$error = '';
+// Initialize variables for error handling
 $success = '';
+$error = '';
 
-if (isset($_GET['success']) && $_GET['success'] === '1') {
-    $success = 'Operator account created successfully. A welcome email has been sent to the operator.';
+// Check for success/error messages from URL parameters
+if (isset($_GET['success'])) {
+    $success = urldecode($_GET['success']);
 }
-
 if (isset($_GET['error'])) {
-    $error = (string)$_GET['error'];
+    $error = urldecode($_GET['error']);
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Operator - FES Admin</title>
+    <title>Add Operator - FES</title>
+    <link rel="icon" type="image/png" href="../../assets/images/logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        fes: { red: '#D32F2F', dark: '#424242' }
+                        fes: {
+                            red: '#D32F2F',
+                            dark: '#424242'
+                        }
                     },
                     boxShadow: {
                         card: '0 4px 15px rgba(0,0,0,0.05)'
@@ -38,156 +40,137 @@ if (isset($_GET['error'])) {
         };
     </script>
     <style>
-        body { font-family: Georgia, 'Times New Roman', serif; }
-
-        /* Sidebar */
-        .sidebar-link {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 16px; border-radius: 8px;
-            color: #9ca3af; font-size: 0.875rem; text-decoration: none;
-            transition: background .15s, color .15s;
+        @media (max-width: 767px) {
+            #main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
         }
-        .sidebar-link:hover { background: rgba(255,255,255,.07); color: #fff; }
-        .sidebar-link.active { background: #D32F2F; color: #fff; }
-
-        /* Input styles */
-        .fes-input {
-            width: 100%; border: 1px solid #e5e7eb; border-radius: 8px;
-            padding: 10px 14px; font-size: 0.875rem; font-family: inherit;
-            color: #111827; background: #f9fafb; outline: none;
-            transition: border-color .2s, box-shadow .2s;
+        @media (min-width: 768px) {
+            #main-content {
+                margin-left: 300px !important;
+                width: calc(100% - 300px) !important;
+            }
         }
-        .fes-input:focus { border-color: #D32F2F; box-shadow: 0 0 0 3px rgba(211,47,47,.1); background: #fff; }
-        .fes-label { display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 6px; }
     </style>
 </head>
+
 <body>
-<div class="min-h-screen w-full bg-gray-100">
-<div class="flex min-h-screen">
+    <div class="min-h-screen w-full bg-gray-100" style="font-family: Georgia, 'Times New Roman', serif;">
+        <!-- Fixed Sidebar (Left Side) -->
+        <?php include __DIR__ . '/include/sidebar.php'; ?>
 
-    <!-- Sidebar -->
-    <aside id="fes-dashboard-sidebar"
-        class="fixed inset-y-0 left-0 z-40 w-64 bg-fes-dark flex flex-col
-               -translate-x-full md:translate-x-0 md:static transition-transform duration-300">
-        <!-- Logo -->
-        <div class="flex items-center gap-3 px-6 py-5 border-b border-white/10">
-            <div class="w-9 h-9 rounded-lg bg-fes-red flex items-center justify-center text-white font-bold text-lg">F</div>
-            <div>
-                <div class="text-white font-semibold text-sm leading-tight">FES Admin</div>
-                <div class="text-gray-400 text-xs">Equipment System</div>
-            </div>
-        </div>
-        <!-- Nav -->
-        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            <a href="dashboard.php" class="sidebar-link"><i class="fas fa-th-large w-4"></i> Dashboard</a>
-            <a href="#" class="sidebar-link"><i class="fas fa-tractor w-4"></i> Equipment</a>
-            <a href="#" class="sidebar-link"><i class="fas fa-clipboard-list w-4"></i> Bookings</a>
-            <a href="add_operator.php" class="sidebar-link active"><i class="fas fa-users w-4"></i> Operators</a>
-            <a href="#" class="sidebar-link"><i class="fas fa-users-cog w-4"></i> Customers</a>
-            <a href="#" class="sidebar-link"><i class="fas fa-chart-bar w-4"></i> Reports</a>
-            <a href="#" class="sidebar-link"><i class="fas fa-wrench w-4"></i> Maintenance</a>
-            <a href="#" class="sidebar-link"><i class="fas fa-cog w-4"></i> Settings</a>
-        </nav>
-        <div class="px-3 pb-4">
-            <a href="../auth/signin.php" class="sidebar-link"><i class="fas fa-sign-out-alt w-4"></i> Logout</a>
-        </div>
-    </aside>
+        <!-- Mobile Overlay -->
+        <div id="fes-dashboard-overlay" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
 
-    <div id="fes-dashboard-overlay" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
-
-    <!-- Main -->
-    <div class="flex-1 flex flex-col min-w-0">
-        <!-- Top bar -->
-        <header class="bg-white px-6 py-4 flex items-center justify-between shadow-sm">
-            <div class="flex items-center gap-3">
-                <button id="fes-dashboard-menu-btn" class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-600">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <div>
-                    <div class="text-xs text-gray-400 flex items-center gap-1">
-                        <a href="dashboard.php" class="hover:text-fes-red">Dashboard</a>
-                        <i class="fas fa-chevron-right text-[10px]"></i>
-                        <a href="add_operator.php" class="hover:text-fes-red">Operators</a>
-                        <i class="fas fa-chevron-right text-[10px]"></i>
-                        <span class="text-gray-600">Add Operator</span>
+        <!-- Main Content Container (Right Side) -->
+        <div class="min-h-screen" style="margin-left: 300px; width: calc(100% - 300px);" id="main-content">
+            <!-- Top bar -->
+            <header class="bg-white px-6 py-7 flex items-center justify-between shadow-sm md:pl-6">
+                <div class="flex items-center gap-3">
+                    <button id="fes-dashboard-menu-btn" class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-600" aria-label="Open menu" aria-controls="fes-dashboard-sidebar" aria-expanded="false">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div>
+                        <div class="text-sm text-gray-500">Users</div>
+                        <h1 class="text-xl font-semibold text-gray-900">Add Operator</h1>
                     </div>
-                    <h1 class="text-lg font-semibold text-gray-900 mt-0.5">Add New Operator</h1>
                 </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <button class="relative h-10 w-10 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
-                    <i class="fas fa-bell"></i>
-                    <span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-fes-red"></span>
-                </button>
-                <div class="w-9 h-9 rounded-full bg-fes-red flex items-center justify-center text-white font-semibold text-sm">A</div>
-            </div>
-        </header>
+           </header>
 
-        <!-- Content -->
-        <main class="flex-1 overflow-y-auto p-6">
-            <div class="max-w-3xl mx-auto">
+            <!-- Content -->
+            <main class="flex-1 overflow-y-auto p-6" style="width: 100%; overflow-x: hidden;">
+                    <!-- Success/Error Messages -->
+                    <?php if (!empty($success)): ?>
+                        <div class="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 flex items-center gap-3">
+                            <i class="fas fa-check-circle text-emerald-600"></i>
+                            <?php echo htmlspecialchars($success); ?>
+                        </div>
+                    <?php endif; ?>
 
-                <!-- Success/Error Messages -->
-                <?php if (!empty($success)): ?>
-                    <div class="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                        <?php echo htmlspecialchars($success); ?>
-                    </div>
-                <?php endif; ?>
+                    <?php if (!empty($error)): ?>
+                        <div class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-center gap-3">
+                            <i class="fas fa-exclamation-circle text-red-600"></i>
+                            <?php echo htmlspecialchars($error); ?>
+                        </div>
+                    <?php endif; ?>
 
-                <?php if (!empty($error)): ?>
-                    <div class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                        <?php echo htmlspecialchars($error); ?>
-                    </div>
-                <?php endif; ?>
-
-                <!-- Single Form Section -->
-                <div class="bg-white rounded-xl shadow-card p-6">
-                    <h2 class="text-base font-semibold text-gray-900 mb-5 flex items-center gap-2">
-                        <i class="fas fa-user text-fes-red text-sm"></i> Operator Information
-                    </h2>
-
-                    <form action="process_add_operator.php" method="post" id="operatorForm">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <div>
-                                <label class="fes-label">Full Name <span class="text-fes-red">*</span></label>
-                                <input type="text" name="full_name" class="fes-input" id="fullName" placeholder="e.g. James Phiri" required>
+                    <!-- Account Setup Card -->
+                    <div class="bg-white rounded-xl shadow-card p-8 max-w-2xl mx-auto">
+                        <div class="text-center mb-8">
+                            <div class="w-16 h-16 rounded-full bg-fes-red flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
+                                <i class="fas fa-user-plus"></i>
                             </div>
-                            <div>
-                                <label class="fes-label">Email Address <span class="text-fes-red">*</span></label>
-                                <input type="email" name="email" class="fes-input" id="email" placeholder="operator@fes.africa" required>
-                            </div>
+                            <h2 class="text-2xl font-semibold text-gray-900 mb-2">Add New Operator</h2>
+                            <p class="text-base text-gray-500">Create a new operator account with login credentials</p>
                         </div>
 
-                        <div class="flex justify-end mt-6">
-                            <button type="submit" class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-6 py-2.5 rounded-lg shadow transition">
-                                <i class="fas fa-user-plus"></i> Create Operator Account
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                        <form action="process_add_operator.php?v=<?php echo time(); ?>" method="post" class="space-y-6">
+                            <div>
+                                <label class="block text-base font-medium text-gray-700 mb-3">Full Name <span class="text-fes-red">*</span></label>
+                                <input type="text" name="full_name" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" placeholder="e.g. James Phiri" required>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-base font-medium text-gray-700 mb-3">Email Address <span class="text-fes-red">*</span></label>
+                                <input type="email" name="email" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" placeholder="operator@fes.africa" required>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-base font-medium text-gray-700 mb-3">Password <span class="text-fes-red">*</span></label>
+                                <input type="password" name="password" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" placeholder="Enter password (min 8 characters)" required>
+                            </div>
 
+                            <div class="pt-8">
+                                <button type="submit" class="w-full inline-flex items-center justify-center gap-3 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-6 py-3 rounded-lg shadow transition text-base">
+                                    <i class="fas fa-user-plus"></i> Create Operator
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </main>
             </div>
-        </main>
+        </div>
     </div>
-</div>
-</div>
 
-<!-- Toast -->
-<div id="toast">
-    <i class="fas fa-check-circle" id="toast-icon"></i>
-    <span id="toast-msg">Saved</span>
-</div>
+    <script>
+        (function () {
+            var btn = document.getElementById('fes-dashboard-menu-btn');
+            var sidebar = document.getElementById('fes-dashboard-sidebar');
+            var overlay = document.getElementById('fes-dashboard-overlay');
+            if (!btn || !sidebar || !overlay) return;
 
-<script>
-// Mobile sidebar
-(function(){
-    var btn = document.getElementById('fes-dashboard-menu-btn');
-    var sb  = document.getElementById('fes-dashboard-sidebar');
-    var ov  = document.getElementById('fes-dashboard-overlay');
-    if (!btn) return;
-    btn.addEventListener('click', () => { sb.classList.toggle('-translate-x-full'); ov.classList.toggle('hidden'); });
-    ov.addEventListener('click', () => { sb.classList.add('-translate-x-full'); ov.classList.add('hidden'); });
-})();
-</script>
+            function openSidebar() {
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.add('translate-x-0');
+                overlay.classList.remove('hidden');
+                btn.setAttribute('aria-expanded', 'true');
+            }
+
+            function closeSidebar() {
+                sidebar.classList.add('-translate-x-full');
+                sidebar.classList.remove('translate-x-0');
+                overlay.classList.add('hidden');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+
+            btn.addEventListener('click', function () {
+                var isOpen = sidebar.classList.contains('translate-x-0');
+                if (isOpen) closeSidebar();
+                else openSidebar();
+            });
+
+            overlay.addEventListener('click', closeSidebar);
+
+            window.addEventListener('resize', function () {
+                if (window.matchMedia('(min-width: 768px)').matches) {
+                    overlay.classList.add('hidden');
+                    btn.setAttribute('aria-expanded', 'false');
+                } else {
+                    closeSidebar();
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

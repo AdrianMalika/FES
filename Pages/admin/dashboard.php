@@ -1,3 +1,28 @@
+<?php
+session_start();
+
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ../auth/signin.php');
+    exit();
+}
+
+// Check if user has admin role
+if ($_SESSION['role'] !== 'admin') {
+    // Redirect based on actual role
+    switch($_SESSION['role']) {
+        case 'operator':
+            header('Location: ../operator/dashboard.php');
+            exit();
+        case 'customer':
+            header('Location: ../customer/dashboard.php');
+            exit();
+        default:
+            header('Location: ../auth/signin.php');
+            exit();
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -26,50 +51,64 @@
             }
         };
     </script>
+    <style>
+        @media (max-width: 767px) {
+            #main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+        }
+        @media (min-width: 768px) {
+            #main-content {
+                margin-left: 300px !important;
+                width: calc(100% - 300px) !important;
+            }
+        }
+    </style>
 </head>
 
 <body>
     <div class="min-h-screen w-full bg-gray-100" style="font-family: Georgia, 'Times New Roman', serif;">
-        <div class="flex min-h-screen">
-            <!-- Sidebar -->
-            <?php include __DIR__ . '/include/sidebar.php'; ?>
+        <!-- Fixed Sidebar (Left Side) -->
+        <?php include __DIR__ . '/include/sidebar.php'; ?>
 
-            <div id="fes-dashboard-overlay" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
+        <!-- Mobile Overlay -->
+        <div id="fes-dashboard-overlay" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
 
-            <!-- Main -->
-            <div class="flex-1 flex flex-col min-w-0">
-                <!-- Top bar -->
-                <header class="bg-white px-6 py-7 flex items-center justify-between shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <button id="fes-dashboard-menu-btn" class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-600" aria-label="Open menu" aria-controls="fes-dashboard-sidebar" aria-expanded="false">
-                            <i class="fas fa-bars"></i>
-                        </button>
+        <!-- Main Content Container (Right Side) -->
+        <div class="min-h-screen" style="margin-left: 300px; width: calc(100% - 300px);" id="main-content">
+            <!-- Top bar -->
+            <header class="bg-white px-6 py-7 flex items-center justify-between shadow-sm md:pl-6">
+                <div class="flex items-center gap-3">
+                    <button id="fes-dashboard-menu-btn" class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-600" aria-label="Open menu" aria-controls="fes-dashboard-sidebar" aria-expanded="false">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div>
+                        <div class="text-sm text-gray-500">Dashboard</div>
+                        <h1 class="text-xl font-semibold text-gray-900">Overview</h1>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <button class="relative h-10 w-10 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" aria-label="Notifications">
+                        <i class="fas fa-bell"></i>
+                        <span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-fes-red"></span>
+                    </button>
+                    <button class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-4 py-2 rounded-lg shadow">
+                        <i class="fas fa-plus"></i>
+                        Add Equipment
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <main class="flex-1 overflow-y-auto p-6" style="width: 100%; overflow-x: hidden;">
+                <!-- Stats -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+                    <div class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between">
                         <div>
-                            <div class="text-sm text-gray-500">Dashboard</div>
-                            <h1 class="text-xl font-semibold text-gray-900">Overview</h1>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center gap-4">
-                        <button class="relative h-10 w-10 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" aria-label="Notifications">
-                            <i class="fas fa-bell"></i>
-                            <span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-fes-red"></span>
-                        </button>
-                        <button class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-4 py-2 rounded-lg shadow">
-                            <i class="fas fa-plus"></i>
-                            Add Equipment
-                        </button>
-                    </div>
-                </header>
-
-                <!-- Content -->
-                <main class="flex-1 overflow-y-auto p-6">
-                    <!-- Stats -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
-                        <div class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between">
-                            <div>
-                                <div class="text-sm text-gray-500">Total Equipment</div>
-                                <div class="mt-1 text-2xl font-semibold text-gray-900">124</div>
+                            <div class="text-sm text-gray-500">Total Equipment</div>
+                            <div class="mt-1 text-2xl font-semibold text-gray-900">124</div>
                             </div>
                             <div class="h-11 w-11 rounded-xl bg-red-50 text-fes-red flex items-center justify-center">
                                 <i class="fas fa-tractor"></i>
