@@ -7,12 +7,12 @@ if (session_status() === PHP_SESSION_NONE) {
 // Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     $_SESSION['error'] = 'Access denied. Admin privileges required.';
-    header('Location: add_equipment.php');
+    header('Location: ../add_equipment.php');
     exit();
 }
 
 // Include database connection
-require_once '../../includes/database.php';
+require_once '../../../includes/database.php';
 
 /**
  * Generate automatic equipment ID in format EQ-001, EQ-002, etc.
@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // If there are errors, redirect back with error message
     if (!empty($errors)) {
         $_SESSION['error'] = implode('<br>', $errors);
-        header('Location: add_equipment.php');
+        header('Location: ../add_equipment.php');
         exit();
     }
     
@@ -158,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($result->num_rows > 0) {
             $_SESSION['error'] = 'Equipment ID already exists. Please use a different ID.';
-            header('Location: add_equipment.php');
+            header('Location: ../add_equipment.php');
             exit();
         }
         
@@ -190,22 +190,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($stmt->execute()) {
             $_SESSION['success'] = 'Equipment added successfully!';
-            header('Location: add_equipment.php');
+            header('Location: ../add_equipment.php');
             exit();
         } else {
             $_SESSION['error'] = 'Error adding equipment. Please try again.';
-            header('Location: add_equipment.php');
+            header('Location: ../add_equipment.php');
             exit();
         }
         
     } catch (Exception $e) {
         $_SESSION['error'] = 'Database error: ' . $e->getMessage();
-        header('Location: add_equipment.php');
+        header('Location: ../add_equipment.php');
         exit();
     }
 } else {
     // If not POST request, redirect to form
-    header('Location: add_equipment.php');
+    header('Location: ../add_equipment.php');
     exit();
 }
 ?>
+

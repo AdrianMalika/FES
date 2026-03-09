@@ -151,7 +151,7 @@ try {
                         </div>
                     </div>
 
-                    <form action="process_add_equipment.php" method="POST" enctype="multipart/form-data" class="bg-white shadow-sm border border-t-0 border-gray-200 rounded-b-xl">
+                    <form action="include/process_add_equipment.php" method="POST" enctype="multipart/form-data" class="bg-white shadow-sm border border-t-0 border-gray-200 rounded-b-xl">
                         <div class="px-8 py-6 border-b border-gray-100">
                             <div class="flex items-center gap-3 mb-6">
                                 <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -395,3 +395,4 @@ try {
     </script>
 </body>
 </html>
+

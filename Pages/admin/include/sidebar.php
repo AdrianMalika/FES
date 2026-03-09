@@ -198,7 +198,7 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
             <i class="fas fa-th-large w-5"></i>
             Dashboard
         </a>
-        <a href="add_equipment.php" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg <?php echo $current_page === 'add_equipment' ? 'bg-fes-red shadow-md shadow-black/10 font-medium' : 'text-white/80 hover:text-white hover:bg-white/5'; ?> transition">
+        <a href="equipment.php" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg <?php echo ($current_page === 'equipment' || $current_page === 'add_equipment') ? 'bg-fes-red shadow-md shadow-black/10 font-medium' : 'text-white/80 hover:text-white hover:bg-white/5'; ?> transition">
             <i class="fas fa-truck-pickup w-5"></i>
             Equipment
         </a>
@@ -208,7 +208,7 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
         </a>
         <a href="users.php" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg <?php echo $current_page === 'users' ? 'bg-fes-red shadow-md shadow-black/10 font-medium' : 'text-white/80 hover:text-white hover:bg-white/5'; ?> transition">
             <i class="fas fa-users w-5"></i>
-            Users
+            Manage Operators
         </a>
         <a href="add_operator.php" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg <?php echo $current_page === 'add_operator' ? 'bg-fes-red shadow-md shadow-black/10 font-medium' : 'text-white/80 hover:text-white hover:bg-white/5'; ?> transition">
             <i class="fas fa-hard-hat"></i>

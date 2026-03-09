@@ -1,7 +1,7 @@
 <?php
-require_once '../../includes/database.php';
-require_once '../../includes/email_config.php';
-require_once '../../vendor/autoload.php';
+require_once '../../../includes/database.php';
+require_once '../../../includes/email_config.php';
+require_once '../../../vendor/autoload.php';
 
 // Import PHPMailer
 use PHPMailer\PHPMailer\PHPMailer;
@@ -15,21 +15,22 @@ if (session_status() === PHP_SESSION_NONE) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: add_operator.php?error=Invalid request method');
+    header('Location: ../add_operator.php?error=Invalid request method');
     exit();
 }
 
 $full_name = trim($_POST['full_name'] ?? '');
 $email = strtolower(trim($_POST['email'] ?? ''));
 $created_by = (int)($_SESSION['user_id'] ?? 0);
+$assign_equipment_id = (int)($_POST['assign_equipment_id'] ?? 0);
 
 if (empty($full_name) || empty($email)) {
-    header('Location: add_operator.php?error=All fields are required');
+    header('Location: ../add_operator.php?error=All fields are required');
     exit();
 }
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    header('Location: add_operator.php?error=Invalid email address');
+    header('Location: ../add_operator.php?error=Invalid email address');
     exit();
 }
 
@@ -44,7 +45,7 @@ try {
     $result = $checkStmt->get_result();
 
     if ($result->num_rows > 0) {
-        header('Location: add_operator.php?error_code=duplicate_email&email=' . urlencode($email));
+        header('Location: ../add_operator.php?error_code=duplicate_email&email=' . urlencode($email));
         exit();
     }
     $checkStmt->close();
@@ -58,11 +59,20 @@ try {
         throw new \Exception('Failed to create operator account.');
     }
     $insertStmt->close();
+    $new_operator_id = (int)$conn->insert_id;
+
+    // Optional: assign selected equipment to the new operator if equipment exists.
+    if ($assign_equipment_id > 0) {
+        $eqStmt = $conn->prepare('UPDATE equipment SET operator_id = ?, updated_at = NOW() WHERE id = ? AND (operator_id IS NULL OR operator_id = 0)');
+        $eqStmt->bind_param('ii', $new_operator_id, $assign_equipment_id);
+        $eqStmt->execute();
+        $eqStmt->close();
+    }
 
     $conn->commit();
 
     // Generate secure password-set token (24 hours)
-    $user_id = $conn->insert_id;
+    $user_id = $new_operator_id;
     $token = bin2hex(random_bytes(16));
     $expires = date('Y-m-d H:i:s', time() + 24 * 3600);
     $upd = $conn->prepare('UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE user_id = ?');
@@ -71,7 +81,7 @@ try {
     $upd->close();
 
     // Send email using PHPMailer with Gmail SMTP
-    $config = include '../../includes/email_config.php';
+    $config = include '../../../includes/email_config.php';
     $mail = new PHPMailer(true);
 
     try {
@@ -185,13 +195,13 @@ try {
         // Continue even if email fails - account is created
     }
 
-    header('Location: add_operator.php?success=1');
+    header('Location: ../add_operator.php?success=Operator account created successfully.');
     exit();
 
 } catch (\Exception $e) {
     $conn->rollback();
     error_log('Operator creation error: ' . $e->getMessage());
-    header('Location: add_operator.php?error=' . urlencode($e->getMessage()));
+    header('Location: ../add_operator.php?error=' . urlencode($e->getMessage()));
     exit();
 } finally {
     if (isset($checkStmt)) $checkStmt->close();
@@ -199,3 +209,5 @@ try {
     $conn->close();
 }
 ?>
+
+
