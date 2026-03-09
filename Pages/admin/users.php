@@ -52,11 +52,9 @@ try {
             u.name,
             u.email,
             u.created_at,
-            c.name AS creator_name,
             COUNT(e.id) AS assigned_equipment,
             SUM(CASE WHEN e.status = 'in_use' THEN 1 ELSE 0 END) AS active_jobs
         FROM users u
-        LEFT JOIN users c ON c.user_id = u.created_by
         LEFT JOIN equipment e ON e.operator_id = u.user_id
         WHERE u.role = 'operator'
     ";

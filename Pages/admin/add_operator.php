@@ -20,8 +20,7 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
     exit();
 }
 
-require_once '../../includes/database.php';
-
+require_once '../../includes/database.phpe
 $available_equipment = [];
 $recent_operators = [];
 

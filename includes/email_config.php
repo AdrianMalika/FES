@@ -1,14 +1,14 @@
 <?php
 // SMTP Configuration for local development (XAMPP)
 return [
-    'host' => 'smtp.gmail.com',      // Using Gmail SMTP for testing
+    'host' => 'smtp.gmail.com',           // Using Gmail SMTP for testing
     'username' => 'adrianmalika01@gmail.com',  // Your Gmail address
-    'password' => 'imhx zvoy dbth nbro',     // Use App Password (not your Gmail password)
-    'port' => 587,                        // Gmail SMTP port for TLS
-    'encryption' => 'tls',                // tls for port587
+    'password' => 'vdaowauvlgrrdfvn',     // App Password (no spaces)
+    'port' => 465,                        // Gmail SMTP port for SSL
+    'encryption' => 'ssl',                // ssl for port 465
     'from_email' => 'adrianmalika01@gmail.com',
     'from_name' => 'FES System',
-    'debug' => 2,                        // Enable verbose debug output (0=off, 1=client, 2=client and server)
+    'debug' => 2,                         // Enable verbose debug output (0=off, 1=client, 2=client and server)
 ];
 
 /*
