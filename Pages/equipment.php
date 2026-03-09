@@ -3,14 +3,34 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// Fetch equipment from database
+$equipment = [];
+try {
+    require_once '../includes/database.php';
+    $conn = getDBConnection();
+    $sql = "SELECT * FROM equipment ORDER BY created_at DESC";
+    $result = $conn->query($sql);
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $equipment[] = $row;
+        }
+    }
+} catch (Exception $e) {
+    error_log("Database error: " . $e->getMessage());
+    $equipment = [];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FES - Equipment Catalogue</title>
+    <title>FES — Equipment Catalogue</title>
     <link rel="icon" type="image/png" href="../assets/images/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -18,112 +38,264 @@ if (session_status() === PHP_SESSION_NONE) {
             theme: {
                 extend: {
                     colors: {
-                        fes: {
-                            red: '#D32F2F',
-                            dark: '#424242'
-                        }
+                        fes: { red: '#D32F2F', dark: '#1a1a1a', mid: '#2e2e2e' }
                     },
                     fontFamily: {
-                        'playfair': ['Playfair Display', 'serif'],
-                        'inter': ['Inter', 'sans-serif'],
-                        'poppins': ['Poppins', 'sans-serif']
+                        display: ['"Barlow Condensed"', 'sans-serif'],
+                        body: ['Barlow', 'sans-serif'],
                     }
                 }
             }
         };
     </script>
+    <style>
+        * { font-family: 'Barlow', sans-serif; }
+        h1, h2, h3, .display { font-family: 'Barlow Condensed', sans-serif; }
+
+        :root {
+            --red: #D32F2F;
+            --red-deep: #b71c1c;
+            --dark: #1a1a1a;
+            --mid: #2e2e2e;
+        }
+
+        /* Hero diagonal slice */
+        .hero-section {
+            background: var(--dark);
+            clip-path: polygon(0 0, 100% 0, 100% 88%, 0 100%);
+            padding-bottom: 7rem;
+        }
+
+        /* Noise texture overlay */
+        .noise::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            mix-blend-mode: overlay;
+            opacity: 0.4;
+        }
+
+        /* Grid lines background */
+        .grid-bg {
+            background-image:
+                linear-gradient(rgba(211,47,47,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(211,47,47,0.04) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* Red accent line */
+        .accent-line {
+            display: block;
+            width: 3rem;
+            height: 3px;
+            background: var(--red);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Card hover */
+        .equip-card {
+            transition: transform 0.35s cubic-bezier(.22,.68,0,1.2), box-shadow 0.35s ease;
+            background: #fff;
+        }
+        .equip-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 24px 60px -12px rgba(211,47,47,0.18), 0 8px 32px -8px rgba(0,0,0,0.12);
+        }
+
+        /* Image overlay effect */
+        .card-img-wrap::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 50%, rgba(26,26,26,0.65) 100%);
+            transition: opacity 0.35s ease;
+        }
+
+        /* Status dots */
+        .status-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        /* Filter chips active */
+        .chip-active {
+            background: var(--red) !important;
+            color: white !important;
+            border-color: var(--red) !important;
+        }
+
+        /* Modal backdrop */
+        #modalOv { backdrop-filter: blur(6px); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #f5f5f5; }
+        ::-webkit-scrollbar-thumb { background: var(--red); border-radius: 99px; }
+
+        /* Stat counter animation */
+        @keyframes countUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .stat-val { animation: countUp 0.6s ease both; }
+
+        /* Card stagger */
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .equip-card { animation: fadeSlideIn 0.45s ease both; }
+
+        /* Red diagonal accent in hero */
+        .hero-accent {
+            position: absolute;
+            right: 0; top: 0; bottom: 0;
+            width: 42%;
+            background: linear-gradient(135deg, transparent 30%, rgba(211,47,47,0.07) 100%);
+            pointer-events: none;
+        }
+
+        /* Search input focus ring */
+        #searchInput:focus { box-shadow: 0 0 0 3px rgba(211,47,47,0.18); }
+
+        /* Skeleton shimmer (loading) */
+        @keyframes shimmer {
+            0%   { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 800px 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 8px;
+        }
+
+        /* Modal entrance */
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.94) translateY(16px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        #modalContent { animation: modalIn 0.28s cubic-bezier(.22,.68,0,1.2) both; }
+
+        /* Spec tag */
+        .spec-tag {
+            border: 1px solid #e5e5e5;
+            background: #fafafa;
+            transition: all 0.2s;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            font-size: 0.78rem;
+        }
+        .spec-tag:hover { border-color: var(--red); background: rgba(211,47,47,0.05); color: var(--red); }
+    </style>
 </head>
 
-<body class="font-inter bg-gray-50 text-gray-900">
+<body class="bg-gray-50 font-body text-gray-900 antialiased">
     <?php include '../includes/header.php'; ?>
-    
-    <!-- Hero Section -->
-    <section class="bg-fes-dark text-white py-24 relative overflow-hidden">
-        <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center relative z-10">
-            <!-- Left Side: Content -->
-            <div>
-                <div class="text-sm font-bold text-fes-red uppercase tracking-wider mb-5">
-                    Farming & Engineering Services
+
+    <!-- ═══════════ HERO ═══════════ -->
+    <section class="hero-section relative overflow-hidden noise">
+        <div class="hero-accent"></div>
+
+        <!-- Large background tractor icon -->
+        <div class="absolute right-0 bottom-0 translate-x-16 opacity-5 pointer-events-none select-none">
+            <i class="fas fa-tractor" style="font-size: 480px; color: #D32F2F;"></i>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-6 py-24 lg:py-32 relative z-10">
+            <div class="max-w-2xl">
+                <!-- Eyebrow -->
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="text-fes-red font-display font-700 text-sm uppercase tracking-[0.2em]">Farming & Engineering Services</span>
+                    <span class="block h-px w-12 bg-fes-red opacity-60"></span>
                 </div>
-                <h1 class="text-5xl lg:text-6xl font-black mb-6 leading-tight">
-                    Equipment <span class="text-fes-red">Catalogue</span>
+
+                <!-- Heading -->
+                <h1 class="font-display font-900 text-white leading-none mb-6" style="font-size: clamp(3rem,7vw,5.5rem); letter-spacing:-0.01em;">
+                    Equipment<br>
+                    <span class="text-fes-red">Catalogue</span>
                 </h1>
 
-                <p class="text-lg text-gray-300 leading-relaxed mb-10">
-                    Browse available equipment, check real-time availability, and book resources for your farming and engineering operations.
+                <p class="text-gray-400 text-base leading-relaxed mb-10 max-w-lg" style="font-size:1.05rem;">
+                    Browse our full fleet of farming &amp; engineering machinery. Check live availability and book the equipment you need — instantly.
                 </p>
-                
-                <div class="flex flex-col sm:flex-row gap-5 items-center">
-                    <?php if(isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])): ?>
-                        <a href="booking.php" class="inline-flex items-center justify-center px-10 py-4 bg-fes-red hover:bg-red-700 text-white font-bold rounded-lg shadow-lg transition-all duration-300 text-base uppercase tracking-wide">
-                            + Book Equipment
-                        </a>
-                    <?php else: ?>
-                        <a href="auth/signin.php?redirect=equipment.php" class="inline-flex items-center justify-center px-10 py-4 bg-fes-red hover:bg-red-700 text-white font-bold rounded-lg shadow-lg transition-all duration-300 text-base uppercase tracking-wide">
-                            + Book Equipment
-                        </a>
-                    <?php endif; ?>
-                </div>
-            </div>
 
-            <!-- Right Side: Icon -->
-            <div class="text-center opacity-15">
-                <i class="fas fa-tractor text-[300px]"></i>
+                <?php if(isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])): ?>
+                    <a href="booking.php"
+                       class="inline-flex items-center gap-3 bg-fes-red hover:bg-red-700 text-white font-display font-700 uppercase tracking-wider px-8 py-4 rounded-sm shadow-lg transition-all duration-300 hover:shadow-fes-red/40 hover:shadow-xl"
+                       style="font-size:1rem; letter-spacing:0.1em;">
+                        <i class="fas fa-calendar-check text-sm"></i>
+                        Book Equipment
+                    </a>
+                <?php else: ?>
+                    <a href="auth/signin.php?redirect=equipment.php"
+                       class="inline-flex items-center gap-3 bg-fes-red hover:bg-red-700 text-white font-display font-700 uppercase tracking-wider px-8 py-4 rounded-sm shadow-lg transition-all duration-300 hover:shadow-xl"
+                       style="font-size:1rem; letter-spacing:0.1em;">
+                        <i class="fas fa-calendar-check text-sm"></i>
+                        Book Equipment
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
+
+        <!-- Bottom red stripe -->
+        <div class="absolute bottom-0 left-0 w-full h-1 bg-fes-red opacity-70"></div>
     </section>
 
-    <!-- Stats Section -->
-    <div class="bg-white border-b border-gray-200 py-8">
-        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div class="stat-item">
-                <div class="text-3xl font-bold text-gray-900" id="sTotal">—</div>
-                <div class="text-sm text-gray-600">Total Equipment</div>
+
+    <!-- ═══════════ STATS BAR ═══════════ -->
+    <div class="bg-white border-b border-gray-100 shadow-sm -mt-1">
+        <div class="max-w-7xl mx-auto px-6 py-7 grid grid-cols-2 md:grid-cols-4 divide-x divide-gray-100">
+            <?php
+            $stats = [
+                ['id'=>'sTotal','label'=>'Total Equipment','icon'=>'fa-layer-group','color'=>'text-gray-900'],
+                ['id'=>'sAvail','label'=>'Available Now','icon'=>'fa-circle-check','color'=>'text-fes-red'],
+                ['id'=>'sBooked','label'=>'Currently Booked','icon'=>'fa-calendar','color'=>'text-blue-600'],
+                ['id'=>'sMaint','label'=>'Under Maintenance','icon'=>'fa-wrench','color'=>'text-orange-500'],
+            ];
+            foreach($stats as $i => $s): ?>
+            <div class="px-6 <?= $i===0?'pl-0':'' ?> flex items-center gap-4">
+                <i class="fas <?= $s['icon'] ?> text-xl <?= $s['color'] ?> opacity-60"></i>
+                <div>
+                    <div class="stat-val text-2xl font-display font-800 <?= $s['color'] ?>" id="<?= $s['id'] ?>">—</div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wider mt-0.5"><?= $s['label'] ?></div>
+                </div>
             </div>
-            <div class="stat-item">
-                <div class="text-3xl font-bold text-fes-red" id="sAvail">—</div>
-                <div class="text-sm text-gray-600">Available Now</div>
-            </div>
-            <div class="stat-item">
-                <div class="text-3xl font-bold text-gray-900" id="sBooked">—</div>
-                <div class="text-sm text-gray-600">Currently Booked</div>
-            </div>
-            <div class="stat-item">
-                <div class="text-3xl font-bold text-orange-600" id="sMaint">—</div>
-                <div class="text-sm text-gray-600">Under Maintenance</div>
-            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 
-    <!-- Toolbar Section -->
-    <div class="bg-white border-b border-gray-200 py-6">
-        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 items-center">
-            <div class="relative flex-1 min-w-[220px]">
-                <input type="text" id="searchInput" placeholder="Search by name, category, or specification…" 
-                       class="w-full border border-gray-300 rounded-lg px-4 py-3 pl-12 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red transition-colors duration-300">
-                <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+
+    <!-- ═══════════ TOOLBAR ═══════════ -->
+    <div class="bg-white border-b border-gray-100 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col lg:flex-row gap-4 items-center">
+
+            <!-- Search -->
+            <div class="relative flex-1 min-w-[220px] w-full lg:w-auto">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+                <input type="text" id="searchInput" placeholder="Search equipment, category, spec…"
+                       class="w-full border border-gray-200 bg-gray-50 rounded-sm pl-11 pr-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-fes-red focus:bg-white transition-all duration-200">
             </div>
-            
+
+            <!-- Category chips -->
             <div class="flex gap-2 flex-wrap">
-                <div class="bg-fes-red text-white border border-fes-red rounded-lg px-4 py-2 text-sm font-medium hover:bg-red-700 transition-colors duration-300 cursor-pointer" data-cat="all">
-                    All
-                </div>
-                <div class="bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-300 cursor-pointer" data-cat="Farming">
-                    Farming
-                </div>
-                <div class="bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-300 cursor-pointer" data-cat="Engineering">
-                    Engineering
-                </div>
-                <div class="bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-300 cursor-pointer" data-cat="Transport">
-                    Transport
-                </div>
-                <div class="bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-300 cursor-pointer" data-cat="Power">
-                    Power
-                </div>
+                <?php
+                $cats = ['all'=>'All','Farming'=>'Farming','Engineering'=>'Engineering','Transport'=>'Transport','Power'=>'Power'];
+                foreach($cats as $val => $label): ?>
+                <button class="chip border text-xs font-display font-700 uppercase tracking-widest px-4 py-2 rounded-sm transition-all duration-200 <?= $val==='all' ? 'chip-active border-fes-red' : 'border-gray-200 bg-white text-gray-600 hover:border-fes-red hover:text-fes-red' ?>"
+                        data-cat="<?= $val ?>"><?= $label ?></button>
+                <?php endforeach; ?>
             </div>
-            
-            <select class="bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red transition-colors duration-300" id="sortSel">
-                <option value="name">Sort: Name A-Z</option>
+
+            <!-- Sort -->
+            <select id="sortSel"
+                    class="border border-gray-200 bg-white rounded-sm px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:border-fes-red transition-colors duration-200 cursor-pointer">
+                <option value="name">Name A–Z</option>
                 <option value="rate-asc">Rate: Low → High</option>
                 <option value="rate-desc">Rate: High → Low</option>
                 <option value="available">Available First</option>
@@ -131,287 +303,380 @@ if (session_status() === PHP_SESSION_NONE) {
         </div>
     </div>
 
-    <!-- Main Equipment Grid -->
-    <section class="py-16">
-        <div class="max-w-7xl mx-auto">
-            <div class="mb-8">
-                <h2 class="text-3xl font-playfair font-bold text-gray-900 mb-4">Available Equipment</h2>
-                <div class="w-10 h-1 bg-fes-red"></div>
+
+    <!-- ═══════════ EQUIPMENT GRID ═══════════ -->
+    <section class="py-16 grid-bg min-h-[50vh]">
+        <div class="max-w-7xl mx-auto px-6">
+
+            <!-- Section heading -->
+            <div class="flex items-end justify-between mb-10">
+                <div>
+                    <span class="accent-line"></span>
+                    <h2 class="font-display font-800 text-3xl lg:text-4xl text-gray-900" style="letter-spacing:-0.01em;">
+                        Available Fleet
+                    </h2>
+                </div>
+                <div class="text-sm text-gray-500" id="resultCount"></div>
             </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="equipGrid">
-                <!-- Equipment items will be dynamically inserted here -->
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7" id="equipGrid">
+                <!-- cards injected by JS -->
             </div>
         </div>
     </section>
 
-    <!-- Equipment Details Modal -->
-    <div class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4" id="modalOv">
-        <div class="bg-white rounded-xl shadow-2xl max-w-4xl max-h-[90vh] overflow-y-auto w-full">
-            <div class="p-6 border-b border-gray-200 flex justify-between items-start">
+
+    <!-- ═══════════ MODAL ═══════════ -->
+    <div class="fixed inset-0 bg-black/70 z-50 hidden items-center justify-center p-4" id="modalOv">
+        <div id="modalContent" class="bg-white rounded-sm shadow-2xl max-w-5xl w-full max-h-[92vh] overflow-y-auto">
+
+            <!-- Modal Header -->
+            <div class="sticky top-0 bg-white border-b border-gray-100 px-8 py-5 flex items-start justify-between z-10">
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-900" id="mName">—</h2>
-                    <div class="mt-2" id="mBadge"></div>
+                    <h2 class="font-display font-800 text-2xl text-gray-900" id="mName">—</h2>
+                    <div id="mBadge" class="mt-2"></div>
                 </div>
-                <button class="text-gray-400 hover:text-gray-600 transition-colors duration-200" onclick="closeModal()">
-                    <i class="fas fa-times text-xl"></i>
+                <button onclick="closeModal()"
+                        class="text-gray-400 hover:text-fes-red hover:bg-red-50 rounded-sm p-2 transition-all duration-200">
+                    <i class="fas fa-xmark text-lg"></i>
                 </button>
             </div>
-            
-            <div class="p-6">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="h-36 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-tractor text-6xl text-gray-400" id="mImg"></i>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 gap-4 text-sm">
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">Category</label>
-                            <span id="mCat">—</span>
+
+            <!-- Modal Body -->
+            <div class="p-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+
+                    <!-- LEFT: Image + quick stats -->
+                    <div class="space-y-5">
+                        <div class="bg-gray-100 rounded-sm overflow-hidden h-72 flex items-center justify-center relative" id="mImg">
                         </div>
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">Equipment ID</label>
-                            <span id="mId">—</span>
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">Daily Rate</label>
-                            <span id="mRate" style="color: #D32F2F">—</span>
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">Operator</label>
-                            <span id="mOp">—</span>
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">Location</label>
-                            <span id="mLoc">—</span>
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">Last Service</label>
-                            <span id="mServ">—</span>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-fes-red rounded-sm p-4 text-white">
+                                <div class="text-xs uppercase tracking-widest opacity-70 mb-1">Daily Rate</div>
+                                <div class="font-display font-800 text-xl" id="mRate">—</div>
+                            </div>
+                            <div class="bg-fes-dark rounded-sm p-4 text-white">
+                                <div class="text-xs uppercase tracking-widest opacity-70 mb-1">Equipment ID</div>
+                                <div class="font-display font-700 text-xl" id="mId">—</div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="mt-6">
-                    <div class="text-sm font-medium text-gray-700 mb-2">Specifications</div>
-                    <div class="flex flex-wrap gap-2" id="mSpecs">
-                        <!-- Specs will be dynamically inserted here -->
+
+                    <!-- RIGHT: Details -->
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <?php
+                            $fields = [
+                                ['id'=>'mCat','label'=>'Category','icon'=>'fa-layer-group'],
+                                ['id'=>'mOp','label'=>'Operator','icon'=>'fa-user-tie'],
+                                ['id'=>'mLoc','label'=>'Location','icon'=>'fa-map-marker-alt'],
+                                ['id'=>'mServ','label'=>'Last Service','icon'=>'fa-wrench'],
+                            ];
+                            foreach($fields as $f): ?>
+                            <div class="bg-gray-50 border border-gray-100 rounded-sm p-4 hover:border-fes-red/30 transition-colors duration-200">
+                                <div class="text-xs uppercase tracking-widest text-gray-500 mb-1 flex items-center gap-2">
+                                    <i class="fas <?= $f['icon'] ?> text-fes-red text-xs"></i>
+                                    <?= $f['label'] ?>
+                                </div>
+                                <div class="font-display font-700 text-base text-gray-900" id="<?= $f['id'] ?>">—</div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <div>
+                            <div class="text-xs uppercase tracking-widest text-gray-500 mb-3 flex items-center gap-2">
+                                <i class="fas fa-cogs text-fes-red text-xs"></i>
+                                Specifications
+                            </div>
+                            <div class="flex flex-wrap gap-2" id="mSpecs"></div>
+                        </div>
+
+                        <div>
+                            <div class="text-xs uppercase tracking-widest text-gray-500 mb-3 flex items-center gap-2">
+                                <i class="fas fa-info-circle text-fes-red text-xs"></i>
+                                Description
+                            </div>
+                            <p class="text-gray-600 text-sm leading-relaxed bg-gray-50 border border-gray-100 rounded-sm p-4" id="mDesc">—</p>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="mt-6">
-                    <div class="text-sm font-medium text-gray-700 mb-2">Description</div>
-                    <p class="text-gray-600 leading-relaxed" id="mDesc">—</p>
                 </div>
             </div>
-            
-            <div class="p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <button class="w-full py-3 text-gray-700 hover:text-gray-900 transition-colors duration-200 border border-gray-300 rounded-lg hover:bg-gray-50" onclick="closeModal()">
-                        Close
-                    </button>
-                    <button class="w-full py-3 text-white bg-fes-red hover:bg-red-700 transition-colors duration-200 rounded-lg" id="mBookBtn">
-                        Book Now
-                    </button>
-                </div>
+
+            <!-- Modal Footer -->
+            <div class="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-8 py-5 flex gap-4">
+                <button onclick="closeModal()"
+                        class="flex-1 py-3 border-2 border-gray-200 text-gray-600 hover:border-gray-400 font-display font-700 uppercase tracking-wider text-sm rounded-sm transition-all duration-200">
+                    Close
+                </button>
+                <button id="mBookBtn"
+                        class="flex-1 py-3 bg-fes-red hover:bg-red-700 text-white font-display font-800 uppercase tracking-wider text-sm rounded-sm shadow-lg hover:shadow-fes-red/30 hover:shadow-xl transition-all duration-300">
+                    <i class="fas fa-calendar-check mr-2"></i>Book This Equipment
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Footer -->
-     <?php include '../includes/footer.php'; ?>
+    <?php include '../includes/footer.php'; ?>
 
 
+    <!-- ═══════════ JAVASCRIPT ═══════════ -->
     <script>
-        // Equipment data
-        const equipment = [
-            {id:'EQ-001',name:'Tractor – MF 375',cat:'Farming',icon:'fa-tractor',status:'available',rate:45000,operator:'John Banda',location:'Blantyre Depot',lastService:'Jan 2026',specs:['75 HP','4WD','PTO Shaft'],desc:'Heavy-duty Massey Ferguson tractor for ploughing, harrowing, and ridging on large-scale farms.'},
-            {id:'EQ-002',name:'Combine Harvester',cat:'Farming',icon:'fa-wheat-awn',status:'booked',rate:85000,operator:'Peter Mvula',location:'Lilongwe Hub',lastService:'Dec 2025',specs:['220 HP','7m Header','9000L Tank'],desc:'High-capacity combine harvester for maize and wheat. Currently booked through end of month.'},
-            {id:'EQ-003',name:'Excavator – Komatsu PC200',cat:'Engineering',icon:'fa-helmet-safety',status:'available',rate:120000,operator:'Moses Chirwa',location:'Blantyre Depot',lastService:'Feb 2026',specs:['148 HP','20T','9.7m Reach','GPS'],desc:'Medium-duty hydraulic excavator for earthworks, trenching, and foundation digging.'},
-            {id:'EQ-004',name:'Generator – 100 KVA',cat:'Power',icon:'fa-bolt',status:'available',rate:35000,operator:'Unassigned',location:'Limbe Store',lastService:'Jan 2026',specs:['100 KVA','3-Phase','Auto-Start','Silent'],desc:'Perkins-powered silent generator providing stable power for industrial and construction sites.'},
-            {id:'EQ-005',name:'Irrigation Pump Set',cat:'Farming',icon:'fa-faucet',status:'available',rate:18000,operator:'Grace Nkhoma',location:'Blantyre Depot',lastService:'Jan 2026',specs:['15 HP','6 inch','200m³/hr','Diesel'],desc:'Heavy duty diesel irrigation pump suitable for large-scale surface and borehole water delivery.'},
-            {id:'EQ-006',name:'Bulldozer – D6T CAT',cat:'Engineering',icon:'fa-truck-monster',status:'maintenance',rate:150000,operator:'Chris Phiri',location:'Workshop',lastService:'Ongoing',specs:['215 HP','19T','6-Way Blade','ROPS'],desc:'Undergoing scheduled maintenance. Estimated return to service: mid-March 2026.'},
-            {id:'EQ-007',name:'Water Bowser – 5000L',cat:'Transport',icon:'fa-truck-ramp-box',status:'booked',rate:25000,operator:'Samuel Jere',location:'Lilongwe Hub',lastService:'Nov 2025',specs:['5000L','4WD','Spray Bar','Pump'],desc:'Mobile water bowser for dust suppression, construction support, and irrigation logistics.'},
-            {id:'EQ-008',name:'Tipper Truck – 10T',cat:'Transport',icon:'fa-truck-ramp-box',status:'available',rate:60000,operator:'Richard Mwale',location:'Lilongwe Hub',lastService:'Feb 2026',specs:['10T Payload','Hydraulic Tip','Steel Body'],desc:'10-tonne tipper for aggregate, sand, and material transport across construction sites.'},
-            {id:'EQ-009',name:'Boom Sprayer – 18m',cat:'Farming',icon:'fa-spray-can',status:'available',rate:22000,operator:'Alice Dube',location:'Blantyre Depot',lastService:'Jan 2026',specs:['18m Boom','2000L Tank','GPS Guidance'],desc:'GPS-guided boom sprayer for precision chemical application across large crop fields.'},
-            {id:'EQ-010',name:'Compactor – Roller 10T',cat:'Engineering',icon:'fa-circle',status:'available',rate:55000,operator:'James Tembo',location:'Blantyre Depot',lastService:'Feb 2026',specs:['10T','Vibratory','Sprinkler','ROPS'],desc:'Smooth drum vibratory roller for road construction and compaction of sub-base layers.'},
-            {id:'EQ-011',name:'Loader – JCB 3CX',cat:'Engineering',icon:'fa-person-digging',status:'booked',rate:75000,operator:'Frank Lungu',location:'Mzuzu Branch',lastService:'Jan 2026',specs:['74 HP','4-in-1 Bucket','Extendahoe','4WD'],desc:'Versatile backhoe loader for digging, loading, lifting, and site clearance.'},
-            {id:'EQ-012',name:'Transformer – 50 KVA',cat:'Power',icon:'fa-plug',status:'maintenance',rate:28000,operator:'N/A',location:'Workshop',lastService:'Ongoing',specs:['50 KVA','11kV/440V','Oil-Cooled'],desc:'Step-down transformer undergoing electrical inspection. Estimated return to service: March 15, 2026.'}
-        ];
+    const equipment = <?php
+        $out = [];
+        foreach ($equipment as $item) {
+            $specs = [];
+            if (!empty($item['model'])) $specs[] = htmlspecialchars($item['model']);
+            if (!empty($item['year_manufactured'])) $specs[] = (string)$item['year_manufactured'];
+            if (!empty($item['weight_kg'])) $specs[] = $item['weight_kg'] . 'kg';
+            if (!empty($item['fuel_type'])) $specs[] = htmlspecialchars($item['fuel_type']);
+            $out[] = [
+                'id'       => htmlspecialchars($item['equipment_id']),
+                'name'     => htmlspecialchars($item['equipment_name']),
+                'cat'      => ucfirst(htmlspecialchars($item['category'])),
+                'icon'     => htmlspecialchars($item['icon'] ?? 'fa-tractor'),
+                'status'   => htmlspecialchars($item['status']),
+                'rate'     => floatval($item['daily_rate']),
+                'operator' => !empty($item['operator_id']) ? 'Operator ' . htmlspecialchars($item['operator_id']) : 'Unassigned',
+                'location' => htmlspecialchars($item['location']),
+                'lastService' => !empty($item['last_maintenance']) ? date('M Y', strtotime($item['last_maintenance'])) : 'N/A',
+                'specs'    => $specs,
+                'desc'     => htmlspecialchars($item['description']),
+                'image'    => !empty($item['image_path']) ? '../' . htmlspecialchars($item['image_path']) : null,
+            ];
+        }
+        echo json_encode($out);
+    ?>;
 
-        let activeFilter = 'all';
-        let searchQuery = '';
-        let sortMode = 'name';
+    let activeFilter = 'all', searchQuery = '', sortMode = 'name';
 
-        function getStatusBadge(status) {
-            if(status === 'available') return '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="fas fa-circle mr-2 text-xs"></i>Available</span>';
-            if(status === 'booked') return '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><i class="fas fa-circle mr-2 text-xs"></i>Booked</span>';
-            if(status === 'maintenance') return '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><i class="fas fa-circle mr-2 text-xs"></i>Maintenance</span>';
-            return '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"><i class="fas fa-circle mr-2 text-xs"></i>Unavailable</span>';
+    /* ── Status badge ───────────────────────────────────────── */
+    const STATUS = {
+        available:   { dot:'bg-green-500',  pill:'bg-green-50 text-green-700 border-green-200',  label:'Available' },
+        in_use:      { dot:'bg-blue-500',   pill:'bg-blue-50 text-blue-700 border-blue-200',     label:'Booked' },
+        maintenance: { dot:'bg-orange-400', pill:'bg-orange-50 text-orange-700 border-orange-200',label:'Maintenance' },
+        retired:     { dot:'bg-gray-400',   pill:'bg-gray-100 text-gray-600 border-gray-200',    label:'Retired' },
+    };
+
+    function badge(status) {
+        const s = STATUS[status] || STATUS.retired;
+        return `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-display font-700 uppercase tracking-wider border ${s.pill}">
+                    <span class="status-dot ${s.dot}"></span>${s.label}</span>`;
+    }
+
+    /* ── Filter / Sort ──────────────────────────────────────── */
+    function filtered() {
+        let list = [...equipment];
+        if (searchQuery) list = list.filter(e =>
+            e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            e.cat.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            e.specs.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+        if (activeFilter !== 'all') list = list.filter(e => e.cat === activeFilter);
+        if (sortMode === 'name')       list.sort((a,b) => a.name.localeCompare(b.name));
+        if (sortMode === 'rate-asc')   list.sort((a,b) => a.rate - b.rate);
+        if (sortMode === 'rate-desc')  list.sort((a,b) => b.rate - a.rate);
+        if (sortMode === 'available')  list.sort((a,b) => (a.status==='available'?-1:1) - (b.status==='available'?-1:1));
+        return list;
+    }
+
+    /* ── Render Grid ────────────────────────────────────────── */
+    function renderGrid() {
+        const grid = document.getElementById('equipGrid');
+        const list = filtered();
+        document.getElementById('resultCount').textContent = `${list.length} item${list.length!==1?'s':''} found`;
+
+        if (!list.length) {
+            grid.innerHTML = `<div class="col-span-full py-20 text-center text-gray-400">
+                <i class="fas fa-magnifying-glass text-4xl mb-4 block opacity-30"></i>
+                <p class="font-display font-700 text-xl">No equipment found</p>
+                <p class="text-sm mt-1">Try adjusting your search or filters</p>
+            </div>`;
+            return;
         }
 
-        function getFilteredEquipment() {
-            let filtered = equipment;
-            
-            // Apply search filter
-            if(searchQuery) {
-                filtered = filtered.filter(item => 
-                    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    item.cat.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    item.specs.some(spec => spec.toLowerCase().includes(searchQuery.toLowerCase()))
-                );
-            }
-            
-            // Apply category filter
-            if(activeFilter !== 'all') {
-                filtered = filtered.filter(item => item.cat === activeFilter);
-            }
-            
-            // Apply sorting
-            if(sortMode === 'name') {
-                filtered.sort((a, b) => a.name.localeCompare(b.name));
-            } else if(sortMode === 'rate-asc') {
-                filtered.sort((a, b) => a.rate - b.rate);
-            } else if(sortMode === 'rate-desc') {
-                filtered.sort((a, b) => b.rate - a.rate);
-            } else if(sortMode === 'available') {
-                filtered.sort((a, b) => {
-                    if(a.status === 'available' && b.status !== 'available') return -1;
-                    if(a.status !== 'available' && b.status === 'available') return 1;
-                    return 0;
-                });
-            }
-            
-            return filtered;
-        }
+        grid.innerHTML = list.map((item, i) => `
+        <article class="equip-card rounded-sm overflow-hidden border border-gray-100 cursor-pointer group"
+                 style="animation-delay:${i*0.06}s"
+                 onclick="openModal('${item.id}')">
 
-        function renderEquipment() {
-            const grid = document.getElementById('equipGrid');
-            const filtered = getFilteredEquipment();
-            
-            if(filtered.length === 0) {
-                grid.innerHTML = '<div class="col-span-full text-center py-16"><i class="fas fa-search text-4xl text-gray-300 mb-4"></i><p class="text-gray-500">No equipment found matching your criteria.</p></div>';
-                return;
-            }
-            
-            grid.innerHTML = filtered.map((item, index) => `
-                <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer" onclick="openModal('${item.id}')">
-                    <div class="relative h-36 bg-gray-100 rounded-lg flex items-center justify-center mb-6">
-                        <i class="fas ${item.icon} text-6xl text-gray-400"></i>
-                        ${getStatusBadge(item.status)}
-                        <span class="absolute top-2 right-2 bg-fes-red text-white text-xs font-bold px-2 py-1 rounded">${item.cat}</span>
-                    </div>
-                    <div class="card-body">
-                        <div class="card-name text-lg font-bold text-gray-900 mb-2">${item.name}</div>
-                        <div class="card-meta text-sm text-gray-600 mb-4">
-                            <span class="inline-flex items-center mr-4"><i class="fas fa-location-dot mr-2"></i>${item.location}</span>
-                            <span class="inline-flex items-center"><i class="fas fa-user mr-2"></i>${item.operator}</span>
-                        </div>
-                        <div class="specs-row mb-4">
-                            ${item.specs.slice(0, 3).map(spec => `<span class="inline-flex items-center px-3 py-1 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-700">${spec}</span>`).join('')}
-                        </div>
-                    </div>
-                    <div class="card-footer flex justify-between items-center pt-4 border-t border-gray-200">
-                        <div class="rate text-xl font-bold text-fes-red">MK ${item.rate.toLocaleString()}/day</div>
-                        <div class="btn-row flex gap-2">
-                            <button class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200" onclick="event.stopPropagation(); openModal('${item.id}')">View</button>
-                            <button class="px-4 py-2 text-white bg-fes-red rounded-lg hover:bg-red-700 transition-colors duration-200 ${item.status !== 'available' ? 'opacity-50 cursor-not-allowed' : ''}" onclick="event.stopPropagation(); bookEquipment('${item.id}')" ${item.status !== 'available' ? 'disabled' : ''}>
-                                ${item.status === 'available' ? 'Book Now' : 'N/A'}
-                            </button>
-                        </div>
+            <!-- Image -->
+            <div class="card-img-wrap relative h-52 bg-gray-100 overflow-hidden">
+                ${item.image
+                    ? `<img src="${item.image}" alt="${item.name}"
+                             class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                       <div class="absolute inset-0 items-center justify-center" style="display:none;">
+                           <i class="fas ${item.icon} text-6xl text-gray-300"></i></div>`
+                    : `<div class="absolute inset-0 flex items-center justify-center">
+                           <i class="fas ${item.icon} text-6xl text-gray-200 group-hover:text-gray-300 transition-colors duration-300"></i></div>`
+                }
+                <!-- category pill -->
+                <span class="absolute top-3 left-3 bg-fes-dark/80 text-white text-xs font-display font-700 uppercase tracking-widest px-3 py-1 rounded-sm backdrop-blur-sm">
+                    ${item.cat}
+                </span>
+                <!-- quick-view -->
+                <div class="absolute inset-0 flex items-end p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-400 z-10">
+                    <div class="w-full bg-white text-fes-dark text-xs font-display font-800 uppercase tracking-widest py-2.5 px-4 rounded-sm text-center shadow-lg">
+                        <i class="fas fa-eye mr-2"></i>View Details
                     </div>
                 </div>
-            `).join('');
+            </div>
+
+            <!-- Body -->
+            <div class="p-5">
+                <div class="mb-3">${badge(item.status)}</div>
+
+                <h3 class="font-display font-800 text-lg leading-tight text-gray-900 mb-3 group-hover:text-fes-red transition-colors duration-300 line-clamp-2"
+                    style="letter-spacing:-0.01em;">
+                    ${item.name}
+                </h3>
+
+                <div class="space-y-1.5 mb-4">
+                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                        <i class="fas fa-map-marker-alt text-fes-red w-3.5 flex-shrink-0"></i>
+                        <span class="truncate">${item.location}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                        <i class="fas fa-user-tie text-fes-red w-3.5 flex-shrink-0"></i>
+                        <span class="truncate">${item.operator}</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-1.5 mb-4">
+                    ${item.specs.slice(0,3).map(s=>`
+                        <span class="spec-tag px-2.5 py-1 rounded-sm text-gray-600">${s}</span>
+                    `).join('')}
+                    ${item.specs.length>3?`<span class="spec-tag px-2.5 py-1 rounded-sm text-fes-red border-fes-red/20">+${item.specs.length-3}</span>`:''}
+                </div>
+
+                <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <div>
+                        <span class="font-display font-900 text-xl text-fes-red" style="letter-spacing:-0.01em;">
+                            MK ${item.rate.toLocaleString()}
+                        </span>
+                        <span class="text-xs text-gray-400 ml-1">/ day</span>
+                    </div>
+                    <button class="
+                        px-4 py-2 text-xs font-display font-800 uppercase tracking-wider rounded-sm transition-all duration-200
+                        ${item.status==='available'
+                            ? 'bg-fes-red text-white hover:bg-red-700 shadow-sm hover:shadow-md'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
+                    "
+                    onclick="event.stopPropagation(); bookEquipment('${item.id}')"
+                    ${item.status!=='available'?'disabled':''}>
+                        ${item.status==='available'
+                            ? '<i class="fas fa-calendar-check mr-1.5"></i>Book'
+                            : '<i class="fas fa-ban mr-1.5"></i>N/A'}
+                    </button>
+                </div>
+            </div>
+        </article>`).join('');
+    }
+
+    /* ── Stats ──────────────────────────────────────────────── */
+    function renderStats() {
+        document.getElementById('sTotal').textContent = equipment.length;
+        document.getElementById('sAvail').textContent = equipment.filter(e=>e.status==='available').length;
+        document.getElementById('sBooked').textContent = equipment.filter(e=>e.status==='in_use').length;
+        document.getElementById('sMaint').textContent = equipment.filter(e=>e.status==='maintenance').length;
+    }
+
+    /* ── Modal ──────────────────────────────────────────────── */
+    function openModal(id) {
+        const item = equipment.find(e=>e.id===id);
+        if (!item) return;
+
+        document.getElementById('mName').textContent = item.name;
+        document.getElementById('mBadge').innerHTML = badge(item.status);
+        document.getElementById('mRate').textContent = `MK ${item.rate.toLocaleString()} / day`;
+        document.getElementById('mId').textContent = item.id;
+        document.getElementById('mCat').textContent = item.cat;
+        document.getElementById('mOp').textContent = item.operator;
+        document.getElementById('mLoc').textContent = item.location;
+        document.getElementById('mServ').textContent = item.lastService;
+        document.getElementById('mDesc').textContent = item.desc || 'No description provided.';
+
+        const imgBox = document.getElementById('mImg');
+        imgBox.innerHTML = item.image
+            ? `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+               <div class="absolute inset-0 flex items-center justify-center" style="display:none;">
+                   <i class="fas ${item.icon} text-7xl text-gray-300"></i></div>`
+            : `<div class="w-full h-full flex items-center justify-center">
+                   <i class="fas ${item.icon} text-7xl text-gray-300"></i></div>`;
+
+        document.getElementById('mSpecs').innerHTML = item.specs.map(s=>
+            `<span class="spec-tag px-3 py-1.5 rounded-sm text-gray-700">${s}</span>`
+        ).join('') || '<span class="text-sm text-gray-400">No specifications listed.</span>';
+
+        const btn = document.getElementById('mBookBtn');
+        if (item.status === 'available') {
+            btn.disabled = false;
+            btn.className = 'flex-1 py-3 bg-fes-red hover:bg-red-700 text-white font-display font-800 uppercase tracking-wider text-sm rounded-sm transition-all duration-300';
+            btn.innerHTML = '<i class="fas fa-calendar-check mr-2"></i>Book This Equipment';
+            btn.onclick = () => bookEquipment(id);
+        } else {
+            btn.disabled = true;
+            btn.className = 'flex-1 py-3 bg-gray-200 text-gray-400 font-display font-800 uppercase tracking-wider text-sm rounded-sm cursor-not-allowed';
+            btn.innerHTML = '<i class="fas fa-ban mr-2"></i>Currently Unavailable';
         }
 
-        function renderStats() {
-            const total = equipment.length;
-            const available = equipment.filter(item => item.status === 'available').length;
-            const booked = equipment.filter(item => item.status === 'booked').length;
-            const maintenance = equipment.filter(item => item.status === 'maintenance').length;
-            
-            document.getElementById('sTotal').textContent = total;
-            document.getElementById('sAvail').textContent = available;
-            document.getElementById('sBooked').textContent = booked;
-            document.getElementById('sMaint').textContent = maintenance;
+        const ov = document.getElementById('modalOv');
+        ov.classList.remove('hidden');
+        ov.classList.add('flex');
+    }
+
+    function closeModal() {
+        const ov = document.getElementById('modalOv');
+        ov.classList.add('hidden');
+        ov.classList.remove('flex');
+    }
+
+    function bookEquipment(id) {
+        const item = equipment.find(e=>e.id===id);
+        if (item && item.status === 'available') {
+            <?php if(isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])): ?>
+                window.location.href = `booking.php?equipment_id=${id}`;
+            <?php else: ?>
+                window.location.href = `auth/signin.php?redirect=equipment.php&equipment_id=${id}`;
+            <?php endif; ?>
         }
+    }
 
-        function openModal(id) {
-            const item = equipment.find(e => e.id === id);
-            if(!item) return;
-            
-            document.getElementById('mName').textContent = item.name;
-            document.getElementById('mBadge').innerHTML = getStatusBadge(item.status);
-            document.getElementById('mImg').className = `fas ${item.icon} text-6xl text-gray-400`;
-            document.getElementById('mCat').textContent = item.cat;
-            document.getElementById('mId').textContent = item.id;
-            document.getElementById('mRate').textContent = `MK ${item.rate.toLocaleString()}/day`;
-            document.getElementById('mOp').textContent = item.operator;
-            document.getElementById('mLoc').textContent = item.location;
-            document.getElementById('mServ').textContent = item.lastService;
-            document.getElementById('mSpecs').innerHTML = item.specs.map(spec => `<span class="inline-flex items-center px-3 py-1 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-700">${spec}</span>`).join('');
-            document.getElementById('mDesc').textContent = item.desc;
-            
-            const bookBtn = document.getElementById('mBookBtn');
-            bookBtn.disabled = item.status !== 'available';
-            bookBtn.textContent = item.status === 'available' ? 'Book Now' : 'N/A';
-            
-            document.getElementById('modalOv').classList.remove('hidden');
-            document.getElementById('modalOv').classList.add('flex');
-        }
+    /* ── Event listeners ────────────────────────────────────── */
+    document.getElementById('searchInput').addEventListener('input', e => {
+        searchQuery = e.target.value;
+        renderGrid();
+    });
 
-        function bookEquipment(id) {
-            const item = equipment.find(e => e.id === id);
-            if(item && item.status === 'available') {
-                <?php if(isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])): ?>
-                    // User is logged in, redirect to booking page
-                    window.location.href = `booking.php?equipment_id=${id}`;
-                <?php else: ?>
-                    // User is not logged in, redirect to login page
-                    window.location.href = `auth/signin.php?redirect=equipment.php&equipment_id=${id}`;
-                <?php endif; ?>
-            }
-        }
+    document.getElementById('sortSel').addEventListener('change', e => {
+        sortMode = e.target.value;
+        renderGrid();
+    });
 
-        function closeModal() {
-            document.getElementById('modalOv').classList.add('hidden');
-            document.getElementById('modalOv').classList.remove('flex');
-        }
-
-        // Event listeners
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            searchQuery = e.target.value;
-            renderEquipment();
-        });
-
-        document.getElementById('sortSel').addEventListener('change', (e) => {
-            sortMode = e.target.value;
-            renderEquipment();
-        });
-
-        document.querySelectorAll('[data-cat]').forEach(chip => {
-            chip.addEventListener('click', () => {
-                document.querySelectorAll('[data-cat]').forEach(c => {
-                    c.classList.remove('bg-fes-red', 'text-white', 'border-fes-red');
-                    c.classList.add('bg-gray-100', 'text-gray-700', 'border-gray-300');
-                });
-                chip.classList.remove('bg-gray-100', 'text-gray-700', 'border-gray-300');
-                chip.classList.add('bg-fes-red', 'text-white', 'border-fes-red');
-                activeFilter = chip.dataset.cat;
-                renderEquipment();
+    document.querySelectorAll('.chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            document.querySelectorAll('.chip').forEach(c => {
+                c.classList.remove('chip-active');
+                c.classList.add('border-gray-200','bg-white','text-gray-600');
             });
+            chip.classList.add('chip-active');
+            chip.classList.remove('border-gray-200','bg-white','text-gray-600');
+            activeFilter = chip.dataset.cat;
+            renderGrid();
         });
+    });
 
-        // Close modal when clicking outside
-        document.getElementById('modalOv').addEventListener('click', (e) => {
-            if(e.target === e.currentTarget) {
-                closeModal();
-            }
-        });
+    document.getElementById('modalOv').addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeModal();
+    });
 
-        // Initial render
-        renderStats();
-        renderEquipment();
+    document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+
+    /* ── Init ───────────────────────────────────────────────── */
+    renderStats();
+    renderGrid();
     </script>
 </body>
 </html>

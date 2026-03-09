@@ -1,132 +1,183 @@
 <?php
-// Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
-// Get user info from session
-$userName = $_SESSION['name'] ?? 'Customer';
-$userInitials = '';
-if (!empty($userName)) {
-    $nameParts = explode(' ', $userName);
-    $userInitials = strtoupper(substr($nameParts[0], 0, 1));
-    if (count($nameParts) > 1) {
-        $userInitials .= strtoupper(substr($nameParts[1], 0, 1));
-    }
-}
 ?>
 <style>
-/* ── FES Sidebar Reskin ── */
 #fes-dashboard-sidebar {
-    background: #2b2b2b !important;
+    background:
+        radial-gradient(120% 80% at 0% 0%, rgba(211,47,47,.14) 0%, rgba(211,47,47,0) 38%),
+        linear-gradient(180deg, #2f2f31 0%, #262729 100%) !important;
     border-right: 1px solid rgba(255,255,255,.06);
+    box-shadow: 10px 0 30px rgba(0,0,0,.24);
 }
 
-/* Header */
-#fes-dashboard-sidebar > div:first-child {
-    height: 70px !important;
-    padding: 0 22px !important;
-    border-bottom: 1px solid rgba(255,255,255,.08) !important;
-    gap: 11px !important;
+#fes-dashboard-sidebar .brand {
+    height: 84px;
+    padding: 0 20px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    gap: 12px;
 }
-#fes-dashboard-sidebar > div:first-child .fas.fa-tractor {
-    width: 34px;
-    height: 34px;
+
+#fes-dashboard-sidebar .brand-icon {
+    width: 38px;
+    height: 38px;
     background: #D32F2F;
-    border-radius: 8px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px !important;
-    box-shadow: 0 4px 10px rgba(211,47,47,.4);
+    font-size: 16px;
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(211,47,47,.42);
     flex-shrink: 0;
 }
-#fes-dashboard-sidebar > div:first-child .font-semibold {
-    font-family: 'Playfair Display', serif !important;
-    font-size: 1.15rem !important;
-    font-weight: 700 !important;
-    letter-spacing: .02em;
+
+#fes-dashboard-sidebar .brand-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.28rem;
+    font-weight: 800;
+    letter-spacing: .05em;
     color: #fff;
+    line-height: 1;
 }
 
-/* Nav container */
+#fes-dashboard-sidebar .brand-sub {
+    font-size: .68rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.45);
+    margin-top: 4px;
+}
+
 #fes-dashboard-sidebar nav {
-    padding: 12px 10px !important;
+    padding: 16px 10px !important;
 }
 
-/* All nav links */
+#fes-dashboard-sidebar nav .nav-title {
+    font-size: .66rem;
+    text-transform: uppercase;
+    letter-spacing: .15em;
+    color: rgba(255,255,255,.34);
+    font-weight: 700;
+    padding: 0 10px 8px;
+}
+
 #fes-dashboard-sidebar nav a {
-    border-radius: 8px !important;
-    padding: 14px 18px !important;
-    font-size: 1.05rem !important;
-    font-weight: 500 !important;
+    border-radius: 10px !important;
+    padding: 12px 14px !important;
+    font-size: 1.06rem !important;
+    font-weight: 600 !important;
     color: rgba(255,255,255,.65) !important;
-    margin-bottom: 2px;
-    gap: 16px !important;
+    margin-bottom: 6px;
+    gap: 12px !important;
     position: relative;
-    transition: background .2s, color .2s !important;
-}
-#fes-dashboard-sidebar nav a i {
-    color: rgba(255,255,255,.38) !important;
-    font-size: 1.1rem;
-    transition: color .2s;
-}
-#fes-dashboard-sidebar nav a:hover {
-    background: rgba(255,255,255,.07) !important;
-    color: #fff !important;
-}
-#fes-dashboard-sidebar nav a:hover i {
-    color: rgba(255,255,255,.85) !important;
+    transition: background .2s, color .2s, transform .2s !important;
+    font-family: 'Barlow', sans-serif !important;
 }
 
-/* Active link */
-#fes-dashboard-sidebar nav a.bg-fes-red {
-    background: #D32F2F !important;
-    color: #fff !important;
-    box-shadow: 0 4px 16px rgba(211,47,47,.3) !important;
+#fes-dashboard-sidebar nav a i {
+    color: rgba(255,255,255,.4) !important;
+    font-size: 1.05rem;
+    transition: color .2s;
+    width: 22px;
+    text-align: center;
 }
+
+#fes-dashboard-sidebar nav a:hover {
+    background: rgba(255,255,255,.09) !important;
+    color: #fff !important;
+    transform: translateX(2px);
+}
+
+#fes-dashboard-sidebar nav a:hover i {
+    color: rgba(255,255,255,.9) !important;
+}
+
+#fes-dashboard-sidebar nav a.bg-fes-red {
+    background: linear-gradient(135deg, #D32F2F 0%, #c62828 100%) !important;
+    color: #fff !important;
+    box-shadow: 0 10px 20px rgba(211,47,47,.35) !important;
+}
+
 #fes-dashboard-sidebar nav a.bg-fes-red::before {
     content: '';
     position: absolute;
-    left: 0; top: 50%;
+    left: 0;
+    top: 50%;
     transform: translateY(-50%);
-    width: 3px; height: 55%;
-    background: rgba(255,255,255,.5);
-    border-radius: 0 3px 3px 0;
+    width: 3px;
+    height: 58%;
+    background: rgba(255,255,255,.72);
+    border-radius: 0 4px 4px 0;
 }
+
 #fes-dashboard-sidebar nav a.bg-fes-red i {
     color: #fff !important;
 }
 
-/* Logout footer */
 #fes-dashboard-sidebar .sidebar-footer {
-    padding: 12px 10px 18px;
+    padding: 14px 10px 18px;
     border-top: 1px solid rgba(255,255,255,.08);
 }
+
 .logout-btn {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    border-radius: 8px;
+    justify-content: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border-radius: 10px;
     text-decoration: none;
     width: 100%;
-    transition: background .2s;
+    border: 1px solid rgba(255,255,255,.09);
+    background: rgba(255,255,255,.03);
+    transition: background .2s, border-color .2s;
 }
-.logout-btn:hover { background: rgba(211,47,47,.14); }
-.logout-icon { font-size: 1.1rem; color: rgba(255,255,255,.35); transition: color .2s; }
-.logout-text { font-size: 1.05rem; font-weight: 500; color: rgba(255,255,255,.45); transition: color .2s; }
+
+.logout-btn span {
+    font-size: 1rem;
+    letter-spacing: .01em;
+}
+
+.logout-btn:hover {
+    background: rgba(211,47,47,.18);
+    border-color: rgba(211,47,47,.45);
+}
+
+.logout-icon {
+    font-size: 1.02rem;
+    color: rgba(255,255,255,.45);
+    transition: color .2s;
+}
+
+.logout-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255,255,255,.6);
+    transition: color .2s;
+    font-family: 'Barlow', sans-serif;
+}
+
 .logout-btn:hover .logout-icon,
-.logout-btn:hover .logout-text { color: #ef5350; }
+.logout-btn:hover .logout-text {
+    color: #fff;
+}
 </style>
-<aside id="fes-dashboard-sidebar" class="fixed inset-y-0 left-0 z-40 w-64 flex flex-col bg-fes-dark text-white -translate-x-full transition-transform duration-200 ease-out md:translate-x-0 md:static md:flex">
-    <!-- Logo Section -->
-    <a href="../../Pages/index.php" class="h-24 px-7 border-b border-white/10 flex items-center gap-3 hover:bg-white/5 transition no-underline">
-        <img src="../../assets/images/logo.png" alt="FES Logo" class="h-10 w-auto">
-        <div class="font-semibold tracking-wide text-white">FES</div>
+
+<aside id="fes-dashboard-sidebar" class="fixed inset-y-0 left-0 z-40 w-64 flex flex-col bg-fes-dark text-white -translate-x-full transition-transform duration-200 ease-out md:translate-x-0 md:flex">
+    <a href="../../Pages/index.php" class="brand flex items-center hover:bg-white/5 transition no-underline">
+        <div class="brand-icon">
+            <i class="fas fa-tractor"></i>
+        </div>
+        <div>
+            <div class="brand-name">FES</div>
+            <div class="brand-sub">Customer Panel</div>
+        </div>
     </a>
 
     <nav class="flex-1 px-3 py-4">
+        <div class="nav-title">Main</div>
         <a href="dashboard.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-fes-red shadow-md shadow-black/10 font-medium">
             <i class="fas fa-th-large w-5"></i>
             Dashboard
@@ -149,9 +200,10 @@ if (!empty($userName)) {
         </a>
     </nav>
 
-    <!-- User Info & Logout -->
-    <button class="w-full px-6 py-5 border-t border-white/10 text-white/60 hover:text-white hover:bg-white/5 transition flex items-center justify-end gap-2" title="Logout" onclick="window.location.href='../auth/logout.php'">
-        <span>Logout</span>
-        <i class="fas fa-sign-out-alt"></i>
-    </button>
+    <div class="sidebar-footer">
+        <button class="logout-btn" title="Logout" onclick="window.location.href='../auth/logout.php'">
+            <i class="fas fa-sign-out-alt logout-icon"></i>
+            <span class="logout-text">Logout</span>
+        </button>
+    </div>
 </aside>

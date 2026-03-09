@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.0
+-- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Mar 08, 2026 at 01:31 PM
--- Server version: 8.0.31
--- PHP Version: 8.0.26
+-- Generation Time: Mar 09, 2026 at 01:25 AM
+-- Server version: 9.1.0
+-- PHP Version: 8.3.14
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -50,6 +50,47 @@ INSERT INTO `customers` (`customer_id`, `user_id`, `phone`, `address`, `city`, `
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `equipment`
+--
+
+DROP TABLE IF EXISTS `equipment`;
+CREATE TABLE IF NOT EXISTS `equipment` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `equipment_name` varchar(255) NOT NULL,
+  `category` varchar(100) NOT NULL,
+  `equipment_id` varchar(100) NOT NULL,
+  `model` varchar(255) DEFAULT NULL,
+  `description` text NOT NULL,
+  `status` enum('available','in_use','maintenance','retired') NOT NULL DEFAULT 'available',
+  `location` varchar(255) NOT NULL,
+  `operator_id` int DEFAULT NULL,
+  `purchase_date` date DEFAULT NULL,
+  `daily_rate` decimal(10,2) NOT NULL,
+  `hourly_rate` decimal(10,2) DEFAULT '0.00',
+  `fuel_type` varchar(50) DEFAULT NULL,
+  `total_usage_hours` int DEFAULT '0',
+  `year_manufactured` int DEFAULT NULL,
+  `weight_kg` decimal(10,2) DEFAULT NULL,
+  `last_maintenance` date DEFAULT NULL,
+  `icon` varchar(100) NOT NULL,
+  `image_path` varchar(500) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `operator_id` (`operator_id`)
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `equipment`
+--
+
+INSERT INTO `equipment` (`id`, `equipment_name`, `category`, `equipment_id`, `model`, `description`, `status`, `location`, `operator_id`, `purchase_date`, `daily_rate`, `hourly_rate`, `fuel_type`, `total_usage_hours`, `year_manufactured`, `weight_kg`, `last_maintenance`, `icon`, `image_path`, `created_at`, `updated_at`) VALUES
+(1, 'Tractor MF 315', 'tractor', 'EQ-001', 'forgess', 'gg', 'available', 'Blantyre Depot', 0, '2026-03-08', 200000.00, 16500.00, 'diesel', 0, 2024, 3500.00, '2026-03-08', 'fa-tractor', 'assets/images/equipment/1772980299_images (2).jpg', '2026-03-08 14:31:39', '2026-03-08 14:31:39'),
+(2, 'Tractor MF 315', 'tractor', 'EQ-002', 'forgess', 'ddd', 'available', 'Blantyre Depot', 0, '2026-03-08', 200000.00, 16500.00, 'diesel', 0, 2024, 3500.00, '2026-03-08', 'fa-wheat-awn', 'assets/images/equipment/1772980419_images (2).jpg', '2026-03-08 14:33:39', '2026-03-08 14:33:39');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `users`
 --
 
@@ -59,7 +100,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `password_hash` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `role` enum('customer','admin','operator') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'customer',
+  `role` enum('customer','admin','operator') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'customer',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`user_id`),

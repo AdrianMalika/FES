@@ -32,6 +32,9 @@ if ($_SESSION['role'] !== 'customer') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Customer Dashboard - FES</title>
     <link rel="icon" type="image/png" href="../../assets/images/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -45,6 +48,10 @@ if ($_SESSION['role'] !== 'customer') {
                             dark: '#424242'
                         }
                     },
+                    fontFamily: {
+                        display: ['"Barlow Condensed"', 'sans-serif'],
+                        body: ['Barlow', 'sans-serif'],
+                    },
                     boxShadow: {
                         card: '0 4px 15px rgba(0,0,0,0.05)'
                     }
@@ -52,10 +59,14 @@ if ($_SESSION['role'] !== 'customer') {
             }
         };
     </script>
+    <style>
+        * { font-family: 'Barlow', sans-serif; }
+        h1, h2, h3, h4, .display { font-family: 'Barlow Condensed', sans-serif; }
+    </style>
 </head>
 
 <body>
-    <div class="min-h-screen w-full bg-gray-100" style="font-family: Georgia, 'Times New Roman', serif;">
+    <div class="min-h-screen w-full bg-gray-100">
         <div class="flex min-h-screen">
             <!-- Sidebar -->
             <?php include __DIR__ . '/include/sidebar.php'; ?>
@@ -63,7 +74,7 @@ if ($_SESSION['role'] !== 'customer') {
             <div id="fes-dashboard-overlay" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
 
             <!-- Main -->
-            <div class="flex-1 flex flex-col min-w-0">
+            <div class="flex-1 flex flex-col min-w-0 md:ml-64">
                 <!-- Top bar -->
                 <header class="bg-white px-6 py-7 flex items-center justify-between shadow-sm">
                     <div class="flex items-center gap-3">

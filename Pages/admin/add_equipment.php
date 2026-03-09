@@ -204,20 +204,6 @@ try {
                                     </div>
 
                                     <div>
-                                        <label for="equipment_id" class="block text-sm font-medium text-gray-700 mb-2">
-                                            Equipment ID <span class="text-red-500">*</span>
-                                        </label>
-                                        <div class="relative">
-                                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <i class="fas fa-hashtag text-gray-400"></i>
-                                            </div>
-                                            <input type="text" id="equipment_id" name="equipment_id" required
-                                                   class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fes-red focus:border-fes-red transition-colors"
-                                                   placeholder="e.g., EQ-001">
-                                        </div>
-                                    </div>
-
-                                    <div>
                                         <label for="category" class="block text-sm font-medium text-gray-700 mb-2">
                                             Category <span class="text-red-500">*</span>
                                         </label>
@@ -317,7 +303,7 @@ try {
                                             </div>
                                             <select id="location" name="location" required
                                                     class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fes-red focus:border-fes-red transition-colors appearance-none">
-                                                <option value="">Select depot</option>
+                                                
                                                 <option value="Blantyre Depot">Blantyre Depot</option>
                                                 <option value="Lilongwe Hub"> Lilongwe Hub</option>
                                                 <option value="Mzuzu Branch"> Mzuzu Branch</option>
@@ -447,7 +433,7 @@ try {
                                             </div>
                                             <select id="fuel_type" name="fuel_type"
                                                     class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fes-red focus:border-fes-red transition-colors appearance-none">
-                                                <option value="">Select fuel</option>
+                                               
                                                 <option value="diesel">Diesel</option>
                                                 <option value="petrol">Petrol</option>
                                                 <option value="electric">Electric</option>
