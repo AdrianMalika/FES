@@ -5,8 +5,12 @@ require_once '../../vendor/autoload.php';
 
 // Import PHPMailer
 use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+use PHPMailer\PHPMailer\Exception as MailException;
 use PHPMailer\PHPMailer\SMTP;
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 $error = '';
 
@@ -16,7 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $full_name = trim($_POST['full_name'] ?? '');
-$email = trim($_POST['email'] ?? '');
+$email = strtolower(trim($_POST['email'] ?? ''));
+$created_by = (int)($_SESSION['user_id'] ?? 0);
 
 if (empty($full_name) || empty($email)) {
     header('Location: add_operator.php?error=All fields are required');
@@ -39,17 +44,18 @@ try {
     $result = $checkStmt->get_result();
 
     if ($result->num_rows > 0) {
-        throw new Exception('An account with this email already exists.');
+        header('Location: add_operator.php?error_code=duplicate_email&email=' . urlencode($email));
+        exit();
     }
     $checkStmt->close();
 
     // Do NOT generate plaintext passwords. Create unverified user with temporary hash.
     $hashed_password = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
 
-    $insertStmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role, verified) VALUES (?, ?, ?, \'operator\', 0)');
-    $insertStmt->bind_param('sss', $full_name, $email, $hashed_password);
+    $insertStmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role, created_by) VALUES (?, ?, ?, \'operator\', ?)');
+    $insertStmt->bind_param('sssi', $full_name, $email, $hashed_password, $created_by);
     if (!$insertStmt->execute()) {
-        throw new Exception('Failed to create operator account.');
+        throw new \Exception('Failed to create operator account.');
     }
     $insertStmt->close();
 
@@ -165,7 +171,7 @@ try {
         // Log successful email send
         error_log("Email successfully sent to: $email for operator: $full_name");
         
-    } catch (Exception $e) {
+    } catch (MailException $e) {
         // Detailed error logging
         $errorDetails = [
             'time' => date('Y-m-d H:i:s'),
@@ -182,7 +188,7 @@ try {
     header('Location: add_operator.php?success=1');
     exit();
 
-} catch (Exception $e) {
+} catch (\Exception $e) {
     $conn->rollback();
     error_log('Operator creation error: ' . $e->getMessage());
     header('Location: add_operator.php?error=' . urlencode($e->getMessage()));

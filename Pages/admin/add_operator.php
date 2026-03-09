@@ -2,6 +2,8 @@
 // Initialize variables for error handling
 $success = '';
 $error = '';
+$error_code = $_GET['error_code'] ?? '';
+$existing_email = trim($_GET['email'] ?? '');
 
 // Check for success/error messages from URL parameters
 if (isset($_GET['success'])) {
@@ -100,6 +102,24 @@ if (isset($_GET['error'])) {
                         </div>
                     <?php endif; ?>
 
+                    <?php if ($error_code === 'duplicate_email'): ?>
+                        <div class="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                            <div class="flex items-start gap-3">
+                                <i class="fas fa-triangle-exclamation text-amber-600 mt-0.5"></i>
+                                <div>
+                                    <p class="font-semibold">Operator account could not be created.</p>
+                                    <p class="mt-1 text-amber-800">
+                                        The email
+                                        <span class="font-semibold"><?php echo htmlspecialchars($existing_email); ?></span>
+                                        is already registered to an existing user account. You cannot create another operator with the same email.
+                                        Use a different email address or manage the existing account from the Users page.
+                                    </p>
+                                    <a href="users.php" class="inline-block mt-2 text-fes-red font-semibold hover:underline">Go to Users</a>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
                     <!-- Account Setup Card -->
                     <div class="bg-white rounded-xl shadow-card p-8 max-w-2xl mx-auto">
                         <div class="text-center mb-8">
@@ -110,7 +130,7 @@ if (isset($_GET['error'])) {
                             <p class="text-base text-gray-500">Create a new operator account with login credentials</p>
                         </div>
 
-                        <form action="process_add_operator.php?v=<?php echo time(); ?>" method="post" class="space-y-6">
+                        <form id="add-operator-form" action="process_add_operator.php?v=<?php echo time(); ?>" method="post" class="space-y-6">
                             <div>
                                 <label class="block text-base font-medium text-gray-700 mb-3">Full Name <span class="text-fes-red">*</span></label>
                                 <input type="text" name="full_name" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" placeholder="e.g. James Phiri" required>
@@ -126,9 +146,14 @@ if (isset($_GET['error'])) {
                                 <input type="password" name="password" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" placeholder="Enter password (min 8 characters)" required>
                             </div>
 
-                            <div class="pt-8">
-                                <button type="submit" class="w-full inline-flex items-center justify-center gap-3 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-6 py-3 rounded-lg shadow transition text-base">
-                                    <i class="fas fa-user-plus"></i> Create Operator
+                            <div class="pt-8 flex items-center gap-3">
+                                <a href="users.php" class="w-1/2 inline-flex items-center justify-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium px-6 py-3 rounded-lg transition text-base">
+                                    <i class="fas fa-arrow-left"></i>
+                                    Cancel / Back
+                                </a>
+                                <button id="create-operator-btn" type="submit" class="w-1/2 inline-flex items-center justify-center gap-3 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-6 py-3 rounded-lg shadow transition text-base">
+                                    <i class="fas fa-user-plus"></i>
+                                    <span>Create Operator</span>
                                 </button>
                             </div>
                         </form>
@@ -174,6 +199,18 @@ if (isset($_GET['error'])) {
                 } else {
                     closeSidebar();
                 }
+            });
+        })();
+
+        (function () {
+            var form = document.getElementById('add-operator-form');
+            var submitBtn = document.getElementById('create-operator-btn');
+            if (!form || !submitBtn) return;
+
+            form.addEventListener('submit', function () {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Creating...</span>';
             });
         })();
     </script>
