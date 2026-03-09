@@ -5,31 +5,29 @@ if (session_status() === PHP_SESSION_NONE) {
 ?>
 <style>
 #fes-dashboard-sidebar {
-    background:
-        radial-gradient(120% 80% at 0% 0%, rgba(211,47,47,.14) 0%, rgba(211,47,47,0) 38%),
-        linear-gradient(180deg, #2f2f31 0%, #262729 100%) !important;
-    border-right: 1px solid rgba(255,255,255,.06);
-    box-shadow: 10px 0 30px rgba(0,0,0,.24);
+    background: #28292c !important;
+    border-right: 1px solid rgba(255,255,255,.07);
+    box-shadow: 8px 0 24px rgba(0,0,0,.2);
 }
 
 #fes-dashboard-sidebar .brand {
     height: 84px;
     padding: 0 20px;
-    border-bottom: 1px solid rgba(255,255,255,.08);
+    border-bottom: 1px solid rgba(255,255,255,.09);
     gap: 12px;
 }
 
 #fes-dashboard-sidebar .brand-icon {
     width: 38px;
     height: 38px;
-    background: #D32F2F;
+    background: #D93434;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 16px;
     color: #fff;
-    box-shadow: 0 8px 18px rgba(211,47,47,.42);
+    box-shadow: 0 6px 14px rgba(217,52,52,.32);
     flex-shrink: 0;
 }
 
@@ -66,9 +64,9 @@ if (session_status() === PHP_SESSION_NONE) {
 #fes-dashboard-sidebar nav a {
     border-radius: 10px !important;
     padding: 12px 14px !important;
-    font-size: 1.06rem !important;
+    font-size: 1.02rem !important;
     font-weight: 600 !important;
-    color: rgba(255,255,255,.65) !important;
+    color: rgba(255,255,255,.68) !important;
     margin-bottom: 6px;
     gap: 12px !important;
     position: relative;
@@ -77,7 +75,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 #fes-dashboard-sidebar nav a i {
-    color: rgba(255,255,255,.4) !important;
+    color: rgba(255,255,255,.42) !important;
     font-size: 1.05rem;
     transition: color .2s;
     width: 22px;
@@ -85,7 +83,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 #fes-dashboard-sidebar nav a:hover {
-    background: rgba(255,255,255,.09) !important;
+    background: rgba(255,255,255,.08) !important;
     color: #fff !important;
     transform: translateX(2px);
 }
@@ -95,9 +93,9 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 #fes-dashboard-sidebar nav a.bg-fes-red {
-    background: linear-gradient(135deg, #D32F2F 0%, #c62828 100%) !important;
+    background: #D93434 !important;
     color: #fff !important;
-    box-shadow: 0 10px 20px rgba(211,47,47,.35) !important;
+    box-shadow: 0 8px 18px rgba(217,52,52,.3) !important;
 }
 
 #fes-dashboard-sidebar nav a.bg-fes-red::before {
@@ -118,7 +116,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 #fes-dashboard-sidebar .sidebar-footer {
     padding: 14px 10px 18px;
-    border-top: 1px solid rgba(255,255,255,.08);
+    border-top: 1px solid rgba(255,255,255,.09);
 }
 
 .logout-btn {
@@ -130,19 +128,14 @@ if (session_status() === PHP_SESSION_NONE) {
     border-radius: 10px;
     text-decoration: none;
     width: 100%;
-    border: 1px solid rgba(255,255,255,.09);
+    border: 1px solid rgba(255,255,255,.1);
     background: rgba(255,255,255,.03);
     transition: background .2s, border-color .2s;
 }
 
-.logout-btn span {
-    font-size: 1rem;
-    letter-spacing: .01em;
-}
-
 .logout-btn:hover {
-    background: rgba(211,47,47,.18);
-    border-color: rgba(211,47,47,.45);
+    background: rgba(217,52,52,.16);
+    border-color: rgba(217,52,52,.45);
 }
 
 .logout-icon {
@@ -154,7 +147,7 @@ if (session_status() === PHP_SESSION_NONE) {
 .logout-text {
     font-size: 1rem;
     font-weight: 600;
-    color: rgba(255,255,255,.6);
+    color: rgba(255,255,255,.62);
     transition: color .2s;
     font-family: 'Barlow', sans-serif;
 }
@@ -207,3 +200,4 @@ if (session_status() === PHP_SESSION_NONE) {
         </button>
     </div>
 </aside>
+

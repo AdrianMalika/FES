@@ -90,9 +90,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In - FES</title>
     <link rel="icon" type="image/png" href="../../assets/images/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
+        * { font-family: 'Barlow', sans-serif; }
+        h1, h2, h3, h4, .display { font-family: 'Barlow Condensed', sans-serif; }
+
         @media (max-width: 768px) {
             body {
                 height: auto !important;
@@ -135,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 
 <body
-    style="margin: 0; padding: 0; font-family: Georgia, 'Times New Roman', serif; background-color: #f5f5f5; height: 100vh; display: flex; align-items: center; justify-content: center;">
+    style="margin: 0; padding: 0; background-color: #f5f5f5; height: 100vh; display: flex; align-items: center; justify-content: center;">
 
     <div id="fes-auth-shell"
         style="display: flex; width: 90%; max-width: 1200px; height: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); overflow: hidden;">

@@ -14,7 +14,7 @@
 </style>
 
 <!-- Footer -->
-<footer id="fes-footer" style="background-color: #212121; color: #ffffff; padding: 50px 50px 30px 50px; font-family: Georgia, 'Times New Roman', serif;">
+<footer id="fes-footer" style="background-color: #212121; color: #ffffff; padding: 50px 50px 30px 50px; font-family: 'Barlow', sans-serif;">
     <div style="max-width: 1200px; margin: 0 auto;">
         <div id="fes-footer-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; margin-bottom: 40px;">
             <div>

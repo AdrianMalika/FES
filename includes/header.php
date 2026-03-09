@@ -58,7 +58,7 @@ $pagesBase = $basePath . '/Pages';
 </style>
 
 <!-- Navigation -->
-<nav id="fes-nav" style="background-color: #ffffff; padding: 20px 50px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid #f3f4f6; font-family: Georgia, 'Times New Roman', serif;">
+<nav id="fes-nav" style="background-color: #ffffff; padding: 20px 50px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid #f3f4f6; font-family: 'Barlow', sans-serif;">
     <!-- Logo -->
     <div style="display: flex; align-items: center;">
         <a href="<?php echo htmlspecialchars($pagesBase . '/index.php'); ?>" style="text-decoration: none;">
