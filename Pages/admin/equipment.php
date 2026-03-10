@@ -39,9 +39,21 @@ try {
             e.equipment_id,
             e.equipment_name,
             e.category,
+            e.model,
+            e.description,
             e.status,
             e.location,
             e.operator_id,
+            e.purchase_date,
+            e.daily_rate,
+            e.hourly_rate,
+            e.fuel_type,
+            e.total_usage_hours,
+            e.year_manufactured,
+            e.weight_kg,
+            e.last_maintenance,
+            e.icon,
+            e.image_path,
             u.name AS operator_name
         FROM equipment e
         LEFT JOIN users u ON u.user_id = e.operator_id
@@ -69,7 +81,6 @@ try {
             e.equipment_name
         FROM equipment e
         WHERE e.operator_id IS NOT NULL
-          AND e.status = 'in_use'
     ";
     $busyRes = $conn->query($busySql);
     if ($busyRes) {
@@ -185,6 +196,7 @@ try {
                         <table class="min-w-full">
                             <thead>
                                 <tr class="text-left text-xs font-medium text-gray-500 border-b uppercase tracking-wider">
+                                    <th class="py-3 pr-4">Equipment ID</th>
                                     <th class="py-3 pr-4">Equipment</th>
                                     <th class="py-3 pr-4">Category</th>
                                     <th class="py-3 pr-4">Status</th>
@@ -195,14 +207,17 @@ try {
                             <tbody class="text-sm text-gray-900">
                                 <?php if (empty($equipment)): ?>
                                     <tr>
-                                        <td colspan="5" class="py-10 text-center text-gray-500">No equipment found.</td>
+                                        <td colspan="6" class="py-10 text-center text-gray-500">No equipment found.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($equipment as $row): ?>
                                         <tr class="border-b hover:bg-gray-50">
                                             <td class="py-3 pr-4">
+                                                <div class="font-medium"><?php echo htmlspecialchars($row['equipment_id']); ?></div>
+                                                <div class="text-xs text-gray-500"><?php echo htmlspecialchars($row['location']); ?></div>
+                                            </td>
+                                            <td class="py-3 pr-4">
                                                 <div class="font-medium"><?php echo htmlspecialchars($row['equipment_name']); ?></div>
-                                                <div class="text-xs text-gray-500"><?php echo htmlspecialchars($row['equipment_id']); ?> | <?php echo htmlspecialchars($row['location']); ?></div>
                                             </td>
                                             <td class="py-3 pr-4"><?php echo htmlspecialchars(ucfirst($row['category'])); ?></td>
                                             <td class="py-3 pr-4">
@@ -250,25 +265,136 @@ try {
                                             </td>
                                         </tr>
                                         <tr id="edit-row-<?php echo (int)$row['id']; ?>" class="hidden bg-gray-50">
-                                            <td colspan="5" class="py-3 px-3 border-b">
-                                                <form action="include/process_update_equipment.php" method="POST" class="grid grid-cols-1 md:grid-cols-5 gap-2">
+                                            <td colspan="5" class="py-4 px-4 border-b">
+                                                <form action="include/process_update_equipment.php" method="POST" enctype="multipart/form-data" class="space-y-3">
                                                     <input type="hidden" name="equipment_id" value="<?php echo (int)$row['id']; ?>">
-                                                    <input type="text" name="equipment_name" value="<?php echo htmlspecialchars($row['equipment_name']); ?>" class="border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" placeholder="Equipment name" required>
-                                                    <input type="text" name="category" value="<?php echo htmlspecialchars($row['category']); ?>" class="border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" placeholder="Category" required>
-                                                    <select name="status" class="border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" required>
-                                                        <option value="available" <?php echo $row['status'] === 'available' ? 'selected' : ''; ?>>Available</option>
-                                                        <option value="in_use" <?php echo $row['status'] === 'in_use' ? 'selected' : ''; ?>>In Use</option>
-                                                        <option value="maintenance" <?php echo $row['status'] === 'maintenance' ? 'selected' : ''; ?>>Maintenance</option>
-                                                        <option value="retired" <?php echo $row['status'] === 'retired' ? 'selected' : ''; ?>>Retired</option>
-                                                    </select>
-                                                    <select name="location" class="border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" required>
-                                                        <option value="Blantyre Depot" <?php echo $row['location'] === 'Blantyre Depot' ? 'selected' : ''; ?>>Blantyre Depot</option>
-                                                        <option value="Lilongwe Hub" <?php echo $row['location'] === 'Lilongwe Hub' ? 'selected' : ''; ?>>Lilongwe Hub</option>
-                                                        <option value="Mzuzu Branch" <?php echo $row['location'] === 'Mzuzu Branch' ? 'selected' : ''; ?>>Mzuzu Branch</option>
-                                                        <option value="Limbe Store" <?php echo $row['location'] === 'Limbe Store' ? 'selected' : ''; ?>>Limbe Store</option>
-                                                        <option value="Workshop" <?php echo $row['location'] === 'Workshop' ? 'selected' : ''; ?>>Workshop</option>
-                                                    </select>
-                                                    <div class="flex items-center gap-2">
+                                                    <input type="hidden" name="current_image_path" value="<?php echo htmlspecialchars($row['image_path'] ?? ''); ?>">
+
+                                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Equipment Name</label>
+                                                            <input type="text" name="equipment_name" value="<?php echo htmlspecialchars($row['equipment_name']); ?>" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" required>
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                                                            <select name="category" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" required>
+                                                                <option value="">Select category</option>
+                                                                <option value="tractor" <?php echo $row['category'] === 'tractor' ? 'selected' : ''; ?>>Tractor</option>
+                                                                <option value="harvester" <?php echo $row['category'] === 'harvester' ? 'selected' : ''; ?>>Harvester</option>
+                                                                <option value="excavator" <?php echo $row['category'] === 'excavator' ? 'selected' : ''; ?>>Excavator</option>
+                                                                <option value="generator" <?php echo $row['category'] === 'generator' ? 'selected' : ''; ?>>Generator</option>
+                                                                <option value="pump" <?php echo $row['category'] === 'pump' ? 'selected' : ''; ?>>Irrigation Pump</option>
+                                                                <option value="truck" <?php echo $row['category'] === 'truck' ? 'selected' : ''; ?>>Truck / Transport</option>
+                                                                <option value="roller" <?php echo $row['category'] === 'roller' ? 'selected' : ''; ?>>Compactor / Roller</option>
+                                                                <option value="sprayer" <?php echo $row['category'] === 'sprayer' ? 'selected' : ''; ?>>Sprayer</option>
+                                                                <option value="loader" <?php echo $row['category'] === 'loader' ? 'selected' : ''; ?>>Loader</option>
+                                                                <option value="other" <?php echo $row['category'] === 'other' ? 'selected' : ''; ?>>Other</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                                                            <select name="status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" required>
+                                                                <option value="available" <?php echo $row['status'] === 'available' ? 'selected' : ''; ?>>Available</option>
+                                                                <option value="in_use" <?php echo $row['status'] === 'in_use' ? 'selected' : ''; ?>>In Use</option>
+                                                                <option value="maintenance" <?php echo $row['status'] === 'maintenance' ? 'selected' : ''; ?>>Maintenance</option>
+                                                                <option value="retired" <?php echo $row['status'] === 'retired' ? 'selected' : ''; ?>>Retired</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Model / Make</label>
+                                                            <input type="text" name="model" value="<?php echo htmlspecialchars($row['model'] ?? ''); ?>" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Location</label>
+                                                            <select name="location" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" required>
+                                                                <option value="Blantyre Depot" <?php echo $row['location'] === 'Blantyre Depot' ? 'selected' : ''; ?>>Blantyre Depot</option>
+                                                                <option value="Lilongwe Hub" <?php echo $row['location'] === 'Lilongwe Hub' ? 'selected' : ''; ?>>Lilongwe Hub</option>
+                                                                <option value="Mzuzu Branch" <?php echo $row['location'] === 'Mzuzu Branch' ? 'selected' : ''; ?>>Mzuzu Branch</option>
+                                                                <option value="Limbe Store" <?php echo $row['location'] === 'Limbe Store' ? 'selected' : ''; ?>>Limbe Store</option>
+                                                                <option value="Workshop" <?php echo $row['location'] === 'Workshop' ? 'selected' : ''; ?>>Workshop</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Purchase Date</label>
+                                                            <input type="date" name="purchase_date" value="<?php echo htmlspecialchars($row['purchase_date'] ?? ''); ?>" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                                                        <textarea name="description" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red resize-none"><?php echo htmlspecialchars($row['description'] ?? ''); ?></textarea>
+                                                    </div>
+
+                                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Daily Rate (MWK)</label>
+                                                            <input type="number" name="daily_rate" value="<?php echo htmlspecialchars($row['daily_rate'] ?? '0'); ?>" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Hourly Rate (MWK)</label>
+                                                            <input type="number" name="hourly_rate" value="<?php echo htmlspecialchars($row['hourly_rate'] ?? '0'); ?>" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Fuel Type</label>
+                                                            <select name="fuel_type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                                                <option value="diesel" <?php echo $row['fuel_type'] === 'diesel' ? 'selected' : ''; ?>>Diesel</option>
+                                                                <option value="petrol" <?php echo $row['fuel_type'] === 'petrol' ? 'selected' : ''; ?>>Petrol</option>
+                                                                <option value="electric" <?php echo $row['fuel_type'] === 'electric' ? 'selected' : ''; ?>>Electric</option>
+                                                                <option value="na" <?php echo $row['fuel_type'] === 'na' ? 'selected' : ''; ?>>N/A</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Usage Hours</label>
+                                                            <input type="number" name="total_usage_hours" value="<?php echo htmlspecialchars($row['total_usage_hours'] ?? '0'); ?>" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Year Manufactured</label>
+                                                            <input type="number" name="year_manufactured" value="<?php echo htmlspecialchars($row['year_manufactured'] ?? ''); ?>" min="1970" max="2035" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Weight (kg)</label>
+                                                            <input type="number" name="weight_kg" value="<?php echo htmlspecialchars($row['weight_kg'] ?? ''); ?>" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Last Maintenance</label>
+                                                            <input type="date" name="last_maintenance" value="<?php echo htmlspecialchars($row['last_maintenance'] ?? ''); ?>" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Display Icon</label>
+                                                            <select name="icon" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                                                <option value="">Select icon</option>
+                                                                <option value="fa-tractor" <?php echo $row['icon'] === 'fa-tractor' ? 'selected' : ''; ?>>Tractor</option>
+                                                                <option value="fa-wheat-awn" <?php echo $row['icon'] === 'fa-wheat-awn' ? 'selected' : ''; ?>>Harvester</option>
+                                                                <option value="fa-helmet-safety" <?php echo $row['icon'] === 'fa-helmet-safety' ? 'selected' : ''; ?>>Excavator</option>
+                                                                <option value="fa-bolt" <?php echo $row['icon'] === 'fa-bolt' ? 'selected' : ''; ?>>Generator</option>
+                                                                <option value="fa-faucet" <?php echo $row['icon'] === 'fa-faucet' ? 'selected' : ''; ?>>Pump</option>
+                                                                <option value="fa-truck-ramp-box" <?php echo $row['icon'] === 'fa-truck-ramp-box' ? 'selected' : ''; ?>>Truck</option>
+                                                                <option value="fa-spray-can" <?php echo $row['icon'] === 'fa-spray-can' ? 'selected' : ''; ?>>Sprayer</option>
+                                                                <option value="fa-circle" <?php echo $row['icon'] === 'fa-circle' ? 'selected' : ''; ?>>Roller</option>
+                                                                <option value="fa-person-digging" <?php echo $row['icon'] === 'fa-person-digging' ? 'selected' : ''; ?>>Loader</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Image</label>
+                                                            <div class="flex items-center gap-3">
+                                                                <input type="file" name="image" accept="image/*" class="text-xs">
+                                                                <?php if (!empty($row['image_path'])): ?>
+                                                                    <span class="text-xs text-gray-500 truncate max-w-[160px]">Current: <?php echo htmlspecialchars(basename($row['image_path'])); ?></span>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="flex items-center gap-2 pt-1">
                                                         <button type="submit" class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-4 py-2.5 rounded-lg shadow transition">
                                                             <i class="fas fa-save"></i>
                                                             Save

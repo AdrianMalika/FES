@@ -57,21 +57,34 @@ if ($_SESSION['role'] !== 'operator') {
     <style>
         * { font-family: 'Barlow', sans-serif; }
         h1, h2, h3, h4, .display { font-family: 'Barlow Condensed', sans-serif; }
+
+        /* Ensure main content sits beside sidebar on desktop, full-width on mobile */
+        @media (max-width: 767px) {
+            #main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+        }
+        @media (min-width: 768px) {
+            #main-content {
+                margin-left: 256px !important; /* matches w-64 sidebar */
+                width: calc(100% - 256px) !important;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="min-h-screen w-full bg-gray-100">
-        <div class="flex min-h-screen">
-            <!-- Sidebar -->
-            <?php include __DIR__ . '/include/sidebar.php'; ?>
+        <!-- Sidebar -->
+        <?php include __DIR__ . '/include/sidebar.php'; ?>
 
-            <div id="fes-dashboard-overlay" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
+        <div id="fes-dashboard-overlay" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
 
-            <!-- Main -->
-            <div class="flex-1 flex flex-col min-w-0">
-                <!-- Top bar -->
-                <header class="bg-white px-6 py-7 flex items-center justify-between shadow-sm">
+        <!-- Main content -->
+        <div class="min-h-screen" id="main-content">
+            <!-- Top bar -->
+            <header class="bg-white px-6 py-7 flex items-center justify-between shadow-sm">
                     <div class="flex items-center gap-3">
                         <button id="fes-dashboard-menu-btn" class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-600" aria-label="Open menu" aria-controls="fes-dashboard-sidebar" aria-expanded="false">
                             <i class="fas fa-bars"></i>
@@ -92,10 +105,10 @@ if ($_SESSION['role'] !== 'operator') {
                             Log Update
                         </button>
                     </div>
-                </header>
+            </header>
 
-                <!-- Content -->
-                <main class="flex-1 overflow-y-auto p-6">
+            <!-- Content -->
+            <main class="flex-1 overflow-y-auto p-6">
                     <!-- Stats -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
                         <div class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between">
@@ -235,7 +248,6 @@ if ($_SESSION['role'] !== 'operator') {
                 </main>
             </div>
         </div>
-    </div>
 
     <script>
         (function () {

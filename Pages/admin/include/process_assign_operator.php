@@ -56,8 +56,8 @@ try {
             exit();
         }
 
-        // Busy rule: operator cannot be assigned if already on another in-use equipment.
-        $busyStmt = $conn->prepare("SELECT equipment_id, equipment_name FROM equipment WHERE operator_id = ? AND status = 'in_use' AND id <> ? LIMIT 1");
+        // One-to-one rule: operator cannot be assigned if already linked to any other equipment.
+        $busyStmt = $conn->prepare("SELECT equipment_id, equipment_name FROM equipment WHERE operator_id = ? AND id <> ? LIMIT 1");
         $busyStmt->bind_param('ii', $operator_id, $equipment_id);
         $busyStmt->execute();
         $busyRes = $busyStmt->get_result();
@@ -65,7 +65,7 @@ try {
         $busyStmt->close();
 
         if ($busy) {
-            $_SESSION['error'] = 'Cannot assign operator. This operator is already assigned to active job on ' . $busy['equipment_id'] . ' (' . $busy['equipment_name'] . ').';
+            $_SESSION['error'] = 'Cannot assign operator. This operator is already assigned to ' . $busy['equipment_id'] . ' (' . $busy['equipment_name'] . '). Unassign them there first.';
             header('Location: ../equipment.php');
             exit();
         }

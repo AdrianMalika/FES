@@ -210,6 +210,7 @@ try {
                                     <th class="py-3 pr-4">Active Jobs</th>
                                     <th class="py-3 pr-4">Created</th>
                                     <th class="py-3 pr-4">Created By</th>
+                                    <th class="py-3 pr-4">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="text-sm text-gray-900">
@@ -243,6 +244,12 @@ try {
                                             </td>
                                             <td class="py-3 pr-4 text-gray-600">
                                                 <?php echo !empty($op['creator_name']) ? htmlspecialchars($op['creator_name']) : 'System'; ?>
+                                            </td>
+                                            <td class="py-3 pr-4">
+                                                <a href="operator_manage.php?id=<?php echo (int)$op['user_id']; ?>" class="inline-flex items-center gap-1 text-sm text-fes-red hover:underline">
+                                                    <i class="fas fa-briefcase"></i>
+                                                    View workload
+                                                </a>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

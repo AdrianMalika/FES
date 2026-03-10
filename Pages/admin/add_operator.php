@@ -20,14 +20,15 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
     exit();
 }
 
-require_once '../../includes/database.phpe
+require_once '../../includes/database.php';
+
 $available_equipment = [];
 $recent_operators = [];
 
 try {
     $conn = getDBConnection();
 
-    $eq_sql = "SELECT id, equipment_id, equipment_name FROM equipment WHERE status IN ('available','maintenance') ORDER BY equipment_name ASC";
+    $eq_sql = 'SELECT id, equipment_id, equipment_name FROM equipment WHERE status IN ("available","maintenance") ORDER BY equipment_name ASC';
     $eq_res = $conn->query($eq_sql);
     if ($eq_res) {
         while ($row = $eq_res->fetch_assoc()) {

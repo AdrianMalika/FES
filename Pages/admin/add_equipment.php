@@ -19,20 +19,36 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id']) || ($_SESSION['r
 }
 
 $operators = [];
+$next_equipment_id = 'EQ-001';
 try {
     require_once '../../includes/database.php';
     $conn = getDBConnection();
+
+    // Load operators for assignment dropdown
     $sql = "SELECT user_id, name FROM users WHERE role = 'operator' ORDER BY name ASC";
     $result = $conn->query($sql);
-
     if ($result && $result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
             $operators[] = $row;
         }
     }
+
+    // Compute the next equipment ID preview (EQ-001, EQ-002, ...)
+    $idSql = "SELECT equipment_id FROM equipment ORDER BY id DESC LIMIT 1";
+    $idRes = $conn->query($idSql);
+    if ($idRes && $last = $idRes->fetch_assoc()) {
+        $lastId = (string)($last['equipment_id'] ?? '');
+        if (strpos($lastId, 'EQ-') === 0) {
+            $num = (int)substr($lastId, 3);
+            $next_equipment_id = 'EQ-' . str_pad($num + 1, 3, '0', STR_PAD_LEFT);
+        }
+    }
+
+    $conn->close();
 } catch (Exception $e) {
     error_log('Database error: ' . $e->getMessage());
     $operators = [];
+    $next_equipment_id = 'EQ-001';
 }
 ?>
 <!DOCTYPE html>
@@ -192,6 +208,14 @@ try {
                                 <div>
                                     <label for="serial_number" class="block text-sm font-medium text-gray-700 mb-2">Serial Number</label>
                                     <input type="text" id="serial_number" name="serial_number" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fes-red focus:border-fes-red transition-colors" placeholder="e.g., MF-375-2026-011">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Equipment ID</label>
+                                    <div class="block w-full px-4 py-3 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-800">
+                                        <?php echo htmlspecialchars($next_equipment_id); ?>
+                                        <span class="ml-1 text-xs text-gray-500">(auto-generated)</span>
+                                    </div>
                                 </div>
 
                                 <div class="lg:col-span-3">
