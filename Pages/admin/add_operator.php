@@ -179,12 +179,11 @@ try {
                                     <label class="block text-base font-medium text-gray-700 mb-2">Email</label>
                                     <input type="email" name="email" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" required>
                                 </div>
-
-                                <div>
-                                    <label class="block text-base font-medium text-gray-700 mb-2">Password</label>
-                                    <input type="password" name="password" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" placeholder="At least 8 characters" required>
-                                </div>
                             </div>
+                            <p class="text-sm text-gray-600">
+                                <i class="fas fa-shield-halved text-fes-red mr-1"></i>
+                                A secure activation link will be sent by email. The operator will set their own password via that link (expires in 24 hours).
+                            </p>
 
                             <div>
                                 <label class="block text-base font-medium text-gray-700 mb-2">Assign Equipment (Optional)</label>

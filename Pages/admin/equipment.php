@@ -81,6 +81,7 @@ try {
             e.equipment_name
         FROM equipment e
         WHERE e.operator_id IS NOT NULL
+          AND e.status = 'in_use'
     ";
     $busyRes = $conn->query($busySql);
     if ($busyRes) {
