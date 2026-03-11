@@ -226,7 +226,7 @@ try {
                 </p>
 
                 <?php if(isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])): ?>
-                    <a href="booking.php"
+                    <a href="#available-fleet"
                        class="inline-flex items-center gap-3 bg-fes-red hover:bg-red-700 text-white font-display font-700 uppercase tracking-wider px-8 py-4 rounded-sm shadow-lg transition-all duration-300 hover:shadow-fes-red/40 hover:shadow-xl"
                        style="font-size:1rem; letter-spacing:0.1em;">
                         <i class="fas fa-calendar-check text-sm"></i>
@@ -309,7 +309,7 @@ try {
         <div class="max-w-7xl mx-auto px-6">
 
             <!-- Section heading -->
-            <div class="flex items-end justify-between mb-10">
+            <div class="flex items-end justify-between mb-10" id="available-fleet">
                 <div>
                     <span class="accent-line"></span>
                     <h2 class="font-display font-800 text-3xl lg:text-4xl text-gray-900" style="letter-spacing:-0.01em;">
