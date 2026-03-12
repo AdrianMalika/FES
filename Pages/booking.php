@@ -270,6 +270,12 @@ if ($equipmentId === '') {
             <span class="text-fes-red font-display font-700 text-sm uppercase tracking-[0.2em]">Customer Booking</span>
             <span class="block h-px w-12 bg-fes-red opacity-60"></span>
         </div>
+        <div class="mb-4">
+            <a href="customer/dashboard.php" class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-fes-red">
+                <i class="fas fa-tachometer-alt text-xs"></i>
+                Back to Dashboard
+            </a>
+        </div>
         <h1 class="font-display font-900 text-4xl lg:text-5xl text-gray-900 leading-none mb-6" style="letter-spacing:-0.01em;">
             Book Your<br>
             <span class="text-fes-red">Equipment</span>
@@ -411,6 +417,14 @@ if ($equipmentId === '') {
                                     <label class="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider">Booking Date</label>
                                     <input type="date" name="booking_date" required
                                            class="w-full border border-gray-200 rounded-sm px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-fes-red focus:border-fes-red bg-white">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider">Service Days</label>
+                                    <input type="number" name="service_days" min="1" value="1" required
+                                           class="w-full border border-gray-200 rounded-sm px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-fes-red focus:border-fes-red bg-white"
+                                           placeholder="Number of days the job will take">
+                                    <p class="mt-1 text-xs text-gray-500">Used to estimate total cost for multi-day jobs.</p>
                                 </div>
 
                                 <div>

@@ -7,8 +7,17 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'customer') {
     exit();
 }
 
-// Check if booking data is available
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST)) {
+// Booking confirmation flow:
+// 1) POST from booking.php -> store in session and show review
+// 2) POST with confirm_booking -> show success and clear session
+$pendingKey = 'pending_booking';
+$isConfirmPost = ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_booking']));
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isConfirmPost && !empty($_POST)) {
+    $_SESSION[$pendingKey] = $_POST;
+}
+
+if (empty($_SESSION[$pendingKey]) && ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST))) {
     header('Location: equipment.php');
     exit();
 }
@@ -23,7 +32,7 @@ define('FES_DEPOT_ADDRESS', 'Kaoshiung, Blantyre, Malawi');
 // Rates Configuration
 $RATES = [
     'transport_per_km' => 5000,
-    'operator_per_hour' => 2000,
+    'operator_per_hour' => 6000,
     'base_fee' => 15000,
     'equipment' => [
         'tractor' => ['hourly' => 25000, 'areas' => 15000, 'daily' => 180000],
@@ -71,8 +80,11 @@ function getEquipmentRates($category, $hourlyRate, $rates) {
 }
 
 // Calculate comprehensive cost
-function calculateBookingCost($equipment, $fieldLat, $fieldLng, $fieldAreas, $rates) {
+function calculateBookingCost($equipment, $fieldLat, $fieldLng, $fieldAreas, $serviceDays, $rates) {
     $costBreakdown = [];
+    $serviceDays = max(1, intval($serviceDays));
+    $serviceHoursPerDay = 8;
+    $serviceHours = $serviceDays * $serviceHoursPerDay;
     
     // Calculate travel distance and cost
     $distance = 0;
@@ -96,16 +108,19 @@ function calculateBookingCost($equipment, $fieldLat, $fieldLng, $fieldAreas, $ra
     
     // Calculate equipment cost
     $equipmentCost = 0;
-    $serviceDuration = 8;
+    $serviceDuration = $serviceHours;
     $landAreas = floatval($fieldAreas ?? 0);
+    $costBreakdown['service_days'] = $serviceDays;
+    $costBreakdown['service_hours'] = $serviceHours;
     
     if ($landAreas > 0) {
-        $equipmentCost = $landAreas * $equipmentRates['areas'];
+        $equipmentCost = $landAreas * $equipmentRates['areas'] * $serviceDays;
         $costBreakdown['pricing_model'] = 'per_area';
         $costBreakdown['land_area_areas'] = $landAreas;
         $costBreakdown['rate_per_area'] = $equipmentRates['areas'];
+        $costBreakdown['service_days'] = $serviceDays;
         
-        $minimumEquipmentCost = max(25000, $equipmentRates['areas'] * 1);
+        $minimumEquipmentCost = max(25000, $equipmentRates['areas'] * 1) * $serviceDays;
         if ($equipmentCost < $minimumEquipmentCost) {
             $equipmentCost = $minimumEquipmentCost;
             $costBreakdown['pricing_model'] = 'minimum_charge';
@@ -127,8 +142,9 @@ function calculateBookingCost($equipment, $fieldLat, $fieldLng, $fieldAreas, $ra
 }
 
 // Get booking data
-$bookingData = $_POST;
+$bookingData = $_SESSION[$pendingKey] ?? $_POST;
 $equipmentId = $bookingData['equipment_id'] ?? '';
+$serviceDays = max(1, intval($bookingData['service_days'] ?? 1));
 $equipment = null;
 
 if ($equipmentId) {
@@ -159,12 +175,84 @@ if ($equipment && $bookingData) {
         $equipment, 
         $bookingData['field_lat'] ?? '', 
         $bookingData['field_lng'] ?? '', 
-        $bookingData['field_hectares'] ?? '', 
+        $bookingData['field_hectares'] ?? '',
+        $serviceDays,
         $RATES
     );
 }
 
 $customerName = $_SESSION['name'] ?? 'Customer';
+$isConfirmed = $isConfirmPost && !empty($bookingData);
+$createdBookingId = null;
+$bookingStatus = 'pending';
+
+// Persist booking on confirm (idempotent by session hash)
+if ($isConfirmed && $equipment && $bookingData) {
+    $bookingHash = hash('sha256', json_encode($bookingData));
+    $existingHash = $_SESSION['last_booking_hash'] ?? '';
+    $existingId = $_SESSION['last_booking_id'] ?? null;
+
+    if ($existingHash === $bookingHash && !empty($existingId)) {
+        $createdBookingId = $existingId;
+    } else {
+        try {
+            $conn = getDBConnection();
+            $sql = "INSERT INTO bookings (
+                        customer_id, equipment_id, booking_date, service_days, service_type,
+                        service_location, contact_phone, field_lat, field_lng, field_address,
+                        field_polygon, field_hectares, notes, estimated_total_cost, status, created_at, updated_at
+                    ) VALUES (
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, NOW(), NOW()
+                    )";
+            if ($stmt = $conn->prepare($sql)) {
+                $customerId = intval($_SESSION['user_id']);
+                $equipmentId = $bookingData['equipment_id'] ?? '';
+                $bookingDate = $bookingData['booking_date'] ?? null;
+                $serviceType = $bookingData['service_type'] ?? '';
+                $serviceLocation = $bookingData['service_location'] ?? '';
+                $contactPhone = $bookingData['contact_phone'] ?? '';
+                $fieldLat = !empty($bookingData['field_lat']) ? floatval($bookingData['field_lat']) : null;
+                $fieldLng = !empty($bookingData['field_lng']) ? floatval($bookingData['field_lng']) : null;
+                $fieldAddress = $bookingData['field_address'] ?? '';
+                $fieldPolygon = $bookingData['field_polygon'] ?? '';
+                $fieldHectares = !empty($bookingData['field_hectares']) ? floatval($bookingData['field_hectares']) : null;
+                $notes = $bookingData['notes'] ?? '';
+                $estimatedTotal = $costBreakdown['total_cost'] ?? 0;
+
+                $stmt->bind_param(
+                    'ississsddssdsds',
+                    $customerId,
+                    $equipmentId,
+                    $bookingDate,
+                    $serviceDays,
+                    $serviceType,
+                    $serviceLocation,
+                    $contactPhone,
+                    $fieldLat,
+                    $fieldLng,
+                    $fieldAddress,
+                    $fieldPolygon,
+                    $fieldHectares,
+                    $notes,
+                    $estimatedTotal,
+                    $bookingStatus
+                );
+
+                if ($stmt->execute()) {
+                    $createdBookingId = $stmt->insert_id;
+                    $_SESSION['last_booking_id'] = $createdBookingId;
+                    $_SESSION['last_booking_hash'] = $bookingHash;
+                }
+                $stmt->close();
+            }
+            $conn->close();
+        } catch (Exception $e) {
+            error_log('Booking insert error: ' . $e->getMessage());
+        }
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -240,22 +328,48 @@ $customerName = $_SESSION['name'] ?? 'Customer';
             <span class="block h-px w-12 bg-fes-red opacity-60"></span>
         </div>
         <h1 class="font-display font-900 text-4xl lg:text-5xl text-gray-900 leading-none mb-6" style="letter-spacing:-0.01em;">
-            Booking <span class="text-fes-red">Confirmed</span>
+            <?php if ($isConfirmed): ?>
+                Booking <span class="text-fes-red">Sent</span>
+            <?php else: ?>
+                Review &amp; <span class="text-fes-red">Confirm</span>
+            <?php endif; ?>
         </h1>
         <p class="text-gray-600 text-base leading-relaxed max-w-2xl">
-            Thank you, <span class="font-semibold text-fes-red"><?php echo htmlspecialchars($customerName); ?></span>. Your booking request has been successfully submitted.
+            <?php if ($isConfirmed): ?>
+                Thank you, <span class="font-semibold text-fes-red"><?php echo htmlspecialchars($customerName); ?></span>. Your booking request has been successfully submitted.
+            <?php else: ?>
+                Please review your booking details below, then confirm to submit your request.
+            <?php endif; ?>
         </p>
     </div>
 
-    <div class="mb-8 rounded-sm border border-green-200 bg-green-50 px-6 py-5 flex items-start gap-4">
-        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
-            <i class="fas fa-check"></i>
+    <?php if ($isConfirmed): ?>
+        <div class="mb-8 rounded-sm border border-green-200 bg-green-50 px-6 py-5 flex items-start gap-4">
+            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                <i class="fas fa-check"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-800 text-lg text-gray-900">We have received your request</h2>
+                <p class="text-sm text-gray-600">Our team will review availability and confirm within 24 hours.</p>
+                <?php if (!empty($createdBookingId)): ?>
+                    <p class="text-xs text-gray-600 mt-2">
+                        Booking ID: <span class="font-semibold text-gray-900">#BK-<?php echo htmlspecialchars((string)$createdBookingId); ?></span>
+                        · Status: <span class="font-semibold text-amber-700">Pending</span>
+                    </p>
+                <?php endif; ?>
+            </div>
         </div>
-        <div>
-            <h2 class="font-display font-800 text-lg text-gray-900">We have received your request</h2>
-            <p class="text-sm text-gray-600">Our team will review availability and confirm within 24 hours.</p>
+    <?php else: ?>
+        <div class="mb-8 rounded-sm border border-gray-200 bg-white px-6 py-5 flex items-start gap-4">
+            <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
+                <i class="fas fa-clipboard-check"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-800 text-lg text-gray-900">Confirm before sending</h2>
+                <p class="text-sm text-gray-600">Double-check your details. You can still go back and edit.</p>
+            </div>
         </div>
-    </div>
+    <?php endif; ?>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-7">
         <!-- Booking Summary -->
@@ -281,6 +395,13 @@ $customerName = $_SESSION['name'] ?? 'Customer';
                         <div>
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Service Type</p>
                             <p class="text-base font-medium text-gray-800"><?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $bookingData['service_type'] ?? 'N/A'))); ?></p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Service Days</p>
+                            <p class="text-base font-medium text-gray-800">
+                                <?php echo htmlspecialchars((string)$serviceDays); ?>
+                                <?php echo $serviceDays === 1 ? ' day' : ' days'; ?>
+                            </p>
                         </div>
                     </div>
 
@@ -325,7 +446,9 @@ $customerName = $_SESSION['name'] ?? 'Customer';
                         <span class="font-bold text-gray-900">
                             MK <?php echo number_format($costBreakdown['equipment_cost'] ?? 0); ?>
                             <?php if (!empty($costBreakdown['pricing_model']) && $costBreakdown['pricing_model'] === 'per_area'): ?>
-                                <span class="text-xs font-normal text-gray-600">(<?php echo htmlspecialchars($costBreakdown['land_area_areas']); ?> areas x MK <?php echo number_format($costBreakdown['rate_per_area']); ?>/area)</span>
+                                <span class="text-xs font-normal text-gray-600">
+                                    (<?php echo htmlspecialchars($costBreakdown['land_area_areas']); ?> areas x MK <?php echo number_format($costBreakdown['rate_per_area']); ?>/area<?php if (($costBreakdown['service_days'] ?? 1) > 1) echo ' x ' . htmlspecialchars((string)$costBreakdown['service_days']) . ' days'; ?>)
+                                </span>
                             <?php elseif (!empty($costBreakdown['pricing_model']) && $costBreakdown['pricing_model'] === 'minimum_charge'): ?>
                                 <span class="text-xs font-normal text-gray-600">(Minimum charge: MK <?php echo number_format($costBreakdown['minimum_cost']); ?>)</span>
                             <?php else: ?>
@@ -336,7 +459,10 @@ $customerName = $_SESSION['name'] ?? 'Customer';
 
                     <div class="flex justify-between items-center pb-3 border-b border-gray-100">
                         <span class="text-gray-700 font-medium">Operator Cost:</span>
-                        <span class="font-bold text-gray-900">MK <?php echo number_format($costBreakdown['operator_cost'] ?? 0); ?> <span class="text-xs font-normal text-gray-600">(<?php echo htmlspecialchars($costBreakdown['service_hours'] ?? 8); ?> hrs x MK 2,000/hr)</span></span>
+                        <span class="font-bold text-gray-900">
+                            MK <?php echo number_format($costBreakdown['operator_cost'] ?? 0); ?>
+                            <span class="text-xs font-normal text-gray-600">(<?php echo htmlspecialchars($costBreakdown['service_hours'] ?? 8); ?> hrs x MK <?php echo number_format($RATES['operator_per_hour']); ?>/hr)</span>
+                        </span>
                     </div>
 
                     <div class="flex justify-between items-center pb-3 border-b border-gray-100">
@@ -418,18 +544,36 @@ $customerName = $_SESSION['name'] ?? 'Customer';
 
     <!-- Action Buttons -->
     <div class="flex flex-col sm:flex-row gap-4 justify-center mt-10">
-        <a href="equipment.php" class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-fes-red hover:bg-red-700 text-white font-display font-700 uppercase tracking-wider text-sm rounded-sm shadow-lg transition-all duration-300 hover:shadow-fes-red/40">
-            <i class="fas fa-plus text-sm"></i>
-            Book Another Equipment
-        </a>
-
-        <a href="customer-dashboard.php" class="inline-flex items-center justify-center gap-2 px-8 py-4 border border-gray-200 text-gray-600 font-display font-700 uppercase tracking-wider text-sm rounded-sm hover:bg-gray-50 transition-all duration-300">
-            <i class="fas fa-tachometer-alt text-sm"></i>
-            My Dashboard
-        </a>
+        <?php if ($isConfirmed): ?>
+            <a href="equipment.php" class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-fes-red hover:bg-red-700 text-white font-display font-700 uppercase tracking-wider text-sm rounded-sm shadow-lg transition-all duration-300 hover:shadow-fes-red/40">
+                <i class="fas fa-plus text-sm"></i>
+                Book Another Equipment
+            </a>
+            <a href="customer/dashboard.php" class="inline-flex items-center justify-center gap-2 px-8 py-4 border border-gray-200 text-gray-600 font-display font-700 uppercase tracking-wider text-sm rounded-sm hover:bg-gray-50 transition-all duration-300">
+                <i class="fas fa-tachometer-alt text-sm"></i>
+                My Dashboard
+            </a>
+        <?php else: ?>
+            <a href="booking.php?equipment_id=<?php echo urlencode($equipmentId); ?>" class="inline-flex items-center justify-center gap-2 px-8 py-4 border border-gray-200 text-gray-600 font-display font-700 uppercase tracking-wider text-sm rounded-sm hover:bg-gray-50 transition-all duration-300">
+                <i class="fas fa-arrow-left text-sm"></i>
+                Edit Booking
+            </a>
+            <form method="post" class="inline-flex">
+                <input type="hidden" name="confirm_booking" value="1">
+                <button type="submit" class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-fes-red hover:bg-red-700 text-white font-display font-700 uppercase tracking-wider text-sm rounded-sm shadow-lg transition-all duration-300 hover:shadow-fes-red/40">
+                    <i class="fas fa-check text-sm"></i>
+                    Confirm Booking
+                </button>
+            </form>
+        <?php endif; ?>
     </div>
 </main>
 
 <?php include '../includes/footer.php'; ?>
 </body>
 </html>
+<?php
+if ($isConfirmed) {
+    unset($_SESSION[$pendingKey]);
+}
+?>

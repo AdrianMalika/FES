@@ -1,0 +1,693 @@
+﻿P
+National College of Information Technology (NACIT)
+(Blantyre Campus)
+Bachelor of Science (Hons) in Computing and Information System
+Computing Project Design
+Title: Equipment Booking and Management System for Farming & Engineering Services
+
+Name: Adrian Malika
+Candidate ID: 001510990
+Email Address: Adrianmalika61@gmail.com
+Phone Number: +265 889 54 54 77
+
+Project Supervisor: Mr. Banda
+Project Coordinator: Mr. Mwausegha
+
+Submission Date: 
+Abstract
+This design document is the broad structure and the layout of the Equipment Booking and Management System of Farming and engineering services. It describes how the system will be scheduled to operate prior to the development phase taking place. The document provides the description of the key components of the system with the help of class diagrams indicating the main entities, their attributes, methods, relations, and inheritance. There are also sequence and activity diagrams, which demonstrate the interaction between the users and the system and the process how significant the processes like the equipment booking, approval, allocation, usage tracking, maintenance scheduling, and reporting are conducted. Besides this, the database structure and system interface descriptions are put across to ensure that the design is equivalent to the system requirements. In general, this design may be used as the future guideline to create a stable, effective, and convenient system of controlling farming and engineering equipment.
+
+Table of Contents
+Abstract2
+Introduction5
+Detailed Class Diagram6
+Sequence Diagram9
+Systems Sequence diagram10
+Equipment Catalogue Sequence11
+Online Booking Sequence12
+Cost Calculation Sequence Diagram13
+Operator Assignment Sequence14
+Payment and Receipt Generation Sequence Diagram15
+Maintenance Tracking Sequence Diagram16
+Ratings and Feedback Sequence Diagram17
+Notification System Sequence Diagram18
+Reporting and Analytics Sequence Diagram19
+Activity Diagram20
+Equipment Catalogue21
+Online Booking22
+Cost calculation23
+Operator Assignment24
+Service Tracking25
+Maintenance Tracking26
+Feedback And Rating27
+Notification System28
+System Reports29
+Database Design30
+Database Schema & Table Specifications30
+System Interfaces37
+Test Procedures, Test Plan and Test Cases38
+Test Plan39
+Test Cases40
+Booking Functionality40
+Cost Calculation Functionality40
+Operator Assignment Functionality40
+Maintenance Tracking Functionality41
+Notification Functionality41
+Reporting Functionality41
+
+Introduction
+The design phase defines how the proposed FES system will be structured and implemented. It builds upon the requirements analysis by modelling system components, their interactions, and data structures. Unified Modelling Language (UML) is used to represent the system architecture clearly. This phase ensures that the system design satisfies functional and non-functional requirements while providing a clear guide for implementation and testing.
+
+Detailed Class Diagram
+A class diagram is an elemental part of Unified Modelling Language (UML) which is applied in designing an object-oriented system. It depicts the structural aspect of an object by showing the classes of a system, the attributes of these classes, the methods (operations) of these classes, and the relationship among them such as inheritance, associations, and multiplicities. Class diagrams give a clear picture of the organization of components in the system and the interactions between the components, which is a blueprint of developing and implementing a system (Letaw, 2024).
+
+Users: This class that represents all system users (customers, operators, and administrators). It maintains authentication information, including log-in information, contact information and user roles to guarantee secure access and role-based functionality in the system.
+Customer: This category is applied to the clients who order farming and engineering services. It offers the customers with the ability to make service bookings, monitor booking status, cancel bookings, see invoices and leave feedback after service delivery.
+Operator: This class is taken to indicate the service operators who perform the tasks assigned to them with the help of FES equipment. It enables the operators to see the bookings allocated, update job status, report equipment damage, manage availability, and performance ratings.
+Administrator: This class is used to characterize system administrators that operate system in its entirety. It offers user management functions, booking approvals, operator and equipment allocation and system reports to track and make decisions.
+Booking: This is a class that is employed in handling service requests by customers. It contains the details of booking: the type of service, the land area, the location, the dates of service, the cost, and status. It connects the customers, the operators, the services, the equipment and payments hence make it the key transactional class within the system.
+Service: The type of services provided by FES including ploughing and land preparation is represented under this class. It keeps service information such as pricing regulations, service type, availability, and estimation of the time. It aids in the calculation of costs and availability to make bookings.
+Equipment: This type of equipment is to be used to represent the farming and engineering equipment that FES deals with. It has a record of equipment information including name, type, hours used, status and dates of maintenance. Equipment may be allocated to various bookings and is tracked with regard to its availability as well as maintenance needs.
+Maintenance: The current class is taken to trace maintenance processes of equipment. It contains maintenance information including type of maintenance, date of completion, date of maintenance schedule and cost. This level is used to make sure that the equipment is reliable and serviced on time.
+Payment: The payments made in making the bookings are recorded and managed using this class. It captures payment information like transaction ID, payment amount, payment method, date and status. It facilitates the processing, verification and generation of receipt.
+Feedback: The evaluation of customers after service delivery is taken in this class. It keeps ratings and comments associated with particular bookings and customers, which help track the quality of the services and evaluate the work of operators  
+Notification: This is the type of class, which is utilized to send system alerts and updates. It also handles the alerts like booking confirmations, assigning operators, updates on payments, and service status alerts to facilitate effective communication with the users.
+Report: This type of class is utilized to generate system reports to be used in administration. It contains booking reports, revenue reports and equipment usage reports, which assists in the analysis and decision making regarding the system.
+Sequence Diagram
+A Sequence Diagram is a behavioral diagram that belongs to the Unified Modelling Language (UML) and that is used to show how the objects, actors or system components interact with each other over time to complete a particular task or functionality. It focuses on the sequence of the messages shared between system elements, and lifelines illustrate participants and messages selected to depict communications with time flowing down (Larman, 2004) 
+Sequence diagrams are especially applicable at the design stage because of their ability to represent the dynamic behavior of a system which used along with the class diagrams to view the system as a whole. The sequence diagram in the Framework of the Equipment Booking and Management System of Farming and Engineering Services implies the essential interactions of the user authentication, equipment booking, booking approval, operator allocation, payment processing, service execution, damage reporting, maintenance scheduling, notification delivery and report generation to make sure that all the key processes of the system are carefully defined and aligned with the functional requirements identified at the analysis stage.
+Systems Sequence diagram
+
+The system sequence diagram shows the entire interaction pattern between the Customer, System, Database, Administrator, Operator, Payment Gateway and Notification service of the Equipment Booking and Management system of Farming and Engineering Services (FES). This process starts by a customer opening an account and once the account is opened the system records the customer information in the database and sends a welcome message to the customer as a confirmation of successful registration. The customer then searches through the equipment catalogue, and the equipment available in the database is displayed to the customer by the system. After the customer chooses the needed equipment and adds service details, the system also calculates the approximate cost and offers it to the customer. When booking is confirmed, a booking record is generated and payment is started using payment gateway. Once the payment is successful, the system will be updated with change of booking and an electronic receipt will be produced and the transaction system will confirm to the customer. The administrator will be able to see customer reservations, allocate an operator and provide changes on the assignment details after which, the operator and customer will receive notification. Through the system, the operator views and gets the job assigned. Feedback is provided by the customer after the completion of the service and it is stored as a database where the feedback is utilized to revise the service ratings. Lastly, the administrator prepares system reports, which involves the retrieval of the appropriate data in the database, and these reports are presented by the system to facilitate operations monitoring and decision-making.
+Equipment Catalogue Sequence
+
+The following sequence diagram outlines the steps that a customer goes through to view and browse the equipment available in the Equipment Booking and Management System. This will start when the customer orders to see the equipment catalogue. This system reacts to this by recalling a list of equipment and services available in the database. After receiving the information, the system offers the equipment catalogue to the customer providing such basic data as equipment type, price rates, and availability status. The buyer can then use the filters like type of equipment or the date he/she wants, and the system will check the availability and change the displayed results.
+Online Booking Sequence 
+
+The following sequence diagram displays how an online booking is made. It starts with the customer choosing equipment in the catalogue and providing information on services like land size, location and service term. The given information is checked by the system which temporarily stores the request to book. When all the information is verified, the system estimates the approximate cost and shows it to the customer. In case the customer is satisfied with the cost, the system generates a booking record and changes the booking status. The process will make sure that all the booking information is properly captured prior to payment and assignment to operators.
+Cost Calculation Sequence Diagram
+
+This sequence diagram describes the way the system determines the cost of service. The customer provides booking information and this is the start of the process. The system then takes into account several factors such as equipment rates, estimated service time, size of land, time of operator, and distance covered during the travel. The system then uses this information to compute the total estimated cost and then sends the result to the customer to review it.
+Operator Assignment Sequence 
+
+This sequence diagram is the representation of the process of assigning operators to the bookings. Once a booking has been confirmed, the system considers available operators as per their skill set, compatibility of equipment, and workload, and availability status. On identifying a suitable operator, the system assigns the operator to the booking and it updates the assignment records. Messages are then relayed to both the operator and the customer to notify them of the assignment. This is done to achieve good resource allocation and service delivery on time.
+Payment and Receipt Generation Sequence Diagram
+
+In this sequence diagram, the payment process in the system will be illustrated. Once the booking has been confirmed, the system sends the customer to pay. The transaction is recorded in the system and the payment details are processed. The booking status is changed after the payment has been done and a receipt is generated. In turn, the receipt is offered to the customer as payment documentation. This order will provide transparency and right keeping of the financial records.
+Maintenance Tracking Sequence Diagram
+
+The following sequence diagram explains how the system handles equipment maintenance. The system captures details of usage as machines are operated in the services. The system keeps a constant check on the equipment used and servicing schedules. The system informs the administrator when there is maintenance or repair that is required. The administrator can then book maintenance operations and change the condition of the equipment. This process is to avoid failure of equipment and only safe and working equipment will be offered to be booked.
+Ratings and Feedback Sequence Diagram
+
+Ratings and Feedback sequence diagram reveals the way feedback obtained by customers is handled within the FES system. Once a service has been performed, the customer asks to leave feedback. The system checks the status of a booking to the database and then shows the feedback form. The customer leaves his or her rating and comments, which are saved in the database. The system subsequently calculates the average rating of the operator and acknowledges the submission by a thank-you message. Administrators will be able to see a report on feedback and analytics later to evaluate the quality of services and the work of operators.
+Notification System Sequence Diagram
+
+The sequence diagram shows how important updates are communicated to the users as the system runs its activities. The system will then create a booking confirmation notification when the customer makes a booking. Once an administrator accepts the booking and allocates an operator, a message is sent to the customer and the operator. When the operator reflects on the service status, the customer gets informed of the progress of the service. After payment is done, a customer is notified of payment confirmation and receipt.
+Reporting and Analytics Sequence Diagram
+
+The sequence diagram is used to describe the generation of reports. The administrator will make a request to see reports. Relevant data that are collected by the system include equipment utilization, operator performance, revenue, history of maintenance, and customer feedback. The system then digests, summarizes the data after which it is presented to the administrator in the report form. Informed decision-making and strategic planning are backed up by these reports.
+
+Activity Diagram
+An Activity Diagram is a behavioral diagram of the Unified Modelling Language (UML) which is utilized to display the process of a system in a stepwise manner. It depicts the sequence of activities, decisions as well as actions as a process starts up to its termination. Activity diagrams assist in giving an explanation of sequence of what occurs first, what occurs next and how various actions can occur simultaneously or take various routes depending on the circumstances. They are primarily utilized in the design phase to ensure a description of the logic and workflow of a system in a straightforward and visual fashion that is easy to comprehend by those developing the system and its stakeholders on how the system works (Pressman & Maxim, 2020).
+The processes that are depicted as activity graphs in the Equipment Booking and Management System of Farming and Engineering Services (FES) include customer registration, equipment booking, cost calculation, operator assignment, payment handling, service execution, maintenance reporting, and report generation. These diagrams make sure that every activity of the system is defined and that it is well aligned with functions that were identified in the course of the system analysis.
+
+Equipment Catalogue
+
+The process starts with the customer visiting the FES web portal where he or she logs in, goes to the equipment catalogue, and either types search keywords or picks an equipment category. The system captures the search parameters, generates a query, and asks the database to provide the relevant equipment data that gives the equipment specifications, price rate and the current status. Results are then processed using the system and presented to the customer. In case the equipment status is active, there is an indication of an Available sign in the system and an option of Book Now is available to the customer to go through the details and place an order. In the event that the equipment is either being serviced or engaged, the system would show the relevant status, turn the booking option off and will enable the customer to look at other equipment after which the process will terminate.
+ Online Booking 
+The following activity diagram is a breakdown of the online booking process of the Equipment Booking and Management System. The customer initiates the process by going to a booking portal, choosing equipment in the catalogue, entering a booking request that includes rental dates and location information, and makes a booking request. The system then authenticates the input data and verifies the availability of equipment in the database. Upon availability of the equipment the system computes both the rental price and distance fee, produces a preliminary invoice quote, and submits a request to the administrator to review it. The administrator authenticates the documentation of the customer and upon successful authentication, the administrator grants the request and allocates an operator, who is available. The system updates booking status to confirmed, activates notification services and customer gets booking confirmation email and initiates the first payment, which completes the process. In case of invalidity in the documentation, the request is discarded and a rejection message is sent. In case the equipment is unavailable, the customer will see an error message and propose other dates, which will be reviewed before the process terminates.
+
+Cost calculation
+
+The activity diagram below shows the automated calculation of costs within the Farming and engineering services equipment booking and management system. It starts with the customer typing in the size of land and the location of services and requesting a cost calculation. The system verifies the input data and inquires the necessary pricing information in the database that replies with standard equipment and operator rates. With the help of this data, the system determines the time of the service according to the size of the land and the machine capacity, calculates the distance to the location of the service, and calculates the cost of the travel. All the cost elements are then summed up to generate the total service cost that is projected as an itemized cost breakdown. Lastly, the customer is offered to review the estimated cost summary, making sure that it has correct, transparent, and consistent pricing.
+
+Operator Assignment
+
+This activity diagram shows Operator Assignment process of the Equipment Booking and Management System. This process will start once a booking has been confirmed and the system will determine the type of equipment that is needed and will access the operator criteria database to retrieve the skills, certifications, availability, and current working load of the operators. With this information, the system will automatically match and get the best operator to undertake the task. A review of the proposed assignment is done by the administrator who might approve or disapprove it. In case approved, the system changes the booking record and provides notifications to the assigned operator and the customer. In case the assignment is rejected, the system rerun operator selection logic to create a different assignment. Such workflow will be good to provide a balanced workload, adequate skill allocation, and effective use of operators and to minimize manual error in scheduling.
+
+Service Tracking 
+
+The diagram below is an activity diagram that depicts the process of Service Execution and Tracking in the Farming and Engineering Services (FES) Equipment Booking and Management System. The process starts when the designated operator is notified about the service, and he or she goes to the place of the customer and starts working. After the service has been started, the system then logs the time of starting the service and changes the booking status to In Progress. The system monitors the progress against the planned schedule and the operator executes the prescribed service. The operator sends a report of the completion of the service with the details of the time taken and the problems faced. In this system the completion time is recorded and the booking status is updated to Completed, service report is stored and the customer is notified. It achieves proper monitoring of the service delivery process, enhances accountability, and gives effective data to the billing, reporting, and operational analysis.
+
+Maintenance Tracking
+The following activity diagram illustrates the manner in which the system of the Equipment booking and management system handles equipment maintenance. The first process involves the system capturing the data of equipment usage, the hours it has been operating and checking the servicing schedule to ascertain whether there is need of maintenance or repair. In case of any maintenance requirement, the system sends an alert and reports to the administrator and he/she goes through the notification, schedules the maintenance process and updates the equipment status. The system further captures the maintenance information and updates the equipment status. In case there is no maintenance needed, the system will still monitor and maintain status of the equipment as available so that only safe and healthy equipment’s are provided to use.
+
+Feedback And Rating
+
+The following activity diagram shows the entire Ratings and Feedback Process of the Farming and engineering services Equipment Booking System. It starts with a customer going through a service and then to the feedback section where the customer is allowed to choose whether giving feedback or not. They have an option of rating the particular service and give a numerical rating out of 1-5 stars and may or may not write comments. The system will then approve the submission and save the ratings and comments in the database and update appropriate service performance metrics. Administrators will be able to receive detailed feedback reports, analyze the ratings and comments to understand the level of service delivery, and address the areas that can be improved. Provided that the customer chooses not to receive the feedback, the process itself will terminate without gathering any data so that the participation will be voluntary, and the systematic quality monitoring and the ongoing improvement of the provided services can be achieved.
+
+Notification System
+
+The activity diagram indicates the coordination of communication between the system, customer, and operator made by the notification system. The system detects the updates of booking, the progress of services, and payment. Upon a new booking, a booking confirmation letter is dispatched to the customer. The system sends notification of the operator and the customer after an operator has been assigned. As the service advances, updates by the operator activate the service progress notifications to the customer. Lastly, once payment has been made the system produces payment confirmation and receipt. This process facilitates timely updates, transparency and even a smooth coordination during the service lifecycle.
+
+System Reports 
+
+Activity diagram shows an outline of the report generation process of the Equipment Booking and Management System of FES. The administrator will be able to access the reports module when he/she enters the system and decides on the type of report needed, where he/she will enter the filters like the date range, equipment, or the operator. The system then authenticates the request and finds the required information such as equipment usage, operator activity, revenue, maintenance history and customer feedback and processes the information by analyzing and summarizing it. In case the report is generated successfully, it is presented to the administrator to enable him or her make informed decisions and strategize. When the system fails to produce the report because of the absence of missing data or unavailability of the data, an error will be reported and the administrator can change the filters or order another report.
+
+Database Design
+A database is an organized assembly of data that is arranged in such a way that facilitates effective storage, retrieval and management of information. In the case of the Equipment Booking and Management System of Farming and Engineering Services (FES), the database is the main location where all the processes of the system are stored such as user accounts, equipment records, services booking, financial transactions and maintenance records. The system is based on a relational database model (MySQL) that ensures the integrity, consistency, and security of data and provides a possibility to make operations scalable and performant (Silberschatz, et al., 2020).
+ Database Schema & Table Specifications
+Users Table 
+Column
+Type
+Constraints
+Description
+user_id
+INT
+PRIMARY KEY, AUTO_INCREMENT
+Unique user identifier
+name
+VARCHAR (100)
+NOT NULL
+Full name
+email
+VARCHAR (150)
+UNIQUE, NOT NULL
+Login email
+password_hash
+VARCHAR (255)
+NOT NULL
+Encrypted password
+role
+ENUM ('customer', 'operator', 'admin')
+NOT NULL
+User role
+created_at
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Account creation date
+
+Customers Table (Extends Users)
+Column
+Type
+Constraints
+Description
+customer_id
+INT
+PRIMARY KEY, AUTO_INCREMENT
+Customer identifier
+user_id
+INT
+FOREIGN KEY (Users.user_id)
+Links to base user
+address
+TEXT
+
+Physical address
+preferred_payment
+ENUM('card', 'mobile', 'cash')
+
+Payment preference
+
+Operators Table (Extends Users)
+Column
+Type
+Constraints
+Description
+operator_id
+INT
+PRIMARY KEY, AUTO_INCREMENT
+Operator identifier
+user_id
+INT
+FOREIGN KEY (Users.user_id)
+Links to base user
+skill_set
+TEXT
+
+Skills/certifications
+availability_status
+ENUM('available', 'busy', 'on_leave')
+DEFAULT 'available'
+Current availability
+rating_avg
+DECIMAL(3,2)
+DEFAULT 0.00
+Average rating
+
+Services Table
+Column
+Type
+Constraints
+Description
+service_id
+INT
+PRIMARY KEY, AUTO_INCREMENT
+Service identifier
+name
+VARCHAR(100)
+NOT NULL
+Service name (e.g., Ploughing)
+description
+TEXT
+
+Service details
+base_rate
+DECIMAL(10,2)
+NOT NULL
+Price per unit
+unit_type
+ENUM('acre', 'hour', 'day')
+NOT NULL
+Billing unit
+estimated_duration
+INT
+
+Minutes required
+
+Equipment Table
+Column
+Type
+Constraints
+Description
+equipment_id
+INT
+PRIMARY KEY, AUTO_INCREMENT
+Equipment identifier
+name
+VARCHAR(100)
+NOT NULL
+Equipment name
+type
+ENUM('tractor', 'harvester', 'excavator', 'other')
+NOT NULL
+Equipment category
+status
+ENUM('available', 'in_use', 'maintenance', 'retired')
+DEFAULT 'available'
+Current status
+purchase_date
+DATE
+
+Date acquired
+last_maintenance
+DATE
+
+Last service date
+total_usage_hours
+INT
+DEFAULT 0
+Lifetime usage
+
+Bookings Table 
+Column
+Type
+Constraints
+Description
+booking_id
+INT
+PRIMARY KEY, AUTO_INCREMENT
+Booking identifier
+customer_id
+INT
+FOREIGN KEY (Customers.customer_id)
+Customer making booking
+service_id
+INT
+FOREIGN KEY (Services.service_id)
+Service requested
+equipment_id
+INT
+FOREIGN KEY (Equipment.equipment_id)
+Equipment allocated
+operator_id
+INT
+FOREIGN KEY (Operators.operator_id)
+Operator assigned
+booking_date
+DATE
+NOT NULL
+Date booked
+service_date
+DATE
+NOT NULL
+Date service required
+land_size
+DECIMAL(8,2)
+
+Area in acres/hectares
+location
+VARCHAR(255)
+NOT NULL
+Service location
+status
+ENUM('pending', 'confirmed', 'in_progress', 'completed', 'cancelled')
+DEFAULT 'pending'
+Booking status
+total_cost
+DECIMAL(10,2)
+
+Calculated cost
+special_notes
+TEXT
+
+Additional instructions
+
+Booking Equipment Table 
+Column
+Type
+Constraints
+Description
+booking_id
+INT
+FOREIGN KEY (Bookings.booking_id)
+Booking reference
+equipment_id
+INT
+FOREIGN KEY (Equipment.equipment_id)
+Equipment reference
+hours_used
+DECIMAL (5,2)
+
+Hours equipment used
+PRIMARY KEY (booking_id, equipment_id)
+
+Composite key
+
+Payments Table
+Column
+Type
+Constraints
+Description
+payment_id
+INT
+PRIMARY KEY, AUTO_INCREMENT
+Payment identifier
+booking_id
+INT
+FOREIGN KEY (Bookings.booking_id)
+Associated booking
+amount
+DECIMAL(10,2)
+NOT NULL
+Payment amount
+payment_method
+ENUM('card', 'mobile_money', 'cash', 'bank_transfer')
+NOT NULL
+Method used
+transaction_id
+VARCHAR(100)
+UNIQUE
+Gateway transaction ID
+payment_status
+ENUM('pending', 'completed', 'failed', 'refunded')
+DEFAULT 'pending'
+Payment status
+payment_date
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Date of payment
+receipt_url
+VARCHAR(255)
+
+Link to digital receipt
+
+Maintenance Table
+Column
+Type
+Constraints
+Description
+maintenance_id
+INT
+PRIMARY KEY, AUTO_INCREMENT
+Maintenance identifier
+equipment_id
+INT
+FOREIGN KEY (Equipment.equipment_id)
+Equipment serviced
+maintenance_type
+ENUM('routine', 'repair', 'overhaul')
+NOT NULL
+Type of maintenance
+scheduled_date
+DATE
+NOT NULL
+Planned date
+completed_date
+DATE
+
+Actual completion date
+cost
+DECIMAL(10,2)
+
+Maintenance cost
+description
+TEXT
+
+Work performed
+technician
+VARCHAR(100)
+
+Who performed service
+
+Feedback Table
+Column
+Type
+Constraints
+Description
+feedback_id
+INT
+PRIMARY KEY, AUTO_INCREMENT
+Feedback identifier
+booking_id
+INT
+FOREIGN KEY (Bookings.booking_id)
+Booking reference
+rating
+INT
+CHECK (rating >=1 AND rating <=5)
+1-5 star rating
+comments
+TEXT
+
+Customer comments
+feedback_date
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Date submitted
+operator_rating
+INT
+CHECK (operator_rating >=1 AND operator_rating <=5)
+Optional operator rating
+
+Notifications Table
+Column
+Type
+Constraints
+Description
+notification_id
+INT
+PRIMARY KEY, AUTO_INCREMENT
+Notification identifier
+user_id
+INT
+FOREIGN KEY (Users.user_id)
+Recipient
+notification_type
+ENUM('booking', 'payment', 'assignment', 'maintenance', 'system')
+NOT NULL
+Notification category
+message
+TEXT
+NOT NULL
+Notification content
+is_read
+BOOLEAN
+DEFAULT FALSE
+Read status
+sent_date
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Time sent
+related_id
+INT
+
+ID of related entity (booking_id, etc.)
+
+System Interfaces
+
+Test Procedures, Test Plan and Test Cases
+Test Procedures Software testing is a review and verification of the application or software product to ensure that it is correctly, secure and efficient. The aim of this testing process is to provide the assurance that the Equipment Booking and Management System of the Farming and Engineering Services (FES) is operational, has solid basis and address user needs. Testing assists in uncovering mistakes, checking the functionality of the system, and overall software quality (Sommerville, 2017) 
+The test plan gives a description of the features of the system to be tested and testing methods to be used. Each of the major system requirements should have test cases to ensure that the system will behave accordingly. In each of the test cases, the requirement is well defined, the input data, and the anticipated result of the test (Society, 2008). 
+The following system features will be tested:
+User registration and authentication
+Equipment catalogue and availability
+Online booking and scheduling
+Cost calculation and distance estimation
+Operator assignment
+Payment recording
+Equipment maintenance tracking
+Notification system
+Ratings and feedback
+Report generation
+
+Test Plan
+Function Tested
+Tester
+Description
+User Registration
+Adrian Malika
+The system is supposed to allow customers, operators and administrators to register and access system according to role assigned.
+User Login
+Adrian Malika
+The system is expected to verify the users and send them to their respective dashboards.
+Equipment Catalogue
+Adrian Malika
+The system is expected to show all the equipment that is availed with prices and services.
+Online Booking
+Adrian Malika
+The equipment should enable customers to make a booking by giving location, size of land and period.
+Cost Calculation
+Adrian Malika
+The system as well needs to have the ability to compute an approximate cost on the basis of distance, duration, and type of service.
+Operator Assignment
+Adrian Malika
+The system must allocate the appropriate operators according to availability and type of equipment.
+Payment Recording
+Adrian Malika
+The system must have the ability to capture payment of customers and produce receipts.
+Maintenance Tracking
+Adrian Malika
+The system must monitor the use of equipment and provide maintenance warning when necessary.
+Notifications
+Adrian Malika
+The users should be alerted by the system on changes in their booking, maintenance, and time limits.
+Report Generation
+Adrian Malika
+The system ought to produce some reports on the utilization, revenue, and operator performance.
+
+Test Cases
+Booking Functionality
+Test Case No.
+Test Case
+Description
+Expected
+Actual
+1
+Create Booking
+Customer submits booking details
+Booking successfully created
+
+2
+View Booking Status
+Customer checks booking progress
+Booking status displayed correctly
+
+3
+Cancel Booking
+Customer cancels a pending booking
+Booking cancelled successfully
+
+Cost Calculation Functionality
+Test Case No.
+Test Case
+Description
+Expected
+Actual
+1
+Calculate Distance
+System calculates distance using location data
+Correct distance calculated
+
+2
+Estimate Cost
+System calculates service cost
+Accurate estimated cost displayed
+
+3
+Apply Penalties
+Late return penalty applied
+Correct penalty amount calculated
+
+Operator Assignment Functionality
+Test Case No.
+Test Case
+Description
+Expected
+Actual
+1
+Assign Operator
+System assigns available operator
+Operator assigned successfully
+
+2
+Operator Availability
+System checks workload
+Operator workload updated
+
+3
+Operator View Job
+Operator views assigned job
+Job details displayed correctly
+
+Maintenance Tracking Functionality
+Test Case No.
+Test Case
+Description
+Expected
+Actual
+1
+Track Usage Hours
+System records equipment usage
+Usage hours updated
+
+2
+Generate Maintenance Alert
+Usage threshold reached
+Maintenance alert generated
+
+3
+Update Maintenance Record
+Admin updates maintenance status
+Maintenance record saved
+
+Notification Functionality
+Test Case No.
+Test Case
+Description
+Expected
+Actual
+1
+Booking Notification
+Customer receives booking update
+Notification delivered
+
+2
+Maintenance Notification
+Admin receives maintenance alert
+Alert displayed
+
+3
+Return Reminder
+Customer receives return reminder
+Reminder sent
+
+Reporting Functionality
+Test Case No.
+Test Case
+Description
+Expected
+Actual
+1
+Generate Revenue Report
+Admin generates revenue report
+Report generated correctly
+
+2
+Equipment Usage Report
+Admin views equipment usage
+Accurate usage statistics shown
+
+3
+Operator Performance Report
+Admin reviews operator performance
+Performance data displayed
+
+References
+Larman, C., 2004. Applying UML and Patterns: an Introduction to Object-Oriented Analysis and Design and Iterative Development, Third Edition, s.l.: s.n.
+Letaw, L., 2024. Unified Modeling Language Class and Sequence Diagrams. [Online] Available at: https://open.oregonstate.education/setextbook/chapter/uml-class/[Accessed 25 January 2026].
+Pressman, R. & Maxim, B., 2020. Software Engineering: A Practitioner's Approach 9 th Edition. 9 ed. s.l.:MCGraw Hill.
+Silberschatz, A., Korth, H. & Sudarshan, S., 2020. Database System Concepts. 7 ed. s.l.:McGraw-Hill Education.
+Society, I. C., 2008. IEEE Std 829™-2008 IEEE Standard for Software and System Test Documentation IEEE Computer Society, New York: IEEE.
+Sommerville, 2017. GlobAl EdiTioN Software Engineering. 10th ed. s.l.:Pearson Education Limited..
+

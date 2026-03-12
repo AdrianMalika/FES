@@ -1,0 +1,155 @@
+﻿
+National College of Information Technology (NACIT)
+(Blantyre Campus)
+Bachelor of Science (Hons) in Computing and Information System
+Computing Project Requirements Analysis
+
+Title: Equipment Booking & Management System for Farming & Engineering Services
+
+Name: Adrian Malika
+Candidate ID: 001510990
+Email Address: Adrianmalika61@gmail.com
+Phone Number: +265 889 54 54 77
+
+Project Supervisor: Mr Banda
+Project Coordinator: Mr Mwausegha
+
+Submission Date: 18th January 2026
+Table of Contents
+Abstract4
+Introduction5
+Requirement gathering6
+The Current System7
+Problems of the current system9
+Proposed Solutions10
+Desktop Application10
+Mobile Application10
+Web Application11
+Chosen solution and Justification11
+Use Case for the Current System12
+Use Case Descriptions12
+Functional Requirements14
+Non-Functional Requirements16
+Use Case for the Proposed System18
+Use Case Descriptions18
+Initial Class Diagram21
+References22
+Appendix23
+
+Abstract 
+This report gives a requirements analysis of the development of web-based Equipment Booking and Management System of Farming and Engineering Services Ltd (FES). The research covers the problems encountered by FES as a result of its mainly manual and semi-digital booking system such as service delivery delays, equipment duplicates, cost estimates, service tracking, and scarcity of timely access to management reports. The analysis data was gathered via interviews and questionnaires involving the FES administrative staff and equipment operators to get to know the existing workflows, system operational issues, and expectations. Three solution options were considered based on the findings and these include desktop application, mobile application and web application. The web-based solution was chosen as the most appropriate because it would allow managing the centralized data, its real-time updates, cross-device availability, and simplified maintenance. The report also gives use cases of both the existing and proposed systems to enable users to interact with the systems, states important functional requirements such as online booking, automated cost calculation, operator assignment, service tracking, maintenance management, and reporting, and gives non-functional requirements such as reliability, security, usability, and scalability. A class diagram is also presented as an early description of the essence of the proposed system that will inform system design and development. 
+Introduction
+Farming & Engineering Services Ltd (FES) is a Malawian company, which offers agricultural and engineering mechanization services to the farmers, agribusinesses, and other construction-related consumers within the nation. Some of the activities that the organization provides include ploughing, planting, spraying, harvesting and other tasks that are based on a machine in various parts of Malawi in which they have different depots that offer the services. Though it has played an essential role to aid agriculture productivity, the present system of equipment booking and service management at FES is mostly manual whereby farmers have to make telephone calls or even walk to depots to seek services. The staff manually undertakes equipment availability checks, scheduling, cost estimation, and assigning operators,, in most cases, leads to delays, double booking, inaccurate pricing, limited-service tracking, and additional workload on its administration  (Africa, 2024). This project is an analysis on the requirements of developing a web-based Equipment Booking and Management System by FES, with the aim of automating the process of booking, scheduling and calculating cost and reporting of the process to enhance efficiency, transparency and service delivery by both the farmers and the FES management.
+
+Requirement gathering
+Introduction to Requirements Gathering
+The process of identifying the needs and expectations of the stakeholders and documenting them to establish what a system must do and how it must work is known as requirements gathering(Dawson, 2020). This is done to assist in ensuring that the system that is developed is based on actual user issues and it is in line with organisational objectives. It is a process of comprehending the workflows that exist and defining the challenges and converting the stakeholder needs into clear and organized requirements that will inform the design and development of the system(Pressman, 2020) 
+Methods of Requirement Gathering
+The primary requirements collection techniques applied in this project were interviews and questionnaires. All this has led to the choice of these methods as they complement each other and are highly recommended in the systems analysis in cases whereby in depth and extensive feedback is needed.
+FES administrative employees and equipment operators were interviewed. The choice of this method was based on the possibility to directly communicate with the most important stakeholders to investigate the actual booking process, prices, time constraints, as well as reporting difficulties in detail. Interviews are good to clear up unclear requirements, to get to know about actual operating conditions and to extract the detailed qualitative data that could not be collected by other means (Pressman and Maxim, 2020).Another benefit of the interviews is flexibility since it is possible to ask follow-up questions in person to understand it better (Sommerville, 2016).
+Structured feedback on the prevalent issues in the existing system and expectations of the proposed solution were collected through questionnaires. The choice of this method was reasoned by the fact that one can collect information efficiently and reliably and within a short period of time, and a considerable number of respondents. Questionnaires are especially efficient in determining repeating problems and rank the features of the system depending on the feedback of the users(Dawson, 2020). They also minimise bias with all the respondents being presented with the same set of questions making the data collected easier to analyse.
+The combination of these techniques allowed having a balanced perspective of the limitations of the present system and operational expectations of the offered web-based solution. According to the interview, the questions were examined using a questionnaire, which is also given in the Appendix.
+The Current System
+Farming & Engineering Services Ltd (FES) depends on a manual and semi-digital operational system to perform equipment bookings, equipment scheduling, equipment price and equipment reporting. A majority of the service requests are triggered by making a physical visit to the nearest FES branch or calling the number. The customers who include farmers and contractors contact the branch to enquire about the availability of particular machines like tractors, irrigation systems, harvesters, planters and other machines that are used in agriculture or engineering. Once the inquiry is made, the FES administrative personnel search manually the equipment availability based on paper-based booking logs and spreadsheet files that are stored on local computers. In case the requested machinery is in place, the customer gives service-related information such as the kind of service requested, estimated land area, place of work and anticipated work time.
+Pricing is done manually by FES staff based on pre-set rate structures. Every machine is given a particular rate depending on the type of service, the number of working hours or days, the size of land, the distance covered by the machine between the depot and the place where the customer is situated as well as the operator fee. Rough distance estimates are used in estimating travel expenses as opposed to the automated geo-location devices. After taking everything into consideration, the staff will be able to compute the total cost of the service and relay the information to the customer. This is paid either in cash in the branch or direct bank transfers. Upon confirmation of payment, staff manually enter transaction information in payment registers and give out a hand written receipt. Such receipts are used in the reconciliation and reporting. Booking information, confirmation of payments and the date of the service that has been assigned are manually entered in booking registers or spreadsheets.
+The station manager assigns an equipment operator on the planned service date depending on the availability and experience. The machine operator retrieves the machine at the depot and goes to the place of the customer with the information in his/her address given when booking. The operator notes job execution details such as start time and end time on duty sheets to record hours worked and be able to verify payroll and bills. Upon accomplishment of the task, the operator passes on the equipment to the depot, which is subjected to a basic check. In case of any damages or overuse that may be detected, penalty is introduced as per FES operational policies. The customers have to pay repair costs including parts and labour. The damage reports and repair costs are recorded in maintenance records and are done manually.
+The station managers at the end of each operational cycle prepare the operations and financial report by sourcing the various manual materials such as booking registers, payment records, operator duty sheet as well as maintenance logs. This is a long process that is susceptible to errors and in most cases leads to poor reporting or delayed reporting. This is not a centralized system and this limitation hinders real-time monitoring, accuracy of data, and efficiency of its operations.
+
+Problems of the current system
+The current system used by FES presents several operational challenges. First, the customers who are located distant to FES branches have to travel long distances to inquire and make the booking, which is not only time-consuming but also costly. Second, there is no centralized booking system, which makes it more likely to have the possibility of two bookings, poor allocation of equipment, and delays in the services. Thirdly, the calculation of service costs is done by hand, and it depends on various criteria including, service time, land area, and the number of hours the operator works, and the distance covered which may result to inaccuracy in the prices and may cause conflict with the customers.
+Moreover, customers cannot see equipment available, monitor the progress of the services, or make correct costs of the services before booking. Such transparency deficiency tends to bring misunderstandings and dissatisfaction. Moreover, the system fails to keep a systematic maintenance record that can facilitate the forecasting of equipment failure or preventative maintenance in a more systematic manner. It is also hard to estimate the equipment demand, to evaluate the performance of the operators and to analyse revenue trends because of the absence of automated maintenance tracking.
+Lastly, FES does not get access to timely and rightful reports that could facilitate decision-making regarding equipment use, efficiency among operators and seasoned demand trends. All in all, these issues make the operations less effective and trigger the necessity of an automatized equipment booking system and management.
+
+Proposed Solutions
+The FES equipment booking and management system can have three solutions that can be considered. All solutions have some merits and demerits but they have to be considered depending on usability, accessibility, cost, and operational requirements. Some of the proposed solutions comprise desktop application, mobile application and web application.
+Desktop Application
+A desktop application is a program that is embedded and executed directly on a computer, and usually has all features without constant access to internet (Scoccia, Migliarini and Autili, 2021) .The benefits of using a desktop application as the FES system are that it has the capability of supporting in-depth data input, cost-based calculations and report creation in a large screen, which is appropriate in the hands of the station managers to make books reservation, financial data, and reports. Desktop applications also go well with the local databases enabling quick access to the records in the office where internet connection might not be stable.
+Desktop application, however, is not portable and can only be utilized in the particular computers where they are installed. This makes them less useful to the operators or managers who might require booking information when they are in the field. Moreover, updates in real-time in more than two branches may prove to be cumbersome because in most cases updating data manually or configuring the network is necessary. This is why desktop applications will not be appropriate to a system that needs real time booking status, equipment availability updates and be reachable by the management.
+Mobile Application
+Mobile application is a software application that can be operated on a mobile device like a smartphone and a tablet device. It also enhances portability and easy usage where users can have access to system capabilities at any location at any time thus will be applicable in activities that demand mobility and real time communication(Islam, Islam and Mazumder, 2018). In the case of the FES system, a mobile application would enable a staff member and managers to be informed in real-time, use the schedules to monitor their booking, and track the progress of the service when outside the office. The operators would also find it handy to enter a job start and end time in the field, which enhances the accuracy and minimises paper work.
+As much as these are the benefits, there are some limitations of mobile applications. When compared to large screens, small screens have a disadvantage of being unable to digest elaborate reports or huge information sources like financial overviews and performance patterns. The cost of development is also more, since it might require the development and maintenance of separate applications on the various platforms like Android and iOS. Moreover, the updates should be applied on all devices, and this aspect may cause inconsistencies when some users do not update the application in good time 
+Web Application
+A web application is run by use of an internet browser and can be used across different devices like desktops, laptops, tablets and smartphones. In the FES equipment booking system, this implies that the staff, managers, and administrators can access the system elsewhere without having to install special software. One of the benefits of a web application is centralization of data, and thus the booking schedules, equipment availability, price calculation and reports are always updated and similar in all the branches(Luis Castã and Remy, 2020).
+Real-time updates also work well with web applications and are, therefore, applicable in avoiding a double booking, monitoring the progress of the service, and creating timely reports. Nevertheless, web applications are very reliant on an internet connection and therefore they cannot perform their functionality without the internet. Security concerns, including unauthorized access in case of improper login practices by users, will also have to be covered by strong authentication and access control systems(Andrew Hoffman, 2023)
+Chosen solution and Justification
+A web-based solution is the best option to the FES project. This solution is also flexible because a user can use the system across various devices without necessarily installing individual applications. It facilitates the real-time booking management, cost calculation and centralized scheduling, which directly solve the problem of having the issue of the double booking, incorrect pricing as well as the absence of transparency in the existing system.
+Maintenance is also quite easy with a web application because updates and improvements are centralized and made available to all users immediately. Development wise, it is cheaper than having a separate desktop and mobile version, and it can remain scalable to add more branches, equipment and users as the need arises. By and large, a web-based system is appropriate to the operational requirements of FES since it enhances efficiency, accuracy and accessibility at the same time minimizing manual operations and administrative overheads.
+
+Use Case for the Current System
+Use case diagram is a behavioural frame work of Unified Modelling Language (UML). It is applied to show the functional requirements of a system by the way the system will interact with its users (actors). Use case diagrams describe system functionality using use cases, or actions of the system, and actors, or users or external entities that interact with the system (Sommerville, 2016)
+
+Use Case Descriptions
+Register Customer: This is to enable FES  staff to enter customer information by hand into booking registers or spreadsheets using their names, contact information and location of the service.
+Request Equipment Availability:  The customers that visit or call a branch of FES and inquire about the availability of specific equipment on the needed date.
+Check Equipment Availability: This is an option that enables FES staff to check the availability of equipment by manually checking the logs of paper booking or a spreadsheet.
+Record Service Details: This enables the FES staff to record the service details offered by the customer such as the type of service, land size, location, and estimated duration of service.
+Calculate Service Cost: This feature will enable FES employees to calculate service costs in a manual way depending on the machine rates, period of service, size of lands, hours of the operator, and projected traveling distance.
+Make Payment: This enables the customers to pay the services or make payments in cash in the branch or by bank transfer.
+Record Payment: This enables FES employees to add payment records to payment registers and print handwritten receipts.
+Assign Equipment Operator: This permits the station managers to give an available operator to a scheduled service according to experience and availability.
+Perform Service: This feature enables the operator of the equipment to move to the customer location where he/she will be in a position to perform the service requested by the customer.
+Record Job Details:This enables the equipment operators to manually record the start time, end time, and job details on duty sheet.
+Record Equipment Damage This enables the FES staff to record manually any equipment damage or excessive use identified after the service.
+Create Reports Station managers can use booking records, payment registers, operator duty sheets and maintenance logs to create operational and financial reports under this functionality.
+
+Functional Requirements
+Functional requirements are the requirements of the system with what it should do. They define acts, activities, and processes that a system has to undertake to satisfy the user needs and its goals. Specific functional requirements are significant as they describe the kind of input that the system will receive, how the input is going to be processed by the system under certain circumstances and what output it will generate (Pressman and Maxim, 2020).
+Functional requirements that will be supported by the proposed Farming and Construction Equipment Booking and Management System of FES include the following:
+Equipment Catalogue: The system will offer a catalogue of all the equipment and services available and searchable, the description of the services, the price rates, and availability status.
+Online Booking: The system will enable the customers to make online reservations of equipment and services by providing service details, including the size of land, location, and duration of estimated services.
+Cost Calculation: The system will automatically determine the estimated cost of the services depending on machines rates, time taken in the service, land area, time spent by the operator, and distance of travel.
+Geo-location Integration: The system will be able to combine geo-location services and use the Haversine formula to determine the correct distance between FES depots and the customers.
+Operator Assignment: The system will automatically give the operator assignments to bookings according to the skill set, machine compatibility, availability and workload.
+Real-Time Service Tracking: The system will permit real-time monitoring of the booking, service development with job starts and job end time.
+Recording and Generation of receipt of payment: The system will capture and record the payment of customers and print electronic receipts to verify and report on.
+Maintenance Tracking: The system will be able to track the usage of equipment, track maintenance work, and notify administrators when equipment will need servicing or repair.
+Ratings and Feedback: The system will enable the customers to comment on the services and give feedback once the services are completed in order to aid the improvement of the quality of service.
+Notification System: The system will inform the customers about the confirmations of their booking, operator dispatch time, completion of services, and meet their deadline to prevent penalties.
+Reporting and Analytics: The system will also produce detailed reports on the use of equipment, operator performance, demand patterns, revenue, maintenance history, and service failures to aid decision-making by the management.
+
+Non-Functional Requirements
+Non- functional requirements specify the way the system is going to perform as opposed to the actual functionality of the system. According to them, the quality attributes, constraints, and standards that the system should address ensure reliability, usability, security, and efficiency (Sommerville, 2016) 
+Reliability: The system must be operational with minimum downtimes to facilitate the daily booking and operations at FES. The system should also recover fast without the loss of booking, payments and operational data in case the system goes down, or there are any problems with the server.
+Security: The system should ensure that all data of users and systems are not accessible to unauthorised people. Only the authorised users must be able to access certain features upon their roles, customers, operators or administrators. Booking records and payment details are highly sensitive information that should be held in high security.
+Scalability: Farming and Engineering Services Ltd (FES) is in a continuous expansion; therefore, the system must be in a position to facilitate more users, equipment records and branches of operation. This involves being able to process more bookings, reports and system activity without slowing down and becoming unstable. The system must be constructed in such a manner that is makes it expandable in future like the introduction of new equipment categories or branches without the need to make significant changes to the system architecture or interference of the current activities.
+Navigability: Its system should be clearly and well-structured and easy to use with users having ease of navigation between the various sections of the system. The logical menus and well-marked navigation should give the users access to such key features as the listing of services, the ability to book the equipment, schedules, and reports. This eliminates confusion, and reduces user errors and in addition to this both first-time and experienced users will be able to interact with the system effectively.
+Usability: The system must be easy and user-friendly and therefore only needs little training to the user. It should be reactive and operate successfully on various gadgets, such as desktop computers, tablets, and smartphones. The pages are to load fast and the feedback of the system like confirmations of booking, error messages and system messages are to be displayed using readable text and simple language that is easy to understand hence increase the overall user experience.
+Use Case for the Proposed System 
+
+Use Case Descriptions
+Register / Login: Allows customers, operators and administrators to create accounts and have privileged access to the system, depending on their roles.
+View Service Catalogue: Allows customers to see the available equipment, type of services, description, and rates of a given service and make a booking.
+Book Equipment: Gives the customers the option of ordering equipment by choosing the service, location, land size and a date of choice online.
+View Estimated Cost: The system is an automatic calculation of the estimated service cost of machines rate and service length, land area, operator hours, and distance travelled.
+Make Payment: Sends customers to a payment system where they can pay an amount of money to booked services.
+Track Booking Status: Enables the customers to track the status of their booking, such as approval, operator assignment, and service performed.
+Send Feedback and Rating:Gives the customer a chance to rate the service and leave comments about the service once it is over to allow improvement of service quality.
+Manage Users: Allows the administrator to create, modify, and deactivate system users including customers and operators.
+Manage Equipment:Enables administrators to insert, update or delete equipment information and monitor availability status.
+View Bookings: Allows administrators to see all the bookings of customers and their status in real time.
+Allocate Operator: Provides administrators with the ability to allocate operators to bookings according to skill set, compatibility with machines, and workload.
+Manage Pricing Rules: This option allows administrators to create and modify pricing rules of various equipment and services.
+Track Maintenance: Enables the administrators to check the use of equipment and set a maintenance schedule to minimize breakdowns.
+Develop Reports: Enables administrators to create reports of equipment use and operator work, revenue, demand patterns and maintenance records.
+View Assigned Jobs:Allows the operator to view the jobs they have been assigned with all the service information and the location where the customer is.
+Perform Service: Represents the operator of the assigned service at the location of the customer.
+Record Work Hours: Gives the operators the opportunity to enter in the job start and end times so that they can accurately bill and make payroll.
+Update Job Status: Allows operators to change service status like started, in progress or completed.
+Report Equipment Damage: Enables the operators to make reports on any damage or faults on equipment that they encounter during service.
+
+Initial Class Diagram
+
+References
+Andrew Hoffman (2023) Web Application Security: Exploitation and Countermeasures for Modern Web Applications, Sebastopol, CA, [online] Available at: www.dbooks.org.
+Pressman, R. S. (2020) Software Engineering: A Practitioner’s Approach, New York, [online] Available at: www.mhhe.com/pressman.
+Dawson, C. W. (2020) Projects in Computing and Information Systems A Student’s Guide Third Edition, [online] Available at: www.pearson-books.comwww.pearson-books.com.
+Islam, R., Islam, M. R. and Mazumder, T. A. (2018) Mobile Application and Its Global Impact, Article in International Journal of Engineering and Technology, [online] Available at: https://www.researchgate.net/publication/308022297.
+Luis Castã, J. and Remy, on (2020) Web Browser-Based Interactive Crawling for Security Testing, [online] Available at: https://www.mhhe.com/pressman (Accessed 24 January 2026).
+Pressman, R. S. . and Maxim, B. R. . (2020) Software engineering : a practitioner’s approach, Pearson Education Limited (ed.), Harlow, England, McGraw-Hill Education.
+Scoccia, G. L., Migliarini, P. and Autili, M. (2021) Challenges in Developing Desktop Web Apps: a Study of Stack Overflow and GitHub, [online] Available at:  https://github.com/gianlucascoccia/MSR2021Replication.
+Sommerville, Ian. (2016) Software engineering, Pearson.
+ 
+
+AppendixAppendix A: Questionnaire (FES Staff)
+
+Appendix B: Interview Minutes (FES Staff)

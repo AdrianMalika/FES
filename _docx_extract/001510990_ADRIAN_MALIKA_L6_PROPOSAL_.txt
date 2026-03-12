@@ -1,0 +1,205 @@
+﻿
+National College of Information Technology (NACIT)
+(Blantyre Campus)
+Bachelor of Science (Hons) in Computing and Information System
+Computing Project Concept Paper
+
+Title: Equipment Booking & Management System for Farming & Engineering Services
+
+Name: Adrian Malika
+Candidate ID: 001510990
+Email Address: Adrianmalika61@gmail.com
+Phone Number: +265 889 54 54 77
+
+Project Supervisor: Mr Banda
+Project Coordinator: Mr Mwausegha
+
+Submission Date: 20th October 2025
+
+Contents
+1.OVERVIEW3
+2.AIM4
+3.OBJECTIVES4
+3.1.Investigation and reequipments4
+3.2.System Design4
+3.3.System Development5
+3.4.Testing and Implementation5
+3.5.Documentation5
+4.PLAN AND METHODOLOGY6
+4.1.Methodology6
+4.2.Work Breakdown Structure6
+4.3.Gantt Chart6
+5.RESOURCE REQUIREMENT AND TOOLS7
+6.OTHER ISSUES AND CONSIDERATIONS8
+i.Legal8
+ii.Social8
+iii.Ethical8
+iv.Professional9
+References10
+Appendix11
+Work Breakdown Structure11
+Gannt chat12
+
+OVERVIEW
+Farming & Engineering Services Ltd (FES) is Malawi’s leading provider of integrated agricultural solutions, established in 1967. FES has been one of Malawi’s companies to provide mechanized farming and construction solutions to help farmers and contractors across the nation. The organization offers some services like sales, rental and maintenance of equipment including tractors, harvesters, irrigation systems and construction machinery (Africa, 2024).  By providing the machinery FES enables farmers to improve productivity without the burden of ownership cost. This project focuses on developing a digital platform that enhances accessibility, efficiency, and transparency of these services (2024a).
+Currently, most operational bookings are done manually, depending on in person visits or phone calls. Customers, such as farmers and contractors start by contacting the nearest branch to inquire the availability of the machineries such as irrigation systems, tractors, harvesters and other equipment’s. FES staff check the availability of the equipment through book logs and spread sheets files. When it is proven to be available, the customer then gives out details on the service required including land size, location and estimated work time. The price is then calculated based on the information given, with each machine having its own price rate for the type of service, service duration, land size, travel distance, and operator fees, which are charged per hour or day. The total cost is then determined and then the payment is done in cash or through direct bank transfers, with FES staff then record the payment and then writes down a hand written receipts. On the day scheduled, the assigned operator collects the equipment and travel to the customers location site using the location details provided by the customer when booking. The operate record the start time of the job and the end to keep track of the hours they have worked. Once the job is finished, the operator returns to the deport where the equipment is checked for damage. If damages are found, penalties are applied according to the FES policy. The customer is then required to pay a repair cost for the damaged parts and labour. FES also carries out scheduled maintenance during off season periods to help prepare machinery for the upcoming seasonal harvests. This is to ensure that during the high demand season all the tractors, harvesters and other equipment’s are in good condition and ready for deployment. At the end of each operational cycle, station managers collect information from many manual sources, including payment registers, operator duty paperwork, maintenance records, and booking logs, to produce comprehensive financial and performance reports.
+When it comes to the current system, here are the problems they face. Firstly, customers who are located far from the organization have to travel long distances, which may be costly. Secondly, the lack of a centralized scheduling platform may increase the risk of double booking and scheduling delays. Thirdly, the manual way of calculating costs based on duration, land size, operator hours, and travel distance can lead to pricing errors or disputes. Fourthly, customers are not able to view the equipment, track service progress and estimate accurate costs before bookings, which may result in disagreements. Fifthly, there is no maintenance log to help predict equipment downtime. Sixthly, it is hard to estimate equipment demand, measure operator performance, and assess revenue trends without regular maintenance tracking and data analytics tools.. Finally, FES lacks access to reports that could help monitor equipment, operator performance, and seasonal demand trends. 
+The proposed solution is a web-based equipment booking management system for FES to help reduce all major manual processes. The system will have a service catalogue that will allow customer to view all the available machinery, there service descriptions and pricing rates, this will help remove all in person visits. The system will also have a booking and scheduling method, to allow customer to book equipment online. The system will be able to generate the estimated cost using mathematical formulas that will combine machine rate, service duration, land area, operator hours, and travel distance calculated using geo-location data through the Haversine formula. It will also be able to assign the operators to customers based on there skill set, machine compatibility and workload to reduce errors and scheduling conflict. It will also have feedback and rating features, to help enable customers to evaluate services and improve quality. the system will integrate geo-location and distance calculation using haversine formula. This will help provide the shortest and most accurate route from the depot to the customer’s farm. The system will also be able to manage and track machine usage a and inform the admin for the next maintenance. The system will also have a notification feature the will alert the customer about there booking updates, operator dispatch times and most importantly, the number of days or hours remaining until the equipment return date in order to avoid penalties for late returns. The system will provide FES with full oversight and control over its operations through the generation of detailed reports on equipment usage, seasonal demand patterns, operator performance, revenue summary, penalty and damage statistics, and maintenance history to support management decision-making.
+AIM
+The aim of this project is to design a web-based equipment booking and management system for FES. that will simplify the process of service search, online purchase, robotically calculate costs, assign an operator, and track orders in real-time. This system will have a list of services available, geo-location integration, ratings and feedback, maintenance tracking, and comprehensive management reports about how equipment is used, the performance of the operators, demand rates, revenue, and occurrences of service failures, which will improve efficiency, transparency, and customer satisfaction.
+ 
+OBJECTIVES
+Investigation and reequipments 
+Conduct interviews and surveys with FES staff to collect information about how the bookings, payment and scheduling take place in the current system. 
+Identify and recording the main weaknesses of the manual system like delays, double boking and cost transparency. 
+Research on similar booking systems that are used in other organizations to find the appropriate approach of the new design. 
+Conducting an analysis of the information that is collected to identify the main functional and non-functional requirements and protentional area of improvement.  
+
+System Design 
+Design the structure of the database for storing the services, equipment as well as operator information. 
+Design the user interface prototype for service catalogue, booking forms and user dashboards. aa
+Design system illustration such as activity diagrams, use case diagrams and class diagrams to show the architecture of the system. 
+Define system test cases for the functionalities of the developed system during testing. 
+Reviewing the system design to supervisor for feedback. 
+
+System Development
+Develop user interfaces of the web-based booking system using HTML, CSS and JavaScript for the front-end and PHP for the Back-end. 
+Develop the systems database using MySQL to store information on customers, transaction, equipment, operators and many more. 
+Implementing the system reporting and analytics to help monitor the usage of equipment, operator performance and revenues. 
+Integrating mapping to help pin point user location and help in cost and scheduling calculations. 
+
+ Testing and Implementation
+Conduct a unit test on each functionality such as service catalogue, booking, payments, and notifications to see if they working as intended. 
+Conducting an integration testing to ensure that all the functionalities are working well together. 
+Monitoring the system after integration to identify error or bugs in order to increase performance and useability 
+Fix system errors that occur during testing to ensure that the system functions correctly.
+Implement the system by using the parallel running method which involves using the old and new system simultaneously for some time before the old system is phased out
+
+Documentation 
+Document the system user manual for the whole system to help users understand how to use the system. 
+Document the technical report describing the database structure, code and system work flow. 
+Putting together test documentation, which includes test plans, test cases, and results that show how the system met all the requirements. 
+Prepare a presentation and demonstration document that highlights key system features, challenges faced, and solutions applied during the project. 
+
+ PLAN AND METHODOLOGY
+Methodology 
+The project will be developed using object-Oriented Methodology (OOM), which model the system as an object, which will be representing the real-world items like customers, staff and equipment’s. This methodology will help organize the system into manageable part that can be reused and can be easy to maintain (Pandey, Singh and Kansal, 2011). 
+The system will be designed using UML diagrams, like class diagrams, sequence diagrams, use case diagrams and activity diagrams. This will show the users how the system works and how the users will interact with it. By using object-Oriented Methodology, it will make the system more flexible, scalable and easy to update. With OOM it will all ensure that the development will follow a clear structure, form Requirements Specification, development, testing, and documentation (Rizwan and Qureshi, 2023).
+
+Work Breakdown Structure
+A Work Breakdown Structure (WBS), is a visual representation of tasks and their dependencies.  This helps dividing the project into smaller, manageable section that can be easily monitored and controlled efficiently (Gurnov, 2025)
+Refer to Appendix 1
+
+Gantt Chart
+A Gantt Chat is a project management tool that is used to plan, visualize and even track the progress of project activities. This helps to identify task dependencies, overlaps and milestones to ensure the product is set on time. According to (Richard, 2024), Gantt charts help to improve the project coordination and scheduling efficiency. As for this project Gantt chat will guide the scheduling of tasks such as planning, analysis, design, development and testing to ensure that all the activities are achieved within the given period of time.
+Refer to Appendix2
+
+RESOURCE REQUIREMENT AND TOOLS
+In order to carry out a successful development of the system it will require both hardware and software resources. These resources will support parts of the project such as design, development, testing and documentation. A number of tools will be used to simplify designs and develop tasks, well the hardware will ensure smooth execution of the system. Below is an outline of the key resources and tools that will be used in this project.
+CATEGORY
+REQUIREMENT TOOLS
+DESCRIPTION
+Software
+
+Visual studio code
+VS code is the code editor that will be used to develop the system. It will use HTML, CSS, JavaScript, and PHP.
+
+StarUML
+This is a tool that will be used in modelling and designing UML diagrams like use case, activity, and class diagrams.
+
+WAMP
+provides a local development environment that integrates the MySQL database, PHP, and Apache server.
+
+GitHub
+It is a web-based platform that helps developer collaboration and will serve as the system's backup.
+
+Microsoft word
+All of the required documentation will be written using this software program.
+Hardware
+ 
+
+Laptop
+An Acer Swift SF315-52 with a 250gb SSD, Intel Core i5-8250U processor and 16gb of DDR4 memory to run all necessary programs used in the project.
+
+Internet Connection
+A stable and high-speed internet connection is crucial for research, accessing online documentation, downloading dependencies, and collaborating via version control systems
+
+External Storage Drive
+Used for data backup and project file storage.
+
+OTHER ISSUES AND CONSIDERATIONS
+Other than addressing the technical and functional requirements of the system, it is important to look at the social, legal, ethical and professional factors that may have an impact on development and deployment. These can help ensure that the system does not only meet the operational objectives, but should also compile with the law, protect user data and uphold professional standards.
+Legal
+Legal issues are the laws, regulations, and policies which specify the manner in which the personal data should be gathered, processed, stored, shared, and safeguarded in the information system. These laws provide that organizations also engage in good digital practices, receive user consent, execute digital transactions safely, avoid abuse of information gathered, and also respect user rights(Kaphatsa and Chavula, 2023)
+Malawi Data Protection Section 16 permits the gathering and processing of personal information only with the express consent of the user. This is done to avoid legal fines, as for the system will be collecting user usage, location and booking (Dorcas Tsebee, 2024).
+The system terms and conditions should have penalties for the customers who will intentionally damage the equipment. Ensuring accountability will minimize the misuse and will align with criminal provisions under the Malawi Penal Code (Justice, 2014)
+Social
+Social issues are associated with the impacts of an information system on various communities and social groups such as its accessibility, acceptance by the culture and its appropriateness to users of various age, education level, and socioeconomic status. Such concerns are the digital literacy disparity, the availability of internet, the cost of devices, and the capability of the marginalized population to operate the technology(Malanga and Simkoko, 2020).
+Not all user groups will be able to use the system's technology and equipment because only 50% of Malawians own a mobile phone and only 25.5% have access to mobile broadband. The fact that the majority of people will not be able to operate the system and its components makes this a barrier (Malanga, 2020). Through increased equipment efficiency, the system can indirectly lessen the environmental effects of conventional farming methods, supporting sustainable agriculture practices (Gogoll et al., 2021).
+Ethical
+Ethics relate to ethical matters associated with system design and usage such as fairness, user privacy, and harm reduction. Ethical factors demand developers to come up with systems that uphold user rights and are confidential, do not discriminate or favor any user, and are transparent with user data. They also involve assuring that the system will not mislead the users, will not abuse the information that has been gathered, and will not put the individuals in the hands of security threats(Choruma et al., 2024b).
+The system should ensure the safety of user privacy and data integrity, to make sure that personal and usage of user data is not exposed, misused or even sold without consent. Failure to do so can reduce the users trust and can lead to damage of the organization’s reputation(Choruma et al., 2024a). When it comes to ethical decision making, it should not rely only on generic code of conduct. Ethical deliberation should be embedded in the development stage, hance the developers must brain storm ideas about values and trade-offs(Gotterbarn, 2023).
+Professional
+Professional issues include what ICT practitioners are expected to do to ensure their systems are developed in line with stipulated standards, best practices, and codes of ethics in the industry. These involve remaining technically competent, creating quality work, system security as well as a rigorous testing. The professionals should be able to record their work in a transparent manner, observe confidentiality in their duties, engage well with stakeholders, and take up decisions that will involve the best interests of the user and the organization(Alvi and Zulkernine, 2021).
+Developer maintains accountability and responsibility for their code. Negligent or sloppy implementation (e.g. Insecure payment modules or data leaks) can expose the institution and clients to harm. The professional role demands high standards in testing, documentation, and compliance.  The system developers should maintain open lines of communication to mitigate some risks, such as managers being clear about the company's values and developers being open about the challenges they face to ensure that issues are recognized and fixed (jiitak, 2024).
+
+References
+
+Africa, F., 2024. Your agriculture solutions partner. [Online] Available at: https://fes.africa/.
+Dorcas Tsebee, O. O. a. V. A., 2024. Malawi’s Data Protection Act. TH ADMIN, p. Section 16.
+Gurnov, A., 2025. Work Breakdown Structure (WBS) in Project Management: Full Guide. [Online] Available at: https://www.wrike.com/project-management-guide/faq/what-is-work-breakdown-structure-in-project-management/?utm_source=chatgpt.com[Accessed 5 October 2025].
+Justice, M. o., 2014. Government of Malawi. [Online] Available at: http://www.laws.africa/[Accessed 7 october 2025].
+1
+Alvi, A. K. and Zulkernine, M. (2021) A security pattern detection framework for building more secure software, Journal of Systems and Software, Elsevier Inc., 171.
+Choruma, D. J., Dirwai, T. L., Mutenje, M. J., Mustafa, M., Chimonyo, V. G. P., Jacobs-Mata, I. and Mabhaudhi, T. (2024a) Digitalisation in agriculture: A scoping review of technologies in practice, challenges, and opportunities for smallholder farmers in sub-saharan africa, Journal of Agriculture and Food Research, Elsevier B.V.
+Choruma, D. J., Dirwai, T. L., Mutenje, M. J., Mustafa, M., Chimonyo, V. G. P., Jacobs-Mata, I. and Mabhaudhi, T. (2024b) Digitalisation in agriculture: A scoping review of technologies in practice, challenges, and opportunities for smallholder farmers in sub-saharan africa, Journal of Agriculture and Food Research, Elsevier B.V.
+Gotterbarn, D. (2023) Ethical considerations in software engineering, In Institute of Electrical and Electronics Engineers (IEEE), pp. 266–274.
+Kaphatsa, M. and Chavula, G. (2023) DATA PROTECTION BILL, 2023,.
+Malanga, D. F. (2020) A PARADIGM INITIATIVE PUBLICATION Published by Paradigm Initiative Report written by Donald Flywell Malanga, [online] Available at: www.paradigmhq.org.
+Malanga, D. and Simkoko, E. (2020) Digital Agriculture Technologies in Malawi,.
+Pandey, S. K., Singh, G. P. and Kansal, V. (2011) Study of object oriented analysis and design approach, Journal of Computer Science, 7(2), pp. 143–147.
+Richard, M. O. (2024) The Gantt Chart in Modern Project Management: An Empirical Analysis from Developing Countries The Gantt Chart in Modern Project Management: An Empirical Analysis from Developing Countries *Martin Otundo Richard *PhD Fellow in Project Management *A freelance Research, Data Analyst, and a Senior Consultant in Development Projects’ Cycle Management * Kindly engage me for free through my e-mail (martinotundo@gmail.com) or my phone (+254721246744 or +254759819660), [online] Available at: https://www.researchgate.net/publication/381604056.
+Rizwan, M. and Qureshi, W. A. (2023) Evaluation of the Design Metric to Reduce the Number of Defects in Software Development,.
+ 
+Appendix
+Work Breakdown Structure
+Phase
+Description (Activity)
+Duration (Start – End)
+Milestones
+
+Planning
+- Conduct interviews and surveys with FES staff- Identify weaknesses in the current manual booking process
+- Define functional and non-functional requirements
+
+23 Sept – 14 Nov 2025
+Concept paper and Proposal document
+
+Analysis
+- Conduct interviews and surveys with FES staff to collect data.- Identify weaknesses in the manual system (delays, double booking, cost transparency).- Research on similar booking systems.- Analyse collected data to define functional and non-functional requirements.
+
+18 Nov 2025 – 6 Jan 2026
+Specifications Document
+
+Design
+- Design database schema for services, equipment, and operators.- Design user interface prototypes for catalogue, booking forms, and dashboards.- Develop UML diagrams (use case, class, activity diagrams).- Define test cases and review design with supervisor.
+
+13 Jan – 7 Feb 2026
+Final system design document
+
+Implementation
+• Develop front-end using HTML, CSS, and JavaScript.• Implement back-end using PHP and MySQL.• Build core modules: service catalogue, booking, cost estimation, payments, and reporting.
+
+14 Feb – 26 Apr 2026
+Functional prototype
+Testing
+• Conduct unit and integration testing for all modules.• Monitor and fix bugs.• Optimize performance and usability.• Implement feedback from supervisor testing.
+1 Mar – 27 Apr 2026
+
+Fully tested system
+Documentation
+Prepare user manual and technical documentation.• Compile test documentation (test plans, results).• Prepare final project report and presentation slides.• Review and finalize report for submission.
+1 Mar – 27 Apr 2026
+Final Report document
+
+Gannt chat

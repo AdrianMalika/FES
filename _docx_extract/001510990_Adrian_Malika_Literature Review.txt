@@ -1,0 +1,188 @@
+﻿
+National College of Information Technology (NACIT)
+(Blantyre Campus)
+Bachelor of Science (Hons) in Computing and Information System
+Computing Project Literature Review
+
+Title: Equipment Booking & Management System for Farming & Engineering Services
+
+Name: Adrian Malika
+Candidate ID: 001510990
+Email Address: Adrianmalika61@gmail.com
+Phone Number: +265 889 54 54 77
+
+Project Supervisor: Mr Banda
+Project Coordinator: Mr Mwausegha
+
+Submission Date: 20th October 2025
+
+Table of Contents
+Introduction3
+Problem Statement3
+Importance of an Equipment Booking & Management System4
+Similar systems6
+EquipmentShare6
+Cat® Rental Store8
+United Rentals10
+Technological Review12
+References15
+
+Introduction 
+Farming & Engineering Services Ltd (FES) is Malawi’s leading provider of integrated agricultural solutions, established in 1967. FES operates a wide range of services which may include equipment selling, maintenance and rental of agricultural machinery and equipment. They inventory includes harvesters, tractors, planters, irrigation systems and many other machineries designed to help improve agricultural productivity (Africa, 2024). It has branches and other service depots located across the country. FES becoming a big partner for farmers seeking to access farming tech without having the high cost of ownership. However, despite FES having a strong operational presence, the rental process still faces a number of challenges due to outdated bookings, tracking and payment system.
+Problem Statement
+The equipment booking and management system is an online application that is created to facilitate the arrangement of machinery and operators scheduling, allocation, and tracking. Kising’u (2024) asserts that equipment management systems assist organizations to better service delivery through centralizing resources available and automate coordination between customers, machines, and operators. These systems save on administrative resources, eliminate the possibility of a patient being booked twice and allow real-time communication, which are important concerns in the industries where the timeliness of equipment deployment is a major issue. Davison, Goodspeed and Fluharty (2019) also reveal that equipment management systems are important to organizations with large and diverse fleet of machines. Their research work on the Maintenance Equipment Management System (MEMS) outlines four core modules needed to manage equipment well, namely, equipment inventory, maintenance and scheduling, parts and supplies management, and financial analysis tools. These components are integrated to reduce the downtime, maximize resources, increase the life cycle of equipment and enhance accountability. Another issue that the authors bring to attention is that manual processes may create a lot of inefficiencies including incomplete records, weak scheduling habits, slow maintenance and unreliable budgeting. In the absence of a digital system, organizations experience difficulties in monitoring the use of equipment, repairing them, and operational costs.
+Importance of an Equipment Booking & Management System
+Equipment booking and management system is the key to ensuring that there is efficient use of machine, it has to be deployed on time and it has to enhance coordination within organisations that have machine-based operation. There are a few important reasons why such systems are important:
+Better Operational Performance
+The management systems of digital equipment make the processes simplified through centralisation of information about bookings, equipment availability, operator shifts, and records of equipment usage. (Kising’u, 2025) cites this centralization as a source of decreased workload in the office, eases the coordinating process, and eradicates typical manual errors, including duplication and loss of records. Automated workflows assist organisations to perform their tasks more efficiently and mainly when the demand level is high.
+Less Downtime and Greater Maintenance Scheduling
+Davison, Goodspeed and Fluharty (2019) underscores that well-integrated systems help in the effective upkeep planning by availing the precise and up-to-date information regarding the state of the equipment, its history of service and repairs. As their MEMS framework shows, the modules like equipment inventory, maintenance scheduling, and parts tracking allow significantly decreasing downtime, increasing equipment life, and carrying out repairs on time. Lack of digital systems means that organisations will face delays, incompleteness of records, and inconsistent maintenance practices(Gusti and Suryantara, 2019).
+Live Monitoring and Additional Micro-location
+The current equipment management systems have the use of GPS and Internet of things (IoT) tracking technologies. According to a study by Moumen et al. (2023) real-time monitoring is a way that allows the organisations to monitor the equipment location, usage patterns, and movement in real-time. This minimizes the theft, misuse and inaccessibility risks. Fleet allocation decisions also become easier with real-time visibility provided because it allows matching equipment to operators according to spatiality and availability.
+Cost Control and financial accurateness
+Automated systems are used to assist organisations to keep proper financial records and cost estimates regarding the equipment rental and usage.  suggest that the accuracy of billing, financial discrepancy, and improved budgeting are always realised in organisations with digital tracking tools. This is particularly relevant in the case of rental-based services where the customers require transparency and predictability in cost(Gichuki and Mulu-Mutuku, 2018).
+Better Customer Experience and Openness.
+Equipment booking systems that are offered through the internet enhance customer satisfaction because the client is able to book machinery remotely, get an automatic update, and track the progress of the service. According to(Budhewar et al., 2024), accessibility, less frustration in customers, and timely communication are areas Digital booking platforms enhance to build trust between customers and service providers.
+
+Similar systems 
+EquipmentShare
+Equipment share is a cloud-based management system that is widely used in the construction and machinery industries. Their system gives offers in equipment booking, machinery tracking, maintenance scheduling and equipment monitoring through web and mobile applications (EquipmentShare, 2024)
+
+FUNCTIONALITIES 
+Equipment Booking 
+Real Time Equipment Tracking
+Equipment Management
+Maintenance Scheduling 
+Evaluation Criteria 
+Navigation
+EquipmentShare is well-structured and its navigation is arranged by a well-designed top navigation menu which gives direct access to key areas of core systems like Rent, Buy, Service, Technology, and Company information. The menus are divided into groups in a logical manner and a few clicks are made to access important features. This hierarchical navigation enhances efficiency and removes frustration to the user, especially to a first-time user. 
+Accessibility
+EquipmentShare is accessible on both desktop and mobile platforms, allowing users to manage equipment remotely. However, the system relies heavily on stable internet connectivity, which may pose challenges in rural farming areas such as those served by FES.
+ 
+Appearance 
+The visuals displayed by EquipmentShare interface is good and professional in its system layout. The overall bold typography and the use of a very limited palette of colours, which consists of dark colours and contrasting orange action buttons, contribute to the better readability and focus to the most important functions. This visual consistency assists in creating brand name acceptance and a good look that is suitable for the professional equipment rental and management setup.
+
+Cat® Rental Store
+Cat® Rental Store is an online equipment rental platform operated by Caterpillar dealers worldwide. The system enables customers to browse, choose and order rentals of a large variety of heavy machineries, such as, construction, agricultural support, power systems, and engineering machineries. The platform serves organizations that need a stable access to machinery without ownership, which is relevant to the operation model of Farming & Engineering Services Ltd (FES) (Caterpillar, 2025).
+
+FUNCTIONALITIES 
+Equipment browsing 
+Equipment rental 
+Rental Duration
+Online Payments
+Equipment Status update
+Evaluation Criteria
+Navigation
+The platform is a well-organized and user-friendly system in terms of navigation. The equipment is easily found by a distinctive search box, where the users can filter the equipment by type and job location. The equipment like earthmoving equipment, concrete equipment, material handling, landscaping tools are well separated. The system also facilitates location-based searches which means that customers are able to locate equipment in their local rental branches.
+Accessibility
+Cat Rental store site can be accessed by several devices, such as desktop computers, tablets, and smart phones. The interface applications clear typography and readable font sizes as well as high contrast colour combinations (particularly red, white, and yellow) that enhance readability. The equipment categories are presented in a basic grid format complete with icons and labels, and it is simpler to the users with different degrees of technical expertise to use the system. 
+Appearance 
+The Cat Rental Store has a professional look on its Rentals page, which is very much reminiscent of corporate identity of Caterpillar. A red, white, and dark grey colour is also used in the interface, which forms a high level of visual contrast and enhances the reading ability. There is also a distinct top-level navigation bar, which allows quick access to the main system functions like finding equipment and managing rentals and the central content area is also organized in a table format that shows the details of the rentals such as the name of the asset, the dealer, and the date of the rental. Filter tabs and a search bar are placed in an obvious way to assist the user to find selected rentals fast, and system alerts are distinctly brought to the fore to attract attention to the information needed in the account.
+
+United Rentals
+United Rentals is a global rental company of equipment and is one of the largest companies that offer construction, industrial and agricultural equipment based on an entirely digital rental management platform. The system also gives the customers the opportunity to view the equipment available, to request rentals, reservations, and to monitor the status of delivery and to make payments online. United Rentals also uses fleet management and maintenance tracking tools, which help to allocate equipment efficiently and plan operations. This would render the platform very pertinent to Farming and Engineering Services Ltd whose activities entail the hire of agricultural machinery in various places (RENTALS, 2019) 
+United Rentals is a global rental company of equipment and is one of the largest companies that offer construction, industrial and agricultural equipment based on an entirely digital rental management platform. The system also gives the customers the opportunity to view the equipment available, to request rentals, reservations, and to monitor the status of delivery and to make payments online.<> United Rentals also uses fleet management and maintenance tracking tools, which help to allocate equipment efficiently and plan operations. This would render the platform very pertinent to Farming and Engineering Services Ltd whose activities entail the hire of agricultural machinery in various places.
+
+Navigation
+The United Rentals site has clear navigation that is user oriented. The top navigation menu is well organized and lets the users to navigate to equipment categories, rental services, support features, and account management features with less effort. Search and filtering are well highlighted, so the user can easily find equipment, according to what type of equipment, where, or whether it is available. This hierarchy in navigation lowers the amount of time it takes to get through booking operations and makes the entire system more efficient to users, particularly customers who will be dealing with multiple rentals.
+Accessibility
+United Rentals has achieved accessibility due to web-based and mobile-responsive system enabling customers to administer rentals across various devices. The system will also be user-friendly by allowing users with different degrees of technical expertise to use it because it has clear labels, readable text sizes, and easy-flow interaction. 
+
+Appearance 
+The rental site and United Rentals website have a professional and effective visual design, which is in line with the corporate identity. The system design boasts of clean layout and bold colours in between white backgrounds and bold blue action elements which are easy to understand and use. Trust and reliability are strengthened with high-quality images of equipment’s in a working environment. The similarity of colour, font use and spacing between pages assist users to easily identify key events like booking, searching and controlling rentals. This is one way of showing how simple visuals can be used to come up with complex equipment rental processes.
+
+Technological Review
+Category
+Technology / Tool
+Specification / Version
+Role in the Project
+Justification for Selection
+
+Hardware
+Laptop Computer
+Intel Core i5-8250U, 16GB RAM, 250GB SSD, Windows 10/11
+Used for system design, coding, testing, database management, and documentation
+Provides sufficient processing power and memory for web development tools and local servers
+
+External Hard Drive / Flash Drive
+≥500GB
+Backup of project files and documentation
+Prevents data loss and ensures data security
+
+Software
+Visual Studio Code
+Latest stable release
+Writing and debugging frontend and backend code (HTML, CSS, JavaScript, PHP)
+Lightweight, widely used, supports extensions, and improves developer productivity
+
+PHP
+Version 8.x
+Handles server-side logic such as bookings, cost calculations, authentication, and reporting
+Suitable for CRUD-based systems, widely supported, cost-effective, and easy to maintain
+
+HTML, CSS, JavaScript
+HTML5, CSS3, ES6+
+Used to build responsive user interfaces for customers, operators, and administrators
+Ensures browser compatibility, responsiveness, and ease of use across devices
+
+Software
+Bootstrap / Tailwind CSS
+Latest stable version
+Enhances layout design, responsiveness, and visual consistency
+Reduces development time and ensures accessibility on mobile and desktop platforms
+
+MySQL
+MySQL
+Stores equipment records, bookings, users, payments, operators, and maintenance data
+Relational structure suits transactional data and supports data integrity
+
+WAMP
+PHP
+Used for local system development and testing
+Enables offline development and testing before deployment
+
+Maps API / Haversine Formula
+Latest API version
+Calculates distance between depot and customer location for cost estimation and scheduling
+Supports accurate travel distance calculations essential for FES pricing models
+
+StarUML
+Version 5.x
+Designing UML diagrams (use case, class, activity, sequence diagrams)
+Supports Object-Oriented Methodology and clear system documentation
+
+GitHub
+Cloud-based repository
+Source code management, version tracking, and backup
+Ensures code safety, collaboration, and recovery
+
+Google Chrome, Mozilla Firefox
+Latest versions
+Testing and accessing the system
+Ensures cross-browser compatibility and usability
+Software
+Microsoft Word
+Office 2019 / 365
+Writing reports, user manuals, and technical documentation
+Required for NACIT academic documentation standards
+
+References
+Africa, F., 2024. Your agriculture solutions partner. [Online] Available at: https://fes.africa/.
+Caterpillar, 2025. [Online] Available at: https://www.catrentalstore.com[Accessed 28 December 2025].
+EquipmentShare, 2024. EquipmentShare – Equipment Rental, Tracking and Management Platform. [Online] Available at: https://www.equipmentshare.com[Accessed 14 December 2025].
+RENTALS, U., 2019. United Rentals. [Online] Available at: https://www.unitedrentals.com/[Accessed 10 January 2026].
+
+Budhewar, A. S., Patil, P. G., Shivade, K., Patil, A. and Yadav, K. (2024) Implementation of Smart Agricultural Equipment Rental System quality of service (QoS), max-min ant system (MMAS),.
+Davison, G., Goodspeed, C. H. and Fluharty, D. (2019) EQUIPMENT MANAGEMENT SYSTEM,.
+Gichuki, C. N. and Mulu-Mutuku, M. (2018) Determinants of awareness and adoption of mobile money technologies: Evidence from women micro entrepreneurs in Kenya, Women’s Studies International Forum, Elsevier Ltd, 67, pp. 18–22.
+Gusti, I. and Suryantara, N. (2019) Development of Heavy Equipment Rental System Using eXtreme Programming Method, VI(1).
+Kising’u, T. M. (2025) Smart agricultural technologies and sustainability of agricultural projects in Kwale County, Kenya. Reviewed Journal of Science & Technology, [online] Available at: www.reviewedjournals.com,.
+Moumen, I., Rafalia, N., Abouchabaka, J. and Aoufi, M. (2023) Real-time GPS Tracking System for IoTEnabled Connected Vehicles, In E3S Web of Conferences, EDP Sciences.
+ 
+Davison, G., Goodspeed, C. H. and Fluharty, D. (2019) EQUIPMENT MANAGEMENT SYSTEM,.
+Gichuki, C. N. and Mulu-Mutuku, M. (2018) Determinants of awareness and adoption of mobile money technologies: Evidence from women micro entrepreneurs in Kenya, Women’s Studies International Forum, Elsevier Ltd, 67, pp. 18–22.
+Gusti, I. and Suryantara, N. (2019) Development of Heavy Equipment Rental System Using eXtreme Programming Method, VI(1).
+Kising’u, T. M. (2025) Smart agricultural technologies and sustainability of agricultural projects in Kwale County, Kenya. Reviewed Journal of Science & Technology, [online] Available at: www.reviewedjournals.com,.
+Moumen, I., Rafalia, N., Abouchabaka, J. and Aoufi, M. (2023) Real-time GPS Tracking System for IoTEnabled Connected Vehicles, In E3S Web of Conferences, EDP Sciences.
+ 
+
