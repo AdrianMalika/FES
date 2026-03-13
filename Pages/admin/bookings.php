@@ -74,12 +74,14 @@ try {
 
     $sql = "SELECT b.booking_id, b.booking_date, b.service_days, b.service_type,
                    COALESCE(NULLIF(b.service_location, ''), b.field_address) AS service_location,
-                   b.status, b.estimated_total_cost,
+                   b.status, b.estimated_total_cost, b.operator_id,
                    e.equipment_name,
-                   u.name AS customer_name
+                   u.name AS customer_name,
+                   op.name AS operator_name
             FROM bookings b
             JOIN equipment e ON e.equipment_id = b.equipment_id
             JOIN users u ON u.user_id = b.customer_id
+            LEFT JOIN users op ON op.user_id = b.operator_id
             ORDER BY b.created_at DESC";
     if ($stmt = $conn->prepare($sql)) {
         $stmt->execute();
@@ -220,6 +222,7 @@ try {
                                     <th class="py-3 pr-4">Date</th>
                                     <th class="py-3 pr-4">Location</th>
                                     <th class="py-3 pr-4">Days</th>
+                                    <th class="py-3 pr-4">Operator</th>
                                     <th class="py-3 pr-4">Total</th>
                                     <th class="py-3 pr-4">Status</th>
                                     <th class="py-3 pr-4">Action</th>
@@ -248,6 +251,19 @@ try {
                                             </td>
                                             <td class="py-3 pr-4"><?php echo htmlspecialchars($row['service_location'] ?? 'N/A'); ?></td>
                                             <td class="py-3 pr-4"><?php echo htmlspecialchars((string)($row['service_days'] ?? 1)); ?></td>
+                                            <td class="py-3 pr-4">
+                                                <?php if (!empty($row['operator_name'])): ?>
+                                                    <span class="inline-flex items-center gap-2 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
+                                                        <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                                                        <?php echo htmlspecialchars($row['operator_name']); ?>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="inline-flex items-center gap-2 text-xs font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
+                                                        <span class="h-2 w-2 rounded-full bg-gray-400"></span>
+                                                        Unassigned
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="py-3 pr-4">MK <?php echo number_format((float)($row['estimated_total_cost'] ?? 0)); ?></td>
                                             <td class="py-3 pr-4">
                                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium <?php echo $badgeClass; ?>">
@@ -271,7 +287,7 @@ try {
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td class="py-6 text-center text-sm text-gray-500" colspan="9">No bookings found.</td>
+                                        <td class="py-6 text-center text-sm text-gray-500" colspan="10">No bookings found.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -321,3 +337,4 @@ try {
     </script>
 </body>
 </html>
+

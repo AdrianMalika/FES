@@ -15,3 +15,4 @@ session_destroy();
 // Redirect to sign in page
 header("Location: signin.php");
 exit();
+

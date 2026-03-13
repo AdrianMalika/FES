@@ -26,11 +26,129 @@ require_once __DIR__ . '/../../includes/database.php';
 
 $bookingId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $booking = null;
+// FES Depot Configuration
+define('FES_DEPOT_LAT', -15.791381197859343);
+define('FES_DEPOT_LNG', 35.00946109783795);
+define('FES_DEPOT_ADDRESS', 'Kaoshiung, Blantyre, Malawi');
+
+// Pricing Configuration (shared with booking confirmation)
+$RATES = [
+    'transport_per_km' => 5000,
+    'operator_per_hour' => 6000,
+    'base_fee' => 15000,
+    'equipment' => [
+        'tractor' => ['hourly' => 25000, 'areas' => 15000, 'daily' => 180000],
+        'plow' => ['hourly' => 15000, 'areas' => 8000, 'daily' => 100000],
+        'harvester' => ['hourly' => 35000, 'areas' => 20000, 'daily' => 250000],
+        'irrigation' => ['hourly' => 20000, 'areas' => 12000, 'daily' => 140000],
+        'default' => ['hourly' => 18000, 'areas' => 10000, 'daily' => 120000]
+    ]
+];
+
+function calculateDistance($lat1, $lng1, $lat2, $lng2) {
+    $earthRadius = 6371;
+    $latDiff = deg2rad($lat2 - $lat1);
+    $lngDiff = deg2rad($lng2 - $lng1);
+    $a = sin($latDiff / 2) * sin($latDiff / 2) +
+         cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+         sin($lngDiff / 2) * sin($lngDiff / 2);
+    $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+    return $earthRadius * $c;
+}
+
+function getEquipmentRates($category, $hourlyRate, $perAcreRate, $dailyRate, $rates) {
+    $category = strtolower($category);
+    $dbHourlyRate = floatval($hourlyRate ?? 0);
+    $dbPerHectareRate = floatval($perAcreRate ?? 0);
+    $dbDailyRate = floatval($dailyRate ?? 0);
+
+    foreach ($rates['equipment'] as $key => $rate) {
+        if ($key !== 'default' && strpos($category, $key) !== false) {
+            $fallback = $rate;
+            break;
+        }
+    }
+    if (!isset($fallback)) {
+        $fallback = $rates['equipment']['default'];
+    }
+
+    $hourly = $dbHourlyRate > 0 ? $dbHourlyRate : $fallback['hourly'];
+    $areas = $dbPerHectareRate > 0 ? $dbPerHectareRate : ($dbHourlyRate > 0 ? $dbHourlyRate * 0.5 : $fallback['areas']);
+    $daily = $dbDailyRate > 0 ? $dbDailyRate : ($dbHourlyRate > 0 ? $dbHourlyRate * 8 * 0.9 : $fallback['daily']);
+
+    return [
+        'hourly' => $hourly,
+        'areas' => $areas,
+        'daily' => $daily
+    ];
+}
+
+function calculateBookingCost($booking, $rates) {
+    $serviceDays = max(1, intval($booking['service_days'] ?? 1));
+    $serviceHoursPerDay = 8;
+    $serviceHours = $serviceDays * $serviceHoursPerDay;
+
+    $distance = 0;
+    $travelCost = 0;
+    if (!empty($booking['field_lat']) && !empty($booking['field_lng'])) {
+        $distance = calculateDistance(
+            FES_DEPOT_LAT,
+            FES_DEPOT_LNG,
+            floatval($booking['field_lat']),
+            floatval($booking['field_lng'])
+        );
+        $travelCost = $distance * $rates['transport_per_km'];
+    }
+
+    $equipmentRates = getEquipmentRates(
+        $booking['category'] ?? '',
+        $booking['hourly_rate'] ?? 0,
+        $booking['per_hectare_rate'] ?? 0,
+        $booking['daily_rate'] ?? 0,
+        $rates
+    );
+
+    $landAreas = floatval($booking['field_hectares'] ?? 0);
+    $equipmentCost = 0;
+    $pricingModel = 'per_hour';
+
+    if ($landAreas > 0) {
+        $equipmentCost = $landAreas * $equipmentRates['areas'] * $serviceDays;
+        $pricingModel = 'per_area';
+        $minimumEquipmentCost = max(25000, $equipmentRates['areas'] * 1) * $serviceDays;
+        if ($equipmentCost < $minimumEquipmentCost) {
+            $equipmentCost = $minimumEquipmentCost;
+            $pricingModel = 'minimum_charge';
+        }
+    } else {
+        $equipmentCost = $serviceHours * $equipmentRates['hourly'];
+    }
+
+    $operatorCost = $serviceHours * $rates['operator_per_hour'];
+    $baseFee = $rates['base_fee'];
+    $totalCost = $equipmentCost + $operatorCost + $travelCost + $baseFee;
+
+    return [
+        'distance_km' => round($distance, 2),
+        'travel_cost' => $travelCost,
+        'equipment_cost' => $equipmentCost,
+        'operator_cost' => $operatorCost,
+        'base_fee' => $baseFee,
+        'total_cost' => $totalCost,
+        'service_days' => $serviceDays,
+        'service_hours' => $serviceHours,
+        'land_area_areas' => $landAreas,
+        'rate_per_area' => $equipmentRates['areas'],
+        'rate_per_hour' => $equipmentRates['hourly'],
+        'pricing_model' => $pricingModel,
+        'minimum_cost' => isset($minimumEquipmentCost) ? $minimumEquipmentCost : null
+    ];
+}
 
 if ($bookingId > 0) {
     try {
         $conn = getDBConnection();
-        $sql = "SELECT b.*, e.equipment_name, e.category, e.location AS equipment_location, e.daily_rate, e.hourly_rate, e.status AS equipment_status
+        $sql = "SELECT b.*, e.equipment_name, e.category, e.location AS equipment_location, e.daily_rate, e.hourly_rate, e.per_hectare_rate, e.status AS equipment_status
                 FROM bookings b
                 JOIN equipment e ON e.equipment_id = b.equipment_id
                 WHERE b.booking_id = ? AND b.customer_id = ?";
@@ -64,6 +182,7 @@ $serviceLocation = $booking ? trim($booking['service_location'] ?? '') : '';
 if (empty($serviceLocation) && !empty($booking['field_address'])) {
     $serviceLocation = $booking['field_address'];
 }
+$costBreakdown = $booking ? calculateBookingCost($booking, $RATES) : null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -157,6 +276,10 @@ if (empty($serviceLocation) && !empty($booking['field_address'])) {
                                     MK <?php echo number_format((float)($booking['estimated_total_cost'] ?? 0)); ?>
                                 </div>
                                 <div class="mt-2 text-sm text-gray-600">Service: <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $booking['service_type'] ?? 'N/A'))); ?></div>
+                                <button type="button" id="toggle-cost-breakdown" class="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-blue-600 hover:text-blue-800">
+                                    <i class="fas fa-receipt"></i>
+                                    View cost breakdown
+                                </button>
                             </div>
                         </div>
 
@@ -187,7 +310,7 @@ if (empty($serviceLocation) && !empty($booking['field_address'])) {
                                     </div>
                                     <div>
                                         <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Field Size</div>
-                                        <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($booking['field_hectares'] ?? 'Not specified'); ?> areas</div>
+                                        <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($booking['field_hectares'] ?? 'Not specified'); ?> acres</div>
                                     </div>
                                     <div>
                                         <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Notes</div>
@@ -210,6 +333,67 @@ if (empty($serviceLocation) && !empty($booking['field_address'])) {
                                 </div>
                             </section>
                         </div>
+
+                        <section id="cost-breakdown-panel" class="hidden bg-white rounded-xl shadow-card p-6 mt-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-base font-semibold text-gray-900">Cost Breakdown</h2>
+                                <button type="button" id="close-cost-breakdown" class="text-xs font-semibold text-gray-500 hover:text-gray-700">Hide</button>
+                            </div>
+                            <?php if (!$costBreakdown): ?>
+                                <div class="text-sm text-gray-600">Cost breakdown is unavailable for this booking.</div>
+                            <?php else: ?>
+                                <div class="space-y-4 text-sm">
+                                    <div class="flex justify-between items-center pb-3 border-b border-gray-100">
+                                        <span class="text-gray-700 font-medium">Equipment Cost:</span>
+                                        <span class="font-bold text-gray-900">
+                                            MK <?php echo number_format($costBreakdown['equipment_cost'] ?? 0); ?>
+                                            <?php if ($costBreakdown['pricing_model'] === 'per_area'): ?>
+                                                <span class="text-xs font-normal text-gray-600">
+                                                    (<?php echo htmlspecialchars((string)$costBreakdown['land_area_areas']); ?> acres x MK <?php echo number_format($costBreakdown['rate_per_area']); ?>/acre<?php if (($costBreakdown['service_days'] ?? 1) > 1) echo ' x ' . htmlspecialchars((string)$costBreakdown['service_days']) . ' days'; ?>)
+                                                </span>
+                                            <?php elseif ($costBreakdown['pricing_model'] === 'minimum_charge'): ?>
+                                                <span class="text-xs font-normal text-gray-600">(Minimum charge applied: MK <?php echo number_format($costBreakdown['minimum_cost'] ?? 0); ?>)</span>
+                                            <?php else: ?>
+                                                <span class="text-xs font-normal text-gray-600">(<?php echo htmlspecialchars((string)$costBreakdown['service_hours']); ?> hrs x MK <?php echo number_format($costBreakdown['rate_per_hour']); ?>/hr)</span>
+                                            <?php endif; ?>
+                                        </span>
+                                    </div>
+
+                                    <div class="flex justify-between items-center pb-3 border-b border-gray-100">
+                                        <span class="text-gray-700 font-medium">Operator Cost:</span>
+                                        <span class="font-bold text-gray-900">
+                                            MK <?php echo number_format($costBreakdown['operator_cost'] ?? 0); ?>
+                                            <span class="text-xs font-normal text-gray-600">(<?php echo htmlspecialchars((string)($costBreakdown['service_hours'] ?? 8)); ?> hrs x MK <?php echo number_format($RATES['operator_per_hour']); ?>/hr)</span>
+                                        </span>
+                                    </div>
+
+                                    <div class="flex justify-between items-center pb-3 border-b border-gray-100">
+                                        <span class="text-gray-700 font-medium">Travel Cost:</span>
+                                        <span class="font-bold text-gray-900">MK <?php echo number_format($costBreakdown['travel_cost'] ?? 0); ?> <span class="text-xs font-normal text-gray-600">(<?php echo htmlspecialchars((string)($costBreakdown['distance_km'] ?? 0)); ?> km x MK 5,000/km)</span></span>
+                                    </div>
+
+                                    <div class="flex justify-between items-center pb-3 border-b border-gray-100">
+                                        <span class="text-gray-700 font-medium">Base Fee:</span>
+                                        <span class="font-bold text-gray-900">MK <?php echo number_format($costBreakdown['base_fee'] ?? 0); ?></span>
+                                    </div>
+
+                                    <div class="flex justify-between items-center pt-4">
+                                        <span class="text-base font-bold text-gray-900">Estimated Total:</span>
+                                        <span class="text-2xl font-bold text-fes-red">MK <?php echo number_format($costBreakdown['total_cost'] ?? 0); ?></span>
+                                    </div>
+                                </div>
+
+                                <?php
+                                $storedTotal = floatval($booking['estimated_total_cost'] ?? 0);
+                                $calcTotal = floatval($costBreakdown['total_cost'] ?? 0);
+                                if ($storedTotal > 0 && abs($storedTotal - $calcTotal) > 1):
+                                ?>
+                                    <div class="mt-4 text-xs text-gray-500">
+                                        Note: The saved estimate for this booking is MK <?php echo number_format($storedTotal); ?>. Rates may have changed since you booked.
+                                    </div>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </section>
                     <?php endif; ?>
                 </main>
             </div>
@@ -254,6 +438,27 @@ if (empty($serviceLocation) && !empty($booking['field_address'])) {
                 }
             });
         })();
+
+        (function () {
+            var toggleBtn = document.getElementById('toggle-cost-breakdown');
+            var closeBtn = document.getElementById('close-cost-breakdown');
+            var panel = document.getElementById('cost-breakdown-panel');
+            if (!toggleBtn || !panel) return;
+
+            toggleBtn.addEventListener('click', function () {
+                panel.classList.toggle('hidden');
+                if (!panel.classList.contains('hidden')) {
+                    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function () {
+                    panel.classList.add('hidden');
+                });
+            }
+        })();
     </script>
 </body>
 </html>
+

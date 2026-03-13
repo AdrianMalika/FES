@@ -66,25 +66,31 @@ function calculateDistance($lat1, $lng1, $lat2, $lng2) {
 }
 
 // Get equipment rates based on category and database values
-function getEquipmentRates($category, $hourlyRate, $rates) {
+function getEquipmentRates($category, $hourlyRate, $perAcreRate, $dailyRate, $rates) {
     $category = strtolower($category);
     $dbHourlyRate = floatval($hourlyRate ?? 0);
-    
-    if ($dbHourlyRate > 0) {
-        return [
-            'hourly' => $dbHourlyRate,
-            'areas' => $dbHourlyRate * 0.5,
-            'daily' => $dbHourlyRate * 8 * 0.9
-        ];
-    }
+    $dbPerHectareRate = floatval($perAcreRate ?? 0);
+    $dbDailyRate = floatval($dailyRate ?? 0);
     
     foreach ($rates['equipment'] as $key => $rate) {
         if ($key !== 'default' && strpos($category, $key) !== false) {
-            return $rate;
+            $fallback = $rate;
+            break;
         }
     }
-    
-    return $rates['equipment']['default'];
+    if (!isset($fallback)) {
+        $fallback = $rates['equipment']['default'];
+    }
+
+    $hourly = $dbHourlyRate > 0 ? $dbHourlyRate : $fallback['hourly'];
+    $areas = $dbPerHectareRate > 0 ? $dbPerHectareRate : ($dbHourlyRate > 0 ? $dbHourlyRate * 0.5 : $fallback['areas']);
+    $daily = $dbDailyRate > 0 ? $dbDailyRate : ($dbHourlyRate > 0 ? $dbHourlyRate * 8 * 0.9 : $fallback['daily']);
+
+    return [
+        'hourly' => $hourly,
+        'areas' => $areas,
+        'daily' => $daily
+    ];
 }
 
 // Calculate comprehensive cost
@@ -112,7 +118,13 @@ function calculateBookingCost($equipment, $fieldLat, $fieldLng, $fieldAreas, $se
     $costBreakdown['travel_cost'] = $travelCost;
     
     // Get equipment rates
-    $equipmentRates = getEquipmentRates($equipment['category'] ?? '', $equipment['hourly_rate'] ?? 0, $rates);
+    $equipmentRates = getEquipmentRates(
+        $equipment['category'] ?? '',
+        $equipment['hourly_rate'] ?? 0,
+        $equipment['per_hectare_rate'] ?? 0,
+        $equipment['daily_rate'] ?? 0,
+        $rates
+    );
     
     // Calculate equipment cost
     $equipmentCost = 0;
@@ -158,7 +170,7 @@ $equipment = null;
 if ($equipmentId) {
     try {
         $conn = getDBConnection();
-        $sql = "SELECT equipment_id, equipment_name, category, location, daily_rate, hourly_rate, status, description
+        $sql = "SELECT equipment_id, equipment_name, category, location, daily_rate, hourly_rate, per_hectare_rate, status, description
                 FROM equipment
                 WHERE equipment_id = ?";
         if ($stmt = $conn->prepare($sql)) {
@@ -234,7 +246,7 @@ if ($isConfirmed && $equipment && $bookingData) {
                 $fieldLng = !empty($bookingData['field_lng']) ? floatval($bookingData['field_lng']) : null;
                 $fieldAddress = $bookingData['field_address'] ?? '';
                 $fieldPolygon = $bookingData['field_polygon'] ?? '';
-                $fieldHectares = !empty($bookingData['field_hectares']) ? floatval($bookingData['field_hectares']) : null;
+                $fieldAcres = !empty($bookingData['field_hectares']) ? floatval($bookingData['field_hectares']) : null;
                 $notes = $bookingData['notes'] ?? '';
                 $estimatedTotal = $costBreakdown['total_cost'] ?? 0;
 
@@ -251,7 +263,7 @@ if ($isConfirmed && $equipment && $bookingData) {
                     $fieldLng,
                     $fieldAddress,
                     $fieldPolygon,
-                    $fieldHectares,
+                    $fieldAcres,
                     $notes,
                     $estimatedTotal,
                     $bookingStatus
@@ -433,7 +445,7 @@ if ($isConfirmed && $equipment && $bookingData) {
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Field Area</p>
-                            <p class="text-base font-medium text-gray-800"><?php echo htmlspecialchars($bookingData['field_hectares'] ?? 'Not specified'); ?> areas</p>
+                            <p class="text-base font-medium text-gray-800"><?php echo htmlspecialchars($bookingData['field_hectares'] ?? 'Not specified'); ?> acres</p>
                         </div>
                     </div>
                 </div>
@@ -464,7 +476,7 @@ if ($isConfirmed && $equipment && $bookingData) {
                             MK <?php echo number_format($costBreakdown['equipment_cost'] ?? 0); ?>
                             <?php if (!empty($costBreakdown['pricing_model']) && $costBreakdown['pricing_model'] === 'per_area'): ?>
                                 <span class="text-xs font-normal text-gray-600">
-                                    (<?php echo htmlspecialchars($costBreakdown['land_area_areas']); ?> areas x MK <?php echo number_format($costBreakdown['rate_per_area']); ?>/area<?php if (($costBreakdown['service_days'] ?? 1) > 1) echo ' x ' . htmlspecialchars((string)$costBreakdown['service_days']) . ' days'; ?>)
+                                    (<?php echo htmlspecialchars($costBreakdown['land_area_areas']); ?> acres x MK <?php echo number_format($costBreakdown['rate_per_area']); ?>/acre<?php if (($costBreakdown['service_days'] ?? 1) > 1) echo ' x ' . htmlspecialchars((string)$costBreakdown['service_days']) . ' days'; ?>)
                                 </span>
                             <?php elseif (!empty($costBreakdown['pricing_model']) && $costBreakdown['pricing_model'] === 'minimum_charge'): ?>
                                 <span class="text-xs font-normal text-gray-600">(Minimum charge: MK <?php echo number_format($costBreakdown['minimum_cost']); ?>)</span>
@@ -594,3 +606,4 @@ if ($isConfirmed) {
     unset($_SESSION[$pendingKey]);
 }
 ?>
+

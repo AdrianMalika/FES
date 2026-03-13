@@ -287,3 +287,4 @@ $customerName = $_SESSION['name'] ?? 'Customer';
     </script>
 </body>
 </html>
+

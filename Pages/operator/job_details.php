@@ -110,7 +110,7 @@ $jobId = $_GET['id'] ?? 'JOB-2026-001';
                         </div>
                         <div>
                             <dt class="text-gray-500 text-xs uppercase tracking-wide">Land Size</dt>
-                            <dd class="mt-1">18 hectares</dd>
+                            <dd class="mt-1">18 Acres</dd>
                         </div>
                         <div>
                             <dt class="text-gray-500 text-xs uppercase tracking-wide">Location</dt>
@@ -231,4 +231,5 @@ $jobId = $_GET['id'] ?? 'JOB-2026-001';
 </script>
 </body>
 </html>
+
 

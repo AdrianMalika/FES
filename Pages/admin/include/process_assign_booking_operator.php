@@ -4,43 +4,30 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ../equipment.php');
+    header('Location: ../bookings.php');
     exit();
 }
 
 if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
     $_SESSION['error'] = 'Access denied.';
-    header('Location: ../equipment.php');
+    header('Location: ../bookings.php');
     exit();
 }
 
 require_once '../../../includes/database.php';
 
-$equipment_id = (int)($_POST['equipment_id'] ?? 0);
+$booking_id = (int)($_POST['booking_id'] ?? 0);
 $operator_id_raw = trim((string)($_POST['operator_id'] ?? ''));
 $operator_id = ($operator_id_raw === '') ? null : (int)$operator_id_raw;
 
-if ($equipment_id <= 0) {
-    $_SESSION['error'] = 'Invalid equipment selected.';
-    header('Location: ../equipment.php');
+if ($booking_id <= 0) {
+    $_SESSION['error'] = 'Invalid booking selected.';
+    header('Location: ../booking-details.php?id=' . $booking_id);
     exit();
 }
 
 try {
     $conn = getDBConnection();
-
-    $eqStmt = $conn->prepare('SELECT id, equipment_name FROM equipment WHERE id = ?');
-    $eqStmt->bind_param('i', $equipment_id);
-    $eqStmt->execute();
-    $eqRes = $eqStmt->get_result();
-    $equipment = $eqRes->fetch_assoc();
-    $eqStmt->close();
-
-    if (!$equipment) {
-        $_SESSION['error'] = 'Equipment not found.';
-        header('Location: ../equipment.php');
-        exit();
-    }
 
     if ($operator_id !== null) {
         $opStmt = $conn->prepare("SELECT user_id, name FROM users WHERE user_id = ? AND role = 'operator'");
@@ -52,31 +39,31 @@ try {
 
         if (!$operator) {
             $_SESSION['error'] = 'Selected operator is invalid.';
-            header('Location: ../equipment.php');
+            header('Location: ../booking-details.php?id=' . $booking_id);
             exit();
         }
 
-        // One-to-one rule: operator cannot be assigned if already linked to any other equipment.
-        $busyStmt = $conn->prepare("SELECT equipment_id, equipment_name FROM equipment WHERE operator_id = ? AND id <> ? LIMIT 1");
-        $busyStmt->bind_param('ii', $operator_id, $equipment_id);
+        // One-to-one rule: operator cannot be assigned if already linked to any other booking.
+        $busyStmt = $conn->prepare("SELECT booking_id FROM bookings WHERE operator_id = ? AND booking_id <> ? LIMIT 1");
+        $busyStmt->bind_param('ii', $operator_id, $booking_id);
         $busyStmt->execute();
         $busyRes = $busyStmt->get_result();
         $busy = $busyRes->fetch_assoc();
         $busyStmt->close();
 
         if ($busy) {
-            $_SESSION['error'] = 'Cannot assign operator. This operator is already assigned to ' . $busy['equipment_id'] . ' (' . $busy['equipment_name'] . '). Unassign them there first.';
-            header('Location: ../equipment.php');
+            $_SESSION['error'] = 'Cannot assign operator. This operator is already assigned to another booking. Unassign them there first.';
+            header('Location: ../booking-details.php?id=' . $booking_id);
             exit();
         }
     }
 
     if ($operator_id === null) {
-        $updStmt = $conn->prepare('UPDATE equipment SET operator_id = NULL, updated_at = NOW() WHERE id = ?');
-        $updStmt->bind_param('i', $equipment_id);
+        $updStmt = $conn->prepare('UPDATE bookings SET operator_id = NULL, updated_at = NOW() WHERE booking_id = ?');
+        $updStmt->bind_param('i', $booking_id);
     } else {
-        $updStmt = $conn->prepare('UPDATE equipment SET operator_id = ?, updated_at = NOW() WHERE id = ?');
-        $updStmt->bind_param('ii', $operator_id, $equipment_id);
+        $updStmt = $conn->prepare('UPDATE bookings SET operator_id = ?, updated_at = NOW() WHERE booking_id = ?');
+        $updStmt->bind_param('ii', $operator_id, $booking_id);
     }
 
     if ($updStmt->execute()) {
@@ -91,8 +78,7 @@ try {
     $_SESSION['error'] = 'Unexpected error while updating assignment.';
 }
 
-header('Location: ../equipment.php');
+header('Location: ../booking-details.php?id=' . $booking_id);
 exit();
 ?>
-
 

@@ -229,3 +229,4 @@ $is_bookings = in_array($current_page, ['bookings', 'booking-details'], true);
     </div>
 </aside>
 
+

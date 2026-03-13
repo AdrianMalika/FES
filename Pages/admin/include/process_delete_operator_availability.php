@@ -54,3 +54,4 @@ try {
 header('Location: ../operator_manage.php?id=' . $operator_id);
 exit();
 
+

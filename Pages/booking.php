@@ -170,7 +170,7 @@ if ($equipmentId === '') {
 } else {
     try {
         $conn = getDBConnection();
-        $sql = "SELECT equipment_id, equipment_name, category, location, daily_rate, hourly_rate, status, description
+            $sql = "SELECT equipment_id, equipment_name, category, location, daily_rate, hourly_rate, per_hectare_rate, status, description
                 FROM equipment
                 WHERE equipment_id = ?";
         if ($stmt = $conn->prepare($sql)) {
@@ -410,7 +410,7 @@ if ($equipmentId === '') {
                     <input type="hidden" name="field_address" id="field_address">
                     <!-- Stores polygon vertices (JSON array of [lng,lat]) when user marks an area -->
                     <input type="hidden" name="field_polygon" id="field_polygon">
-                    <!-- Stores calculated area in hectares for the marked field -->
+                    <!-- Stores calculated area in Acres for the marked field -->
                     <input type="hidden" name="field_hectares" id="field_hectares">
 
                                 <div>
@@ -631,9 +631,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof turf !== 'undefined' && hectaresInput) {
             try {
                 var areaSqm = turf.area(data.features[0]); // square meters
-                var areas = areaSqm / 10000; // 10,000 m² per area (same as hectare conversion)
+                var areas = areaSqm / 10000; // 10,000 m² per area (same as Acre conversion)
                 hectaresInput.value = areas.toFixed(2);
-                coordsLabel.textContent = polygonCoords.length + ' points · approx ' + areas.toFixed(2) + ' areas';
+                coordsLabel.textContent = polygonCoords.length + ' points · approx ' + areas.toFixed(2) + ' acres';
             } catch (e) {
                 console.error('Area calculation failed:', e);
                 hectaresInput.value = '';
@@ -711,17 +711,19 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Get actual database hourly rate
         var dbHourlyRate = <?php echo floatval($equipment['hourly_rate'] ?? 0); ?>;
+        var dbPerHectareRate = <?php echo floatval($equipment['per_hectare_rate'] ?? 0); ?>;
+        var dbDailyRate = <?php echo floatval($equipment['daily_rate'] ?? 0); ?>;
         
         // Get equipment category
         var equipmentCategory = '<?php echo strtolower($equipment['category'] ?? ''); ?>';
         var rates = equipmentRates.default;
         
-        // Use database rate if available, otherwise use hardcoded rates
-        if (dbHourlyRate > 0) {
+        // Use database rates if available, otherwise use hardcoded rates
+        if (dbHourlyRate > 0 || dbPerHectareRate > 0 || dbDailyRate > 0) {
             rates = {
-                hourly: dbHourlyRate,
-                areas: dbHourlyRate * 0.5, // Per-area is 50% of hourly rate
-                daily: dbHourlyRate * 8 * 0.9  // Daily rate with 10% discount
+                hourly: dbHourlyRate > 0 ? dbHourlyRate : equipmentRates.default.hourly,
+                areas: dbPerHectareRate > 0 ? dbPerHectareRate : (dbHourlyRate > 0 ? dbHourlyRate * 0.5 : equipmentRates.default.areas),
+                daily: dbDailyRate > 0 ? dbDailyRate : (dbHourlyRate > 0 ? dbHourlyRate * 8 * 0.9 : equipmentRates.default.daily)
             };
         } else {
             for (var key in equipmentRates) {
@@ -741,7 +743,7 @@ document.addEventListener('DOMContentLoaded', function () {
         
         if (fieldAreas > 0) {
             equipmentCost = fieldAreas * rates.areas;
-            pricingModel = fieldAreas + ' areas × MK ' + rates.areas + '/area';
+            pricingModel = fieldAreas + ' acres × MK ' + rates.areas + '/acre';
             
             // Apply minimum equipment cost (e.g., minimum 1 area or MK 25,000)
             var minimumEquipmentCost = Math.max(25000, rates.areas * 1); // Minimum MK 25,000 or cost of 1 area
@@ -811,4 +813,5 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 </body>
 </html>
+
 

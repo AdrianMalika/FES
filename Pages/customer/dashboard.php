@@ -338,3 +338,4 @@ $activeBookings = $bookingStats['confirmed'] + $bookingStats['in_progress'];
 </body>
 
 </html>
+
