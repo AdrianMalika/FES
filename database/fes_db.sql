@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.0
+-- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Mar 11, 2026 at 09:28 AM
--- Server version: 8.0.31
--- PHP Version: 8.0.26
+-- Generation Time: Mar 13, 2026 at 03:50 AM
+-- Server version: 9.1.0
+-- PHP Version: 8.3.14
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -20,6 +20,47 @@ SET time_zone = "+00:00";
 --
 -- Database: `fes_db`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `bookings`
+--
+
+DROP TABLE IF EXISTS `bookings`;
+CREATE TABLE IF NOT EXISTS `bookings` (
+  `booking_id` int NOT NULL AUTO_INCREMENT,
+  `customer_id` int NOT NULL,
+  `equipment_id` varchar(50) NOT NULL,
+  `booking_date` date NOT NULL,
+  `service_days` int NOT NULL DEFAULT '1',
+  `service_type` varchar(50) NOT NULL,
+  `service_location` varchar(255) NOT NULL,
+  `contact_phone` varchar(50) NOT NULL,
+  `field_lat` decimal(10,7) DEFAULT NULL,
+  `field_lng` decimal(10,7) DEFAULT NULL,
+  `field_address` varchar(255) DEFAULT NULL,
+  `field_polygon` longtext,
+  `field_hectares` decimal(10,2) DEFAULT NULL,
+  `notes` text,
+  `estimated_total_cost` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `status` enum('pending','confirmed','in_progress','completed','cancelled') NOT NULL DEFAULT 'pending',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`booking_id`),
+  KEY `customer_id` (`customer_id`),
+  KEY `equipment_id` (`equipment_id`),
+  KEY `status` (`status`)
+) ENGINE=MyISAM AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `bookings`
+--
+
+INSERT INTO `bookings` (`booking_id`, `customer_id`, `equipment_id`, `booking_date`, `service_days`, `service_type`, `service_location`, `contact_phone`, `field_lat`, `field_lng`, `field_address`, `field_polygon`, `field_hectares`, `notes`, `estimated_total_cost`, `status`, `created_at`, `updated_at`) VALUES
+(1, 16, 'EQ-002', '2026-03-14', 2, 'land_prep', '', '0889545477', -15.8130972, 34.9964142, '', '[[34.99732933912256,-15.8136432389677],[34.997130516833806,-15.81400989215392],[34.996986922958314,-15.814081628569085],[34.996766009303315,-15.81408959928082],[34.9964788215525,-15.814063030241499],[34.996368364725726,-15.814004578344552],[34.99622200943054,-15.813837193272619],[34.996117075443436,-15.813717632422083],[34.99602594856154,-15.813568845487353],[34.99624962363649,-15.813297840431474],[34.99632418199474,-15.813199534585706],[34.9963876946706,-15.813159680851612],[34.99641419067382,-15.813097189538013]]', 0.93, 'qwerty', 174945.80, 'pending', '2026-03-12 12:22:44', '2026-03-12 12:22:44'),
+(2, 16, 'EQ-002', '2026-03-26', 1, 'land_prep', 'Lat -15.811726198265589, Lng 34.99978649872912', '0889545477', -15.8117262, 34.9997865, '', '[[35.00015046738392,-15.810894478918442],[35.001117259125294,-15.811118824605614],[35.00103195397128,-15.811523740580512],[35.00069642036681,-15.81193412756744],[35.00048600098833,-15.81187940935088],[35.00034382573219,-15.811901296638695],[35.000002605117686,-15.811813747470282],[34.99978649872912,-15.811726198265589]]', 1.11, 'nnnnnnnnnnn', 100439.14, 'pending', '2026-03-12 18:26:56', '2026-03-12 18:26:56'),
+(3, 16, 'EQ-001', '2026-03-16', 2, 'land_prep', 'Lat -15.812386229437948, Lng 35.005290925795606', '0889545477', -15.8123862, 35.0052909, '', '[[35.00458416789928,-15.811866218408696],[35.00080093444927,-15.815806268670201],[35.00148690534925,-15.816346269579839],[35.005290925795606,-15.812386229437948]]', 5.68, 'qwertgfds', 216609.44, 'confirmed', '2026-03-12 18:59:38', '2026-03-12 20:25:28');
 
 -- --------------------------------------------------------
 
@@ -67,6 +108,7 @@ CREATE TABLE IF NOT EXISTS `equipment` (
   `purchase_date` date DEFAULT NULL,
   `daily_rate` decimal(10,2) NOT NULL,
   `hourly_rate` decimal(10,2) DEFAULT '0.00',
+  `per_hectare_rate` decimal(10,2) DEFAULT NULL,
   `fuel_type` varchar(50) DEFAULT NULL,
   `total_usage_hours` int DEFAULT '0',
   `year_manufactured` int DEFAULT NULL,
@@ -84,9 +126,9 @@ CREATE TABLE IF NOT EXISTS `equipment` (
 -- Dumping data for table `equipment`
 --
 
-INSERT INTO `equipment` (`id`, `equipment_name`, `category`, `equipment_id`, `model`, `description`, `status`, `location`, `operator_id`, `purchase_date`, `daily_rate`, `hourly_rate`, `fuel_type`, `total_usage_hours`, `year_manufactured`, `weight_kg`, `last_maintenance`, `icon`, `image_path`, `created_at`, `updated_at`) VALUES
-(1, 'Tractor MF 315', 'tractor', 'EQ-001', 'forgess', 'gg', 'available', 'Blantyre Depot', 20, '2026-03-08', '200000.00', '16500.00', 'diesel', 0, 2024, '3500.00', '2026-03-08', 'fa-tractor', 'assets/images/equipment/1772980299_images (2).jpg', '2026-03-08 14:31:39', '2026-03-09 08:22:25'),
-(2, 'Tractor MF 315', 'tractor', 'EQ-002', 'forgess', 'ddd', 'available', 'Blantyre Depot', 23, '2026-03-08', '200000.00', '16500.00', 'diesel', 0, 2024, '3500.00', '2026-03-08', 'fa-wheat-awn', 'assets/images/equipment/1772980419_images (2).jpg', '2026-03-08 14:33:39', '2026-03-09 17:03:28');
+INSERT INTO `equipment` (`id`, `equipment_name`, `category`, `equipment_id`, `model`, `description`, `status`, `location`, `operator_id`, `purchase_date`, `daily_rate`, `hourly_rate`, `per_hectare_rate`, `fuel_type`, `total_usage_hours`, `year_manufactured`, `weight_kg`, `last_maintenance`, `icon`, `image_path`, `created_at`, `updated_at`) VALUES
+(1, 'Tractor MF 315', 'tractor', 'EQ-001', 'forgess', 'gg', 'available', 'Blantyre Depot', 20, '2026-03-08', 200000.00, 16500.00, 8000.00, 'diesel', 0, 2024, 3500.00, '2026-03-08', 'fa-tractor', 'assets/images/equipment/1772980299_images (2).jpg', '2026-03-08 14:31:39', '2026-03-11 11:04:20'),
+(2, 'Tractor MF 315', 'tractor', 'EQ-002', 'forgess', 'ddd', 'available', 'Blantyre Depot', 23, '2026-03-08', 200000.00, 16500.00, 8000.00, 'diesel', 0, 2024, 3500.00, '2026-03-08', 'fa-wheat-awn', 'assets/images/equipment/1772980419_images (2).jpg', '2026-03-08 14:33:39', '2026-03-11 11:04:20');
 
 -- --------------------------------------------------------
 
@@ -102,7 +144,7 @@ CREATE TABLE IF NOT EXISTS `operator_availability` (
   `start_time` time NOT NULL,
   `end_time` time NOT NULL,
   `is_available` tinyint(1) NOT NULL DEFAULT '1',
-  `note` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `note` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_availability_operator_day` (`operator_id`,`day_of_week`)
@@ -125,8 +167,8 @@ DROP TABLE IF EXISTS `operator_skills`;
 CREATE TABLE IF NOT EXISTS `operator_skills` (
   `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
   `operator_id` int NOT NULL,
-  `skill_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `skill_level` enum('beginner','intermediate','advanced','expert') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'intermediate',
+  `skill_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `skill_level` enum('beginner','intermediate','advanced','expert') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'intermediate',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_operator_skills_operator_id` (`operator_id`)
@@ -154,7 +196,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `role` enum('customer','admin','operator') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'customer',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `password_reset_token` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `password_reset_token` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `password_reset_expires` datetime DEFAULT NULL,
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `email` (`email`)

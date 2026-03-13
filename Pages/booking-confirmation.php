@@ -14,6 +14,14 @@ $pendingKey = 'pending_booking';
 $isConfirmPost = ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_booking']));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isConfirmPost && !empty($_POST)) {
+    // Normalize location field for display/persistence
+    if (empty($_POST['service_location'])) {
+        if (!empty($_POST['field_address'])) {
+            $_POST['service_location'] = $_POST['field_address'];
+        } elseif (!empty($_POST['field_lat']) && !empty($_POST['field_lng'])) {
+            $_POST['service_location'] = 'Lat ' . $_POST['field_lat'] . ', Lng ' . $_POST['field_lng'];
+        }
+    }
     $_SESSION[$pendingKey] = $_POST;
 }
 
@@ -185,6 +193,12 @@ $customerName = $_SESSION['name'] ?? 'Customer';
 $isConfirmed = $isConfirmPost && !empty($bookingData);
 $createdBookingId = null;
 $bookingStatus = 'pending';
+$displayLocation = trim($bookingData['service_location'] ?? '');
+if ($displayLocation === '' && !empty($bookingData['field_address'])) {
+    $displayLocation = $bookingData['field_address'];
+} elseif ($displayLocation === '' && !empty($bookingData['field_lat']) && !empty($bookingData['field_lng'])) {
+    $displayLocation = 'Lat ' . $bookingData['field_lat'] . ', Lng ' . $bookingData['field_lng'];
+}
 
 // Persist booking on confirm (idempotent by session hash)
 if ($isConfirmed && $equipment && $bookingData) {
@@ -212,6 +226,9 @@ if ($isConfirmed && $equipment && $bookingData) {
                 $bookingDate = $bookingData['booking_date'] ?? null;
                 $serviceType = $bookingData['service_type'] ?? '';
                 $serviceLocation = $bookingData['service_location'] ?? '';
+                if ($serviceLocation === '' && !empty($bookingData['field_address'])) {
+                    $serviceLocation = $bookingData['field_address'];
+                }
                 $contactPhone = $bookingData['contact_phone'] ?? '';
                 $fieldLat = !empty($bookingData['field_lat']) ? floatval($bookingData['field_lat']) : null;
                 $fieldLng = !empty($bookingData['field_lng']) ? floatval($bookingData['field_lng']) : null;
@@ -408,7 +425,7 @@ if ($isConfirmed && $equipment && $bookingData) {
                     <div class="space-y-4">
                         <div>
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Service Location</p>
-                            <p class="text-base font-medium text-gray-800"><?php echo htmlspecialchars($bookingData['service_location'] ?? 'N/A'); ?></p>
+                            <p class="text-base font-medium text-gray-800"><?php echo htmlspecialchars($displayLocation ?: 'N/A'); ?></p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Contact Phone</p>
@@ -484,7 +501,7 @@ if ($isConfirmed && $equipment && $bookingData) {
                 <div class="mt-6 p-4 bg-gray-50 rounded-sm border border-gray-100">
                     <p class="text-xs text-gray-600">
                         <i class="fas fa-info-circle mr-2"></i>
-                        Cost calculated from <?php echo htmlspecialchars($costBreakdown['distance_km']); ?> km distance from FES depot (Kaoshiung, Blantyre) to <?php echo htmlspecialchars($bookingData['service_location'] ?? 'your location'); ?>.
+                        Cost calculated from <?php echo htmlspecialchars($costBreakdown['distance_km']); ?> km distance from FES depot (Kaoshiung, Blantyre) to <?php echo htmlspecialchars($displayLocation ?: 'your location'); ?>.
                     </p>
                 </div>
             </div>

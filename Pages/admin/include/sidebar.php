@@ -6,6 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Get current page filename
 $current_page = basename($_SERVER['PHP_SELF'], '.php');
+$is_bookings = in_array($current_page, ['bookings', 'booking-details'], true);
 ?>
 <style>
 #fes-dashboard-sidebar {
@@ -202,7 +203,7 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
             <i class="fas fa-truck-pickup w-5"></i>
             Equipment
         </a>
-        <a href="bookings.php" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg <?php echo $current_page === 'bookings' ? 'bg-fes-red shadow-md shadow-black/10 font-medium' : 'text-white/80 hover:text-white hover:bg-white/5'; ?> transition">
+        <a href="bookings.php" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg <?php echo $is_bookings ? 'bg-fes-red shadow-md shadow-black/10 font-medium' : 'text-white/80 hover:text-white hover:bg-white/5'; ?> transition">
             <i class="fas fa-calendar-check w-5"></i>
             Bookings
         </a>

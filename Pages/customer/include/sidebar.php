@@ -2,6 +2,8 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+$current_page = basename($_SERVER['PHP_SELF'], '.php');
+$is_bookings = in_array($current_page, ['bookings', 'booking-details'], true);
 ?>
 <style>
 #fes-dashboard-sidebar {
@@ -171,17 +173,17 @@ if (session_status() === PHP_SESSION_NONE) {
 
     <nav class="flex-1 px-3 py-4">
         <div class="nav-title">Main</div>
-        <a href="dashboard.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-fes-red shadow-md shadow-black/10 font-medium">
+        <a href="dashboard.php" class="flex items-center gap-3 px-4 py-3 rounded-lg <?php echo $current_page === 'dashboard' ? 'bg-fes-red shadow-md shadow-black/10 font-medium' : 'text-white/80 hover:text-white hover:bg-white/5'; ?> transition">
             <i class="fas fa-th-large w-5"></i>
             Dashboard
         </a>
-        <a href="#" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:text-white hover:bg-white/5 transition">
+        <a href="../equipment.php" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg <?php echo $current_page === 'equipment' ? 'bg-fes-red shadow-md shadow-black/10 font-medium' : 'text-white/80 hover:text-white hover:bg-white/5'; ?> transition">
             <i class="fas fa-search w-5"></i>
             Browse Equipment
         </a>
-        <a href="#" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:text-white hover:bg-white/5 transition">
+        <a href="bookings.php" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg <?php echo $is_bookings ? 'bg-fes-red shadow-md shadow-black/10 font-medium' : 'text-white/80 hover:text-white hover:bg-white/5'; ?> transition">
             <i class="fas fa-calendar-check w-5"></i>
-            My Bookings
+            Bookings
         </a>
         <a href="#" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:text-white hover:bg-white/5 transition">
             <i class="fas fa-file-invoice-dollar w-5"></i>
