@@ -53,7 +53,7 @@ if ($bookingId > 0) {
     try {
         $conn = getDBConnection();
         $sql = "SELECT b.*, 
-                       e.equipment_name, e.category, e.location AS equipment_location, e.daily_rate, e.hourly_rate, e.status AS equipment_status,
+                       e.equipment_name, e.category, e.location AS equipment_location, e.daily_rate, e.hourly_rate, e.per_hectare_rate, e.status AS equipment_status,
                        u.name AS customer_name, u.email AS customer_email
                 FROM bookings b
                 JOIN equipment e ON e.equipment_id = b.equipment_id
@@ -99,6 +99,9 @@ if ($serviceLocation === '' && !empty($booking['field_address'])) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- TomTom Maps CSS -->
+    <link rel="stylesheet" type="text/css" href="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps.css">
+    <script src="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -185,8 +188,8 @@ if ($serviceLocation === '' && !empty($booking['field_address'])) {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <section class="lg:col-span-2 bg-white rounded-xl shadow-card p-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <section class="bg-white rounded-xl shadow-card p-6">
                             <h2 class="text-base font-semibold text-gray-900 mb-4">Booking Information</h2>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                 <div>
@@ -219,7 +222,21 @@ if ($serviceLocation === '' && !empty($booking['field_address'])) {
                                 </div>
                                 <div>
                                     <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Field Size</div>
-                                    <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($booking['field_hectares'] ?? 'Not specified'); ?> areas</div>
+                                    <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($booking['field_hectares'] ?? 'Not specified'); ?> hectares</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Field Address</div>
+                                    <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($booking['field_address'] ?: 'Not specified'); ?></div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">GPS Coordinates</div>
+                                    <div class="text-gray-900 font-medium">
+                                        <?php if (!empty($booking['field_lat']) && !empty($booking['field_lng'])): ?>
+                                            Lat: <?php echo htmlspecialchars((float)$booking['field_lat']); ?>, Lng: <?php echo htmlspecialchars((float)$booking['field_lng']); ?>
+                                        <?php else: ?>
+                                            Not specified
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                                 <div>
                                     <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Notes</div>
@@ -229,19 +246,98 @@ if ($serviceLocation === '' && !empty($booking['field_address'])) {
                         </section>
 
                         <section class="bg-white rounded-xl shadow-card p-6">
-                            <h2 class="text-base font-semibold text-gray-900 mb-4">Update Status</h2>
-                            <form method="post" class="space-y-3">
-                                <input type="hidden" name="booking_id" value="<?php echo htmlspecialchars((string)$booking['booking_id']); ?>">
-                                <select name="new_status" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
-                                    <option value="pending" <?php if ($status === 'pending') echo 'selected'; ?>>Pending</option>
-                                    <option value="confirmed" <?php if ($status === 'confirmed') echo 'selected'; ?>>Confirmed</option>
-                                    <option value="in_progress" <?php if ($status === 'in_progress') echo 'selected'; ?>>In Progress</option>
-                                    <option value="completed" <?php if ($status === 'completed') echo 'selected'; ?>>Completed</option>
-                                    <option value="cancelled" <?php if ($status === 'cancelled') echo 'selected'; ?>>Cancelled</option>
-                                </select>
-                                <button type="submit" class="w-full px-4 py-2 rounded-lg bg-fes-red text-white text-sm font-semibold hover:bg-red-700">Update Status</button>
-                            </form>
+                            <h2 class="text-base font-semibold text-gray-900 mb-4">Field Location & Area</h2>
+                            
+                            <?php if (!empty($booking['field_polygon'])): ?>
+                                <div class="mb-4">
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-2">Field Polygon Data</div>
+                                    <div class="bg-gray-50 rounded-lg p-3 text-xs font-mono text-gray-700 max-h-32 overflow-y-auto">
+                                        <?php echo htmlspecialchars($booking['field_polygon']); ?>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-2">Field Location Map</div>
+                                    <div id="field-map" class="w-full h-64 bg-gray-100 rounded-lg border border-gray-200"></div>
+                                </div>
+                            <?php else: ?>
+                                <div class="text-center text-gray-500 py-8">
+                                    <i class="fas fa-map text-3xl mb-2"></i>
+                                    <div class="text-sm">No field polygon data available</div>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <?php if (!empty($booking['field_lat']) && !empty($booking['field_lng'])): ?>
+                                <div class="mt-4">
+                                    <a href="https://www.google.com/maps?q=<?php echo htmlspecialchars((float)$booking['field_lat']); ?>,<?php echo htmlspecialchars((float)$booking['field_lng']); ?>" 
+                                       target="_blank" 
+                                       class="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                        <i class="fas fa-external-link-alt"></i>
+                                        View on Google Maps
+                                    </a>
+                                </div>
+                            <?php endif; ?>
                         </section>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-card p-6 mt-6">
+                        <h2 class="text-base font-semibold text-gray-900 mb-4">Cost Breakdown</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                    <span class="text-sm text-gray-600">Service Type</span>
+                                    <span class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $booking['service_type'] ?? 'N/A'))); ?></span>
+                                </div>
+                                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                    <span class="text-sm text-gray-600">Service Days</span>
+                                    <span class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars((string)($booking['service_days'] ?? 1)); ?> days</span>
+                                </div>
+                                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                    <span class="text-sm text-gray-600">Field Size</span>
+                                    <span class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($booking['field_hectares'] ?? '0'); ?> hectares</span>
+                                </div>
+                            </div>
+                            <div class="space-y-3">
+                                <?php if (!empty($booking['daily_rate'])): ?>
+                                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                    <span class="text-sm text-gray-600">Daily Rate</span>
+                                    <span class="text-sm font-medium text-gray-900">MK <?php echo number_format((float)$booking['daily_rate']); ?></span>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($booking['hourly_rate'])): ?>
+                                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                    <span class="text-sm text-gray-600">Hourly Rate</span>
+                                    <span class="text-sm font-medium text-gray-900">MK <?php echo number_format((float)$booking['hourly_rate']); ?></span>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($booking['per_hectare_rate'])): ?>
+                                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                    <span class="text-sm text-gray-600">Per Hectare Rate</span>
+                                    <span class="text-sm font-medium text-gray-900">MK <?php echo number_format((float)$booking['per_hectare_rate']); ?></span>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center py-3 mt-2">
+                                    <span class="text-base font-semibold text-gray-900">Estimated Total Cost</span>
+                                    <span class="text-base font-bold text-fes-red">MK <?php echo number_format((float)($booking['estimated_total_cost'] ?? 0)); ?></span>
+                                </div>
+                                <div class="mt-4">
+                                    <form method="post" class="space-y-3">
+                                        <input type="hidden" name="booking_id" value="<?php echo htmlspecialchars((string)$booking['booking_id']); ?>">
+                                        <div class="text-xs text-gray-500 uppercase tracking-wider mb-2">Update Status</div>
+                                        <select name="new_status" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                                            <option value="pending" <?php if ($status === 'pending') echo 'selected'; ?>>Pending</option>
+                                            <option value="confirmed" <?php if ($status === 'confirmed') echo 'selected'; ?>>Confirmed</option>
+                                            <option value="in_progress" <?php if ($status === 'in_progress') echo 'selected'; ?>>In Progress</option>
+                                            <option value="completed" <?php if ($status === 'completed') echo 'selected'; ?>>Completed</option>
+                                            <option value="cancelled" <?php if ($status === 'cancelled') echo 'selected'; ?>>Cancelled</option>
+                                        </select>
+                                        <button type="submit" class="w-full px-4 py-2 rounded-lg bg-fes-red text-white text-sm font-semibold hover:bg-red-700">Update Status</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 <?php endif; ?>
             </main>
@@ -284,6 +380,124 @@ if ($serviceLocation === '' && !empty($booking['field_address'])) {
                 }
             });
         })();
+
+        // Initialize field map if polygon data exists
+        <?php if (!empty($booking['field_polygon'])): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                var polygonData = <?php echo json_encode($booking['field_polygon']); ?>;
+                var mapContainer = document.getElementById('field-map');
+                
+                if (mapContainer && polygonData) {
+                    // Parse polygon coordinates
+                    var coordinates = JSON.parse(polygonData);
+                    var latLngs = coordinates.map(function(coord) {
+                        return [coord[1], coord[0]]; // TomTom uses [lat, lng] format
+                    });
+
+                    if (latLngs.length > 0) {
+                        // Calculate center of the polygon
+                        var bounds = new tt.LngLatBounds();
+                        latLngs.forEach(function(latLng) {
+                            bounds.extend(new tt.LngLat(latLng[1], latLng[0]));
+                        });
+                        var center = bounds.getCenter();
+
+                        // Initialize TomTom map
+                        var map = tt.map({
+                            key: 'UeDQhUcZNKjtuImgABKQ1oqKPZglpVJ0',
+                            container: 'field-map',
+                            center: [center.lng, center.lat],
+                            zoom: 19,
+                            language: 'en-GB',
+                            style: {
+                                version: 8,
+                                sources: {
+                                    'raster-tiles': {
+                                        type: 'raster',
+                                        tiles: [
+                                            'https://api.tomtom.com/map/1/tile/sat/main/{z}/{x}/{y}.jpg?key=UeDQhUcZNKjtuImgABKQ1oqKPZglpVJ0'
+                                        ],
+                                        tileSize: 256
+                                    }
+                                },
+                                layers: [{
+                                    id: 'simple-tiles',
+                                    type: 'raster',
+                                    source: 'raster-tiles',
+                                    minzoom: 0,
+                                    maxzoom: 22
+                                }]
+                            }
+                        });
+
+                        map.addControl(new tt.NavigationControl());
+
+                        // Add the polygon to the map
+                        var polygonData = {
+                            type: 'Feature',
+                            geometry: {
+                                type: 'Polygon',
+                                coordinates: [coordinates]
+                            },
+                            properties: {
+                                name: 'Field Area'
+                            }
+                        };
+
+                        // Add polygon source
+                        map.addSource('fes-field-polygon', {
+                            type: 'geojson',
+                            data: polygonData
+                        });
+
+                        // Add polygon fill layer
+                        map.addLayer({
+                            id: 'fes-field-polygon-layer',
+                            type: 'fill',
+                            source: 'fes-field-polygon',
+                            paint: {
+                                'fill-color': '#D32F2F',
+                                'fill-opacity': 0.3
+                            }
+                        });
+
+                        // Add polygon outline layer
+                        map.addLayer({
+                            id: 'fes-field-polygon-outline',
+                            type: 'line',
+                            source: 'fes-field-polygon',
+                            paint: {
+                                'line-color': '#D32F2F',
+                                'line-width': 3,
+                                'line-opacity': 0.8
+                            }
+                        });
+
+                        // Add a marker at the center
+                        var marker = new tt.Marker()
+                            .setLngLat([center.lng, center.lat])
+                            .addTo(map);
+
+                        var popup = new tt.Popup({ offset: 30 })
+                            .setHTML('<b>Field Location</b><br>Size: <?php echo htmlspecialchars($booking['field_hectares'] ?? '0'); ?> hectares')
+                            .addTo(map);
+
+                        marker.setPopup(popup);
+
+                        // Fit the map to the polygon bounds
+                        map.fitBounds(bounds, { padding: 20 });
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing field map:', error);
+                var mapContainer = document.getElementById('field-map');
+                if (mapContainer) {
+                    mapContainer.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500"><div class="text-center"><i class="fas fa-exclamation-triangle text-2xl mb-2"></i><div class="text-sm">Map data unavailable</div></div></div>';
+                }
+            }
+        });
+        <?php endif; ?>
     </script>
 </body>
 </html>
