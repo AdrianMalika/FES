@@ -19,22 +19,77 @@ if (($_SESSION['role'] ?? '') !== 'operator') {
     }
 }
 
-$operatorName = $_SESSION['name'] ?? 'Operator';
+require_once __DIR__ . '/../../includes/database.php';
 
-// Static example job ID (later: load from DB using this)
-$jobId = $_GET['id'] ?? 'JOB-2026-001';
+$operatorId = (int)($_SESSION['user_id'] ?? 0);
+$operatorName = $_SESSION['name'] ?? 'Operator';
+$bookingId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+$booking = null;
+
+if ($bookingId > 0) {
+    try {
+        $conn = getDBConnection();
+        $sql = "SELECT b.*, 
+                       e.equipment_name, e.category, e.location AS equipment_location,
+                       u.name AS customer_name, u.email AS customer_email
+                FROM bookings b
+                LEFT JOIN equipment e ON e.equipment_id = b.equipment_id
+                LEFT JOIN users u ON u.user_id = b.customer_id
+                WHERE b.booking_id = ? AND b.operator_id = ?";
+        if ($stmt = $conn->prepare($sql)) {
+            $stmt->bind_param('ii', $bookingId, $operatorId);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            if ($row = $res->fetch_assoc()) {
+                $booking = $row;
+            }
+            $stmt->close();
+        }
+        $conn->close();
+    } catch (Exception $e) {
+        error_log('Operator job details error: ' . $e->getMessage());
+    }
+}
+
+$status = $booking['status'] ?? 'pending';
+$badgeClasses = [
+    'pending' => 'bg-amber-50 text-amber-700',
+    'confirmed' => 'bg-blue-50 text-blue-700',
+    'in_progress' => 'bg-purple-50 text-purple-700',
+    'completed' => 'bg-emerald-50 text-emerald-700',
+    'cancelled' => 'bg-gray-100 text-gray-700'
+];
+$badgeClass = $badgeClasses[$status] ?? 'bg-gray-100 text-gray-700';
+$serviceLocation = $booking ? trim($booking['service_location'] ?? '') : '';
+if ($serviceLocation === '' && !empty($booking['field_address'])) {
+    $serviceLocation = $booking['field_address'];
+}
+
+// Attempt to parse latitude / longitude from the service location string (e.g. "Lat -15.81..., Lng 35.00...").
+$mapLat = null;
+$mapLng = null;
+if (!empty($serviceLocation)) {
+    // Match two floating point numbers (latitude and longitude) anywhere in the string.
+    if (preg_match('/(-?\d+\.\d+)[^\d\-\.]+(-?\d+\.\d+)/', $serviceLocation, $coords)) {
+        $mapLat = $coords[1];
+        $mapLng = $coords[2];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Details - <?php echo htmlspecialchars($jobId); ?></title>
+    <title>Job Details - FES Operator</title>
     <link rel="icon" type="image/png" href="../../assets/images/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- TomTom Maps CSS -->
+    <link rel="stylesheet" type="text/css" href="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps.css">
+    <script src="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -53,8 +108,12 @@ $jobId = $_GET['id'] ?? 'JOB-2026-001';
     <style>
         * { font-family: 'Barlow', sans-serif; }
         h1, h2, h3, h4, .display { font-family: 'Barlow Condensed', sans-serif; }
-        @media (max-width: 767px) { #main-content { margin-left: 0 !important; width: 100% !important; } }
-        @media (min-width: 768px) { #main-content { margin-left: 256px !important; width: calc(100% - 256px) !important; } }
+        @media (max-width: 767px) {
+            #main-content { margin-left: 0 !important; width: 100% !important; }
+        }
+        @media (min-width: 768px) {
+            #main-content { margin-left: 256px !important; width: calc(100% - 256px) !important; }
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -66,17 +125,13 @@ $jobId = $_GET['id'] ?? 'JOB-2026-001';
     <div class="min-h-screen" id="main-content">
         <header class="bg-white px-6 py-7 flex items-center justify-between shadow-sm">
             <div class="flex items-center gap-3">
-                <button id="fes-dashboard-menu-btn" class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-600" aria-label="Open menu">
+                <button id="fes-dashboard-menu-btn" class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-600" aria-label="Open menu" aria-controls="fes-dashboard-sidebar" aria-expanded="false">
                     <i class="fas fa-bars"></i>
                 </button>
                 <div>
-                    <div class="text-sm text-gray-500">Operator · Job Details</div>
-                    <h1 class="text-xl font-semibold text-gray-900">
-                        Job <?php echo htmlspecialchars($jobId); ?>
-                    </h1>
-                    <p class="text-xs text-gray-500 mt-1">
-                        Static mock data — wire this to real bookings later.
-                    </p>
+                    <div class="text-sm text-gray-500">Operator — Job Details</div>
+                    <h1 class="text-xl font-semibold text-gray-900">Booking #BK-<?php echo htmlspecialchars((string)$bookingId); ?></h1>
+                    <p class="text-xs text-gray-500 mt-1">Assigned operator: <?php echo htmlspecialchars($operatorName); ?></p>
                 </div>
             </div>
 
@@ -86,115 +141,110 @@ $jobId = $_GET['id'] ?? 'JOB-2026-001';
         </header>
 
         <main class="flex-1 overflow-y-auto p-6">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                <!-- Left: main job info -->
-                <section class="lg:col-span-2 bg-white rounded-xl shadow-card p-5">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Service Details</h2>
-
-                    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm text-gray-800">
-                        <div>
-                            <dt class="text-gray-500 text-xs uppercase tracking-wide">Customer</dt>
-                            <dd class="mt-1 font-medium">Agri-Tech Solutions</dd>
-                        </div>
-                        <div>
-                            <dt class="text-gray-500 text-xs uppercase tracking-wide">Contact</dt>
-                            <dd class="mt-1">+265 999 000 111 · customer@example.com</dd>
-                        </div>
-                        <div>
-                            <dt class="text-gray-500 text-xs uppercase tracking-wide">Service Type</dt>
-                            <dd class="mt-1">Land Preparation (Tractor)</dd>
-                        </div>
-                        <div>
-                            <dt class="text-gray-500 text-xs uppercase tracking-wide">Service Date</dt>
-                            <dd class="mt-1">Mar 10, 2026 · 08:00</dd>
-                        </div>
-                        <div>
-                            <dt class="text-gray-500 text-xs uppercase tracking-wide">Land Size</dt>
-                            <dd class="mt-1">18 Acres</dd>
-                        </div>
-                        <div>
-                            <dt class="text-gray-500 text-xs uppercase tracking-wide">Location</dt>
-                            <dd class="mt-1">Chikwawa · GPS: -16.035, 34.790</dd>
-                            <dd class="mt-2">
-                                <a href="https://www.google.com/maps?q=-16.035,34.790" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-sm text-fes-red hover:underline font-medium">
-                                    <i class="fas fa-map-marker-alt"></i> View on map
-                                </a>
-                            </dd>
-                        </div>
-                    </dl>
-
-                    <div class="mt-6 border-t border-gray-200 pt-4">
-                        <h3 class="text-sm font-semibold text-gray-900 mb-2">Special Notes</h3>
-                        <p class="text-sm text-gray-700 leading-relaxed">
-                            Access road is narrow — use smaller trailer where possible.
-                            Watch out for irrigation pipes crossing the field on the eastern side.
-                        </p>
-                    </div>
-
-                    <div class="mt-6 border-t border-gray-200 pt-4">
-                        <h3 class="text-sm font-semibold text-gray-900 mb-2">Assigned Equipment</h3>
-                        <div class="flex items-center gap-3">
-                            <div class="h-10 w-10 rounded-lg bg-red-50 flex items-center justify-center text-fes-red">
-                                <i class="fas fa-tractor"></i>
+            <?php if (!$booking): ?>
+                <div class="bg-white rounded-xl shadow-card p-6 text-center text-gray-600">
+                    Job not found or you don�t have access.
+                </div>
+            <?php else: ?>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 space-y-6">
+                        <section class="bg-white rounded-xl shadow-card p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-base font-semibold text-gray-900">Job Information</h2>
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium <?php echo $badgeClass; ?>">
+                                    <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $status))); ?>
+                                </span>
                             </div>
-                            <div>
-                                <div class="font-medium text-gray-900">John Deere 5075E</div>
-                                <div class="text-xs text-gray-500">Equipment ID: EQ-010 · Blantyre Depot</div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Customer</div>
+                                    <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($booking['customer_name'] ?? 'N/A'); ?></div>
+                                    <div class="text-xs text-gray-500"><?php echo htmlspecialchars($booking['customer_email'] ?? ''); ?></div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Equipment</div>
+                                    <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($booking['equipment_name'] ?? 'N/A'); ?></div>
+                                    <div class="text-xs text-gray-500"><?php echo htmlspecialchars(ucfirst($booking['category'] ?? '')); ?></div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Service Date</div>
+                                    <div class="text-gray-900 font-medium"><?php echo !empty($booking['booking_date']) ? htmlspecialchars(date('M d, Y', strtotime($booking['booking_date']))) : 'N/A'; ?></div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Service Type</div>
+                                    <div class="text-gray-900 font-medium"><?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $booking['service_type'] ?? 'N/A'))); ?></div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Service Location</div>
+                                    <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($serviceLocation ?: 'N/A'); ?></div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Field Size</div>
+                                    <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($booking['field_hectares'] ?? 'Not specified'); ?> acres</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Contact Phone</div>
+                                    <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($booking['contact_phone'] ?? 'N/A'); ?></div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Start Time</div>
+                                    <div class="text-gray-900 font-medium"><?php echo !empty($booking['operator_start_time']) ? htmlspecialchars(date('M d, Y H:i', strtotime($booking['operator_start_time']))) : 'Not started'; ?></div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">End Time</div>
+                                    <div class="text-gray-900 font-medium"><?php echo !empty($booking['operator_end_time']) ? htmlspecialchars(date('M d, Y H:i', strtotime($booking['operator_end_time']))) : 'Not completed'; ?></div>
+                                </div>
                             </div>
+
+                            <?php if (!empty($booking['notes'])): ?>
+                                <div class="mt-5 pt-5 border-t border-gray-100">
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-2">Notes</div>
+                                    <div class="text-gray-700"><?php echo htmlspecialchars($booking['notes']); ?></div>
+                                </div>
+                            <?php endif; ?>
+                        </section>
+
+                        <?php if (!empty($booking['field_polygon'])): ?>
+                            <section class="bg-white rounded-xl shadow-card p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h2 class="text-base font-semibold text-gray-900">Field Location Map</h2>
+                                    <?php if (!empty($booking['field_lat']) && !empty($booking['field_lng'])): ?>
+                                        <a href="https://www.google.com/maps?q=<?php echo htmlspecialchars((float)$booking['field_lat']); ?>,<?php echo htmlspecialchars((float)$booking['field_lng']); ?>" 
+                                           target="_blank" 
+                                           class="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                            <i class="fas fa-external-link-alt"></i>
+                                            View on Google Maps
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                                <div id="field-map" class="w-full h-64 rounded-lg border border-gray-200 bg-gray-100"></div>
+                            </section>
+                        <?php endif; ?>
+                    </div>
+
+                    <section class="bg-white rounded-xl shadow-card p-6">
+                        <h2 class="text-base font-semibold text-gray-900 mb-4">Job Actions</h2>
+                        <div class="space-y-3">
+                            <a href="job_status.php?id=<?php echo urlencode((string)$bookingId); ?>" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
+                                <i class="fas fa-tasks text-fes-red"></i>
+                                Update Job Status
+                            </a>
+                            <a href="job_hours.php?id=<?php echo urlencode((string)$bookingId); ?>" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
+                                <i class="fas fa-clock text-fes-red"></i>
+                                Record Work Hours
+                            </a>
+                            <a href="job_damage.php?id=<?php echo urlencode((string)$bookingId); ?>" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
+                                <i class="fas fa-tools text-fes-red"></i>
+                                Report Equipment Damage
+                            </a>
                         </div>
-                    </div>
-                </section>
-
-                <!-- Right: quick actions -->
-                <section class="bg-white rounded-xl shadow-card p-5">
-                    <h2 class="text-base font-semibold text-gray-900 mb-4">Job Actions</h2>
-                    <div class="space-y-3 text-sm">
-                        <a href="job_status.php?id=<?php echo urlencode($jobId); ?>" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
-                            <i class="fas fa-signal text-fes-red"></i>
-                            Update Job Status
-                        </a>
-                        <a href="job_hours.php?id=<?php echo urlencode($jobId); ?>" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
-                            <i class="fas fa-clock text-fes-red"></i>
-                            Record Work Hours
-                        </a>
-                        <a href="job_damage.php?id=<?php echo urlencode($jobId); ?>" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
-                            <i class="fas fa-triangle-exclamation text-fes-red"></i>
-                            Report Equipment Damage
-                        </a>
-                    </div>
-
-                    <div class="mt-6 border-t border-gray-200 pt-4 text-xs text-gray-500">
-                        <p><span class="font-semibold text-gray-700">Current Status:</span>
-                            <span class="inline-flex items-center px-2.5 py-1 ml-1 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">
-                                In Progress
-                            </span>
-                        </p>
-                        <p class="mt-2">
-                            Last updated: Mar 10, 2026 · 09:15 by <?php echo htmlspecialchars($operatorName); ?>
-                        </p>
-                    </div>
-                </section>
-            </div>
-
-            <!-- Static section for recorded hours & damage summary -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <section class="bg-white rounded-xl shadow-card p-5">
-                    <h2 class="text-base font-semibold text-gray-900 mb-3">Recorded Hours (example)</h2>
-                    <ul class="text-sm text-gray-800 space-y-2">
-                        <li><span class="font-medium">Start:</span> 08:10 · Mar 10, 2026</li>
-                        <li><span class="font-medium">End:</span> 14:45 · Mar 10, 2026</li>
-                        <li><span class="font-medium">Total:</span> 6.6 hours</li>
-                    </ul>
-                </section>
-
-                <section class="bg-white rounded-xl shadow-card p-5">
-                    <h2 class="text-base font-semibold text-gray-900 mb-3">Damage / Faults (example)</h2>
-                    <p class="text-sm text-gray-700 leading-relaxed">
-                        No major damage reported. Minor hydraulic leak observed on right ram — logged for workshop inspection
-                        after completion of this job.
-                    </p>
-                </section>
-            </div>
+                        <div class="mt-5 text-xs text-gray-500">
+                            Last updated: <?php echo !empty($booking['updated_at']) ? htmlspecialchars(date('M d, Y — H:i', strtotime($booking['updated_at']))) : 'N/A'; ?>
+                        </div>
+                    </section>
+                </div>
+            <?php endif; ?>
         </main>
     </div>
 </div>
@@ -228,8 +278,135 @@ $jobId = $_GET['id'] ?? 'JOB-2026-001';
 
         overlay.addEventListener('click', closeSidebar);
     })();
+
+    // Initialize field map if polygon data exists
+    <?php if (!empty($booking['field_polygon'])): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            var polygonData = <?php echo json_encode($booking['field_polygon']); ?>;
+            var mapContainer = document.getElementById('field-map');
+
+            if (mapContainer && polygonData) {
+                if (!window.tt || typeof tt.map !== 'function') {
+                    throw new Error('TomTom SDK not available');
+                }
+
+                // Parse polygon coordinates (stored as JSON array of [lng, lat])
+                var coordinates = Array.isArray(polygonData) ? polygonData : JSON.parse(polygonData);
+                if (!Array.isArray(coordinates) || coordinates.length < 3) {
+                    throw new Error('Invalid polygon data');
+                }
+
+                // Ensure polygon ring is closed for GeoJSON
+                var first = coordinates[0];
+                var last = coordinates[coordinates.length - 1];
+                if (!last || first[0] !== last[0] || first[1] !== last[1]) {
+                    coordinates = coordinates.concat([first]);
+                }
+
+                var latLngs = coordinates.map(function(coord) {
+                    return [coord[1], coord[0]]; // TomTom uses [lat, lng] format
+                });
+
+                if (latLngs.length > 0) {
+                    // Calculate center of the polygon
+                    var bounds = new tt.LngLatBounds();
+                    latLngs.forEach(function(latLng) {
+                        bounds.extend(new tt.LngLat(latLng[1], latLng[0]));
+                    });
+                    var center = bounds.getCenter();
+
+                    // Initialize TomTom map
+                    var map = tt.map({
+                        key: 'UeDQhUcZNKjtuImgABKQ1oqKPZglpVJ0',
+                        container: 'field-map',
+                        center: [center.lng, center.lat],
+                        zoom: 16,
+                        language: 'en-GB',
+                        style: {
+                            version: 8,
+                            sources: {
+                                'raster-tiles': {
+                                    type: 'raster',
+                                    tiles: [
+                                        'https://api.tomtom.com/map/1/tile/sat/main/{z}/{x}/{y}.jpg?key=UeDQhUcZNKjtuImgABKQ1oqKPZglpVJ0'
+                                    ],
+                                    tileSize: 256
+                                }
+                            },
+                            layers: [{
+                                id: 'simple-tiles',
+                                type: 'raster',
+                                source: 'raster-tiles',
+                                minzoom: 0,
+                                maxzoom: 22
+                            }]
+                        }
+                    });
+
+                    map.addControl(new tt.NavigationControl());
+
+                    map.on('load', function () {
+                        var polygonFeature = {
+                            type: 'Feature',
+                            geometry: {
+                                type: 'Polygon',
+                                coordinates: [coordinates]
+                            },
+                            properties: {
+                                name: 'Field Area'
+                            }
+                        };
+
+                        map.addSource('fes-field-polygon', {
+                            type: 'geojson',
+                            data: polygonFeature
+                        });
+
+                        map.addLayer({
+                            id: 'fes-field-polygon-layer',
+                            type: 'fill',
+                            source: 'fes-field-polygon',
+                            paint: {
+                                'fill-color': '#D32F2F',
+                                'fill-opacity': 0.3
+                            }
+                        });
+
+                        map.addLayer({
+                            id: 'fes-field-polygon-outline',
+                            type: 'line',
+                            source: 'fes-field-polygon',
+                            paint: {
+                                'line-color': '#D32F2F',
+                                'line-width': 3,
+                                'line-opacity': 0.8
+                            }
+                        });
+
+                        var marker = new tt.Marker()
+                            .setLngLat([center.lng, center.lat])
+                            .addTo(map);
+
+                        var popup = new tt.Popup({ offset: 30 })
+                            .setHTML('<b>Field Location</b><br>Size: <?php echo htmlspecialchars($booking['field_hectares'] ?? '0'); ?> Acres')
+                            .addTo(map);
+
+                        marker.setPopup(popup);
+
+                        map.fitBounds(bounds, { padding: 20 });
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error initializing field map:', error);
+            var mapContainer = document.getElementById('field-map');
+            if (mapContainer) {
+                mapContainer.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500"><div class="text-center"><i class="fas fa-exclamation-triangle text-2xl mb-2"></i><div class="text-sm">Map data unavailable</div></div></div>';
+            }
+        }
+    });
+    <?php endif; ?>
 </script>
 </body>
 </html>
-
-

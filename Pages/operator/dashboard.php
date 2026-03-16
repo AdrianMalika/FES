@@ -107,16 +107,32 @@ try {
     }
     $stats['slots'] = count($availability);
 
-    // Placeholder job/notification stats (replace with real queries when jobs & notifications tables exist)
-    $stats['jobs_total'] = 5;
-    $stats['jobs_in_progress'] = 2;
-    $stats['jobs_completed_today'] = 1;
-    $stats['unread_notifications'] = 3;
+    // Job stats based on bookings assigned to this operator
+    $jobSql = "SELECT
+                    COUNT(*) AS total,
+                    SUM(status = 'in_progress') AS in_progress,
+                    SUM(status = 'completed' AND DATE(COALESCE(operator_end_time, updated_at)) = CURDATE()) AS completed_today
+               FROM bookings
+               WHERE operator_id = ?";
+    if ($stmt = $conn->prepare($jobSql)) {
+        $stmt->bind_param('i', $operatorId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($row = $res->fetch_assoc()) {
+            $stats['jobs_total'] = (int)($row['total'] ?? 0);
+            $stats['jobs_in_progress'] = (int)($row['in_progress'] ?? 0);
+            $stats['jobs_completed_today'] = (int)($row['completed_today'] ?? 0);
+        }
+        $stmt->close();
+    }
+
+    // Notifications placeholder (add table later)
+    $stats['unread_notifications'] = 0;
 
     $conn->close();
 } catch (Exception $e) {
     error_log('Operator dashboard error: ' . $e->getMessage());
-    $loadError = 'Could not load your workload and schedule. Please try again later or contact admin.';
+    $loadError = 'Could not load your workload and schedule. Error: ' . $e->getMessage() . '. Please try again later or contact admin.';
 }
 
 $dayNames = [
