@@ -66,29 +66,43 @@ function calculateDistance($lat1, $lng1, $lat2, $lng2) {
     return $earthRadius * $c; // Distance in kilometers
 }
 
-// Get equipment rates based on category and database values
-function getEquipmentRates($category, $hourlyRate, $rates) {
-    $category = strtolower($category);
-    
-    // Use database hourly rate if available, otherwise use hardcoded rates
-    $dbHourlyRate = floatval($hourlyRate ?? 0);
-    
-    if ($dbHourlyRate > 0) {
-        // Use database rates with standard markup for per-area pricing
+// Get equipment rates based on database values (with safe fallbacks)
+function getEquipmentRates($hourlyRate, $dailyRate, $perHectareRate, $rates) {
+    $hourly = (float)($hourlyRate ?? 0);
+    $daily = (float)($dailyRate ?? 0);
+    $area  = (float)($perHectareRate ?? 0);
+
+    // If any database rate is provided, derive the others where needed
+    if ($hourly > 0 || $daily > 0 || $area > 0) {
+        if ($hourly <= 0 && $daily > 0) {
+            $hourly = $daily / 8; // derive hourly from daily
+        }
+
+        if ($daily <= 0 && $hourly > 0) {
+            $daily = $hourly * 8 * 0.9; // standard day with small discount
+        }
+
+        if ($area <= 0) {
+            if ($perHectareRate > 0) {
+                $area = (float)$perHectareRate;
+            } elseif ($hourly > 0) {
+                $area = $hourly * 0.5; // default: 50% of hourly
+            } elseif ($daily > 0) {
+                $area = ($daily / 8) * 0.5;
+            }
+        }
+
+        // Final safety fallback per field
+        $default = $rates['equipment']['default'];
+
         return [
-            'hourly' => $dbHourlyRate,
-            'areas' => $dbHourlyRate * 0.5, // Per-area is typically 50% of hourly rate
-            'daily' => $dbHourlyRate * 8 * 0.9 // Daily rate with 10% discount
+            'hourly' => $hourly > 0 ? $hourly : $default['hourly'],
+            'areas'  => $area > 0 ? $area : $default['areas'],
+            'daily'  => $daily > 0 ? $daily : $default['daily'],
         ];
     }
-    
-    // Fallback to hardcoded rates if database rate is 0
-    foreach ($rates['equipment'] as $key => $rate) {
-        if ($key !== 'default' && strpos($category, $key) !== false) {
-            return $rate;
-        }
-    }
-    
+
+    // If no DB-based rate at all, use global default
     return $rates['equipment']['default'];
 }
 
@@ -113,8 +127,13 @@ function calculateBookingCost($equipment, $fieldLat, $fieldLng, $fieldAreas, $ra
     $costBreakdown['distance_km'] = round($distance, 2);
     $costBreakdown['travel_cost'] = $travelCost;
     
-    // 2. Get equipment rates
-    $equipmentRates = getEquipmentRates($equipment['category'] ?? '', $equipment['hourly_rate'] ?? 0, $rates);
+    // 2. Get equipment rates from database (with safe fallbacks)
+    $equipmentRates = getEquipmentRates(
+        $equipment['hourly_rate'] ?? 0,
+        $equipment['daily_rate'] ?? 0,
+        $equipment['per_hectare_rate'] ?? 0,
+        $rates
+    );
     
     // 3. Calculate equipment cost based on available data
     $equipmentCost = 0;
@@ -700,39 +719,42 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var distance = calculateDistance(depotLat, depotLng, parseFloat(fieldLat), parseFloat(fieldLng));
         
-        // Equipment rates (using database rates with fallback to hardcoded)
-        var equipmentRates = {
-            'tractor': { hourly: 25000, areas: 15000 },
-            'plow': { hourly: 15000, areas: 8000 },
-            'harvester': { hourly: 35000, areas: 20000 },
-            'irrigation': { hourly: 20000, areas: 12000 },
-            'default': { hourly: 18000, areas: 10000 }
-        };
-        
-        // Get actual database hourly rate
+        // Default fallback rates (only used if all DB rates are missing)
+        var defaultRates = { hourly: 18000, areas: 10000, daily: 120000 };
+
+        // Get actual database rates
         var dbHourlyRate = <?php echo floatval($equipment['hourly_rate'] ?? 0); ?>;
         var dbPerHectareRate = <?php echo floatval($equipment['per_hectare_rate'] ?? 0); ?>;
         var dbDailyRate = <?php echo floatval($equipment['daily_rate'] ?? 0); ?>;
-        
-        // Get equipment category
-        var equipmentCategory = '<?php echo strtolower($equipment['category'] ?? ''); ?>';
-        var rates = equipmentRates.default;
-        
-        // Use database rates if available, otherwise use hardcoded rates
-        if (dbHourlyRate > 0 || dbPerHectareRate > 0 || dbDailyRate > 0) {
-            rates = {
-                hourly: dbHourlyRate > 0 ? dbHourlyRate : equipmentRates.default.hourly,
-                areas: dbPerHectareRate > 0 ? dbPerHectareRate : (dbHourlyRate > 0 ? dbHourlyRate * 0.5 : equipmentRates.default.areas),
-                daily: dbDailyRate > 0 ? dbDailyRate : (dbHourlyRate > 0 ? dbHourlyRate * 8 * 0.9 : equipmentRates.default.daily)
-            };
-        } else {
-            for (var key in equipmentRates) {
-                if (key !== 'default' && equipmentCategory.indexOf(key) !== -1) {
-                    rates = equipmentRates[key];
-                    break;
+
+        // Derive effective rates from DB values, with safe fallbacks
+        var hourly = dbHourlyRate || 0;
+        var daily = dbDailyRate || 0;
+        var area = dbPerHectareRate || 0;
+
+        if (hourly > 0 || daily > 0 || area > 0) {
+            if (hourly <= 0 && daily > 0) {
+                hourly = daily / 8;
+            }
+            if (daily <= 0 && hourly > 0) {
+                daily = hourly * 8 * 0.9;
+            }
+            if (area <= 0) {
+                if (dbPerHectareRate > 0) {
+                    area = dbPerHectareRate;
+                } else if (hourly > 0) {
+                    area = hourly * 0.5;
+                } else if (daily > 0) {
+                    area = (daily / 8) * 0.5;
                 }
             }
         }
+
+        if (hourly <= 0) hourly = defaultRates.hourly;
+        if (area <= 0) area = defaultRates.areas;
+        if (daily <= 0) daily = defaultRates.daily;
+
+        var rates = { hourly: hourly, areas: area, daily: daily };
         
         // Calculate costs
         var transportCost = distance * 5000; // MK 5000 per km

@@ -195,6 +195,8 @@ $costBreakdown = $booking ? calculateBookingCost($booking, $RATES) : null;
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- TomTom Maps CSS -->
+    <link rel="stylesheet" type="text/css" href="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -217,6 +219,13 @@ $costBreakdown = $booking ? calculateBookingCost($booking, $RATES) : null;
     <style>
         * { font-family: 'Barlow', sans-serif; }
         h1, h2, h3, h4, .display { font-family: 'Barlow Condensed', sans-serif; }
+        #fes-booking-details-map {
+            height: 360px;
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
@@ -333,6 +342,33 @@ $costBreakdown = $booking ? calculateBookingCost($booking, $RATES) : null;
                                 </div>
                             </section>
                         </div>
+
+                        <section class="bg-white rounded-xl shadow-card p-6 mt-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-base font-semibold text-gray-900">Service Location Map</h2>
+                                <div class="text-xs text-gray-500">
+                                    <?php if (!empty($booking['field_lat']) && !empty($booking['field_lng'])): ?>
+                                        Lat <?php echo htmlspecialchars((string)$booking['field_lat']); ?>, Lng <?php echo htmlspecialchars((string)$booking['field_lng']); ?>
+                                    <?php else: ?>
+                                        No coordinates saved
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <?php if (empty($booking['field_lat']) || empty($booking['field_lng'])): ?>
+                                <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-4 text-sm text-gray-600">
+                                    This booking does not have a saved map location.
+                                </div>
+                            <?php else: ?>
+                                <div id="fes-booking-details-map"></div>
+                                <?php if (!empty($booking['field_address'])): ?>
+                                    <div class="mt-3 text-sm text-gray-600">
+                                        <span class="font-medium text-gray-800">Address:</span>
+                                        <?php echo htmlspecialchars($booking['field_address']); ?>
+                                    </div>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </section>
 
                         <section id="cost-breakdown-panel" class="hidden bg-white rounded-xl shadow-card p-6 mt-6">
                             <div class="flex items-center justify-between mb-4">
@@ -458,6 +494,104 @@ $costBreakdown = $booking ? calculateBookingCost($booking, $RATES) : null;
                 });
             }
         })();
+    </script>
+
+    <!-- TomTom Maps JS (read-only display) -->
+    <script src="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var mapEl = document.getElementById('fes-booking-details-map');
+        if (!mapEl) return;
+        if (typeof tt === 'undefined') {
+            mapEl.innerHTML = '<div class="h-full w-full flex items-center justify-center text-sm text-gray-500">Map failed to load.</div>';
+            return;
+        }
+
+        var lat = <?php echo json_encode(!empty($booking['field_lat']) ? (float)$booking['field_lat'] : null); ?>;
+        var lng = <?php echo json_encode(!empty($booking['field_lng']) ? (float)$booking['field_lng'] : null); ?>;
+        if (lat === null || lng === null) return;
+
+        var polygonCoords = <?php echo json_encode(!empty($booking['field_polygon']) ? $booking['field_polygon'] : ''); ?>;
+        var parsedPoly = [];
+        try {
+            if (polygonCoords) parsedPoly = JSON.parse(polygonCoords);
+        } catch (e) {
+            parsedPoly = [];
+        }
+
+        // Use satellite imagery tiles (same style as booking.php)
+        var map = tt.map({
+            key: 'UeDQhUcZNKjtuImgABKQ1oqKPZglpVJ0',
+            container: 'fes-booking-details-map',
+            center: [lng, lat],
+            zoom: 14,
+            language: 'en-GB',
+            style: {
+                version: 8,
+                sources: {
+                    'raster-tiles': {
+                        type: 'raster',
+                        tiles: [
+                            'https://api.tomtom.com/map/1/tile/sat/main/{z}/{x}/{y}.jpg?key=UeDQhUcZNKjtuImgABKQ1oqKPZglpVJ0'
+                        ],
+                        tileSize: 256
+                    }
+                },
+                layers: [{
+                    id: 'simple-tiles',
+                    type: 'raster',
+                    source: 'raster-tiles',
+                    minzoom: 0,
+                    maxzoom: 22
+                }]
+            }
+        });
+
+        map.addControl(new tt.NavigationControl());
+
+        // Marker for the saved point
+        new tt.Marker({ color: '#D32F2F' }).setLngLat([lng, lat]).addTo(map);
+
+        // Draw polygon if available (array of [lng,lat])
+        if (Array.isArray(parsedPoly) && parsedPoly.length >= 3) {
+            var closed = parsedPoly.concat([parsedPoly[0]]);
+            var geojson = {
+                type: 'FeatureCollection',
+                features: [{
+                    type: 'Feature',
+                    geometry: { type: 'Polygon', coordinates: [closed] },
+                    properties: {}
+                }]
+            };
+
+            map.on('load', function () {
+                map.addSource('fes-booking-field', { type: 'geojson', data: geojson });
+                map.addLayer({
+                    id: 'fes-booking-field-fill',
+                    type: 'fill',
+                    source: 'fes-booking-field',
+                    paint: {
+                        'fill-color': 'rgba(211,47,47,0.22)',
+                        'fill-outline-color': '#D32F2F'
+                    }
+                });
+
+                // Fit bounds to polygon
+                try {
+                    var bounds = new tt.LngLatBounds();
+                    closed.forEach(function (pt) { bounds.extend(pt); });
+                    map.fitBounds(bounds, { padding: 40, maxZoom: 18 });
+                } catch (e) {}
+            });
+        } else {
+            map.on('load', function () {
+                map.setZoom(16);
+            });
+        }
+
+        // Make map feel read-only (no scroll zoom surprises in dashboard)
+        map.scrollZoom.disable();
+    });
     </script>
 </body>
 </html>

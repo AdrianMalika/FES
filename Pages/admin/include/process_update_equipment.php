@@ -26,6 +26,7 @@ $description        = trim($_POST['description'] ?? '');
 $purchase_date      = trim($_POST['purchase_date'] ?? '');
 $daily_rate         = trim($_POST['daily_rate'] ?? '');
 $hourly_rate        = trim($_POST['hourly_rate'] ?? '');
+$per_hectare_rate   = trim($_POST['per_hectare_rate'] ?? '');
 $fuel_type          = trim($_POST['fuel_type'] ?? '');
 $total_usage_hours  = trim($_POST['total_usage_hours'] ?? '');
 $year_manufactured  = trim($_POST['year_manufactured'] ?? '');
@@ -71,7 +72,8 @@ if ($weight_kg !== '' && (!is_numeric($weight_kg) || $weight_kg < 0)) {
 // Handle image upload if a new file was provided
 $image_path = $current_image_path;
 if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-    $upload_dir = '../../assets/images/equipment/';
+    // Store under the main /assets/images/equipment directory at project root
+    $upload_dir = '../../../assets/images/equipment/';
     if (!is_dir($upload_dir)) {
         mkdir($upload_dir, 0755, true);
     }
@@ -89,6 +91,7 @@ if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
     } elseif (!move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
         $errors[] = 'Failed to upload image.';
     } else {
+        // Web path from project root (used by front-end)
         $image_path = 'assets/images/equipment/' . $file_name;
     }
 }
@@ -114,6 +117,7 @@ try {
             purchase_date     = ?,
             daily_rate        = ?,
             hourly_rate       = ?,
+            per_hectare_rate  = ?,
             fuel_type         = ?,
             total_usage_hours = ?,
             year_manufactured = ?,
@@ -126,7 +130,7 @@ try {
     ');
 
     $stmt->bind_param(
-        'ssssssssssssssssi',
+        'sssssssssssssssssi',
         $equipment_name,
         $category,
         $model,
@@ -136,6 +140,7 @@ try {
         $purchase_date,
         $daily_rate,
         $hourly_rate,
+        $per_hectare_rate,
         $fuel_type,
         $total_usage_hours,
         $year_manufactured,

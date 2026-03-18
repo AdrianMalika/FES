@@ -47,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $purchase_date = trim($_POST['purchase_date'] ?? '');
     $daily_rate = trim($_POST['daily_rate'] ?? '');
     $hourly_rate = trim($_POST['hourly_rate'] ?? '0');
+    $per_hectare_rate = trim($_POST['per_hectare_rate'] ?? '0');
     $fuel_type = trim($_POST['fuel_type'] ?? '');
     $total_usage_hours = trim($_POST['total_usage_hours'] ?? '0');
     $year_manufactured = trim($_POST['year_manufactured'] ?? '');
@@ -57,7 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Handle image upload
     $image_path = '';
     if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = '../../assets/images/equipment/';
+        // Store under the main /assets/images/equipment directory at project root
+        $upload_dir = '../../../assets/images/equipment/';
         if (!is_dir($upload_dir)) {
             mkdir($upload_dir, 0755, true);
         }
@@ -122,6 +124,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!empty($hourly_rate) && (!is_numeric($hourly_rate) || $hourly_rate < 0)) {
         $errors[] = 'Valid hourly rate is required.';
     }
+
+    if (!empty($per_hectare_rate) && (!is_numeric($per_hectare_rate) || $per_hectare_rate < 0)) {
+        $errors[] = 'Valid area rate is required.';
+    }
     
     if (!empty($total_usage_hours) && (!is_numeric($total_usage_hours) || $total_usage_hours < 0)) {
         $errors[] = 'Valid usage hours is required.';
@@ -163,11 +169,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Insert new equipment
-        $sql = "INSERT INTO equipment (equipment_name, category, equipment_id, model, description, status, location, operator_id, purchase_date, daily_rate, hourly_rate, fuel_type, total_usage_hours, year_manufactured, weight_kg, last_maintenance, icon, image_path, created_at, updated_at) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
+        $sql = "INSERT INTO equipment (equipment_name, category, equipment_id, model, description, status, location, operator_id, purchase_date, daily_rate, hourly_rate, per_hectare_rate, fuel_type, total_usage_hours, year_manufactured, weight_kg, last_maintenance, icon, image_path, created_at, updated_at) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
         
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssssssssssssssssss", 
+        $stmt->bind_param("sssssssssssssssssss", 
             $equipment_name, 
             $category, 
             $equipment_id, 
@@ -179,6 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $purchase_date, 
             $daily_rate, 
             $hourly_rate,
+            $per_hectare_rate,
             $fuel_type,
             $total_usage_hours,
             $year_manufactured,

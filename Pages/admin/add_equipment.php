@@ -284,7 +284,7 @@ try {
                                 <h3 class="text-lg font-semibold text-gray-900">Pricing</h3>
                             </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
                                     <label for="daily_rate" class="block text-sm font-medium text-gray-700 mb-2">Daily Rate (MWK) <span class="text-red-500">*</span></label>
                                     <input type="number" id="daily_rate" name="daily_rate" required min="0" step="0.01" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fes-red focus:border-fes-red transition-colors" placeholder="0.00">
@@ -293,6 +293,11 @@ try {
                                 <div>
                                     <label for="hourly_rate" class="block text-sm font-medium text-gray-700 mb-2">Hourly Rate (MWK)</label>
                                     <input type="number" id="hourly_rate" name="hourly_rate" min="0" step="0.01" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fes-red focus:border-fes-red transition-colors" placeholder="0.00">
+                                </div>
+
+                                <div>
+                                    <label for="per_hectare_rate" class="block text-sm font-medium text-gray-700 mb-2">Area Rate (MWK per hectare)</label>
+                                    <input type="number" id="per_hectare_rate" name="per_hectare_rate" min="0" step="0.01" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fes-red focus:border-fes-red transition-colors" placeholder="0.00">
                                 </div>
                             </div>
                         </div>

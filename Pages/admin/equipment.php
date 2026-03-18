@@ -329,7 +329,7 @@ try {
                                                         <textarea name="description" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red resize-none"><?php echo htmlspecialchars($row['description'] ?? ''); ?></textarea>
                                                     </div>
 
-                                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                                                         <div>
                                                             <label class="block text-xs font-medium text-gray-600 mb-1">Daily Rate (MWK)</label>
                                                             <input type="number" name="daily_rate" value="<?php echo htmlspecialchars($row['daily_rate'] ?? '0'); ?>" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
@@ -337,6 +337,10 @@ try {
                                                         <div>
                                                             <label class="block text-xs font-medium text-gray-600 mb-1">Hourly Rate (MWK)</label>
                                                             <input type="number" name="hourly_rate" value="<?php echo htmlspecialchars($row['hourly_rate'] ?? '0'); ?>" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Area Rate (MWK per hectare)</label>
+                                                            <input type="number" name="per_hectare_rate" value="<?php echo htmlspecialchars($row['per_hectare_rate'] ?? '0'); ?>" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
                                                         </div>
                                                         <div>
                                                             <label class="block text-xs font-medium text-gray-600 mb-1">Fuel Type</label>
