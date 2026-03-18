@@ -158,7 +158,7 @@ if ($bookingId > 0) {
 
             <?php if (!$booking): ?>
                 <div class="bg-white rounded-xl shadow-card p-6 text-center text-gray-600">
-                    Job not found or you don’t have access.
+                    Job not found or you donâ€™t have access.
                 </div>
             <?php else: ?>
                 <section class="bg-white rounded-xl shadow-card p-6 max-w-2xl">
@@ -167,7 +167,7 @@ if ($bookingId > 0) {
                         <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($booking['customer_name'] ?? 'N/A'); ?></div>
                     </div>
                     <div class="mb-6 text-sm text-gray-600">
-                        <?php echo htmlspecialchars($booking['equipment_name'] ?? ''); ?> · <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $booking['service_type'] ?? 'N/A'))); ?> · <?php echo !empty($booking['booking_date']) ? htmlspecialchars(date('M d, Y', strtotime($booking['booking_date']))) : 'N/A'; ?>
+                        <?php echo htmlspecialchars($booking['equipment_name'] ?? ''); ?> Â· <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $booking['service_type'] ?? 'N/A'))); ?> Â· <?php echo !empty($booking['booking_date']) ? htmlspecialchars(date('M d, Y', strtotime($booking['booking_date']))) : 'N/A'; ?>
                     </div>
                     <form method="post" class="space-y-4">
                         <input type="hidden" name="booking_id" value="<?php echo htmlspecialchars((string)$bookingId); ?>">

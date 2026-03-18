@@ -31,6 +31,10 @@ if (empty($_SESSION[$pendingKey]) && ($_SERVER['REQUEST_METHOD'] !== 'POST' || e
 }
 
 require_once __DIR__ . '/../includes/database.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as MailException;
 
 // FES Depot Configuration
 define('FES_DEPOT_LAT', -15.791381197859343);
@@ -273,6 +277,123 @@ if ($isConfirmed && $equipment && $bookingData) {
                     $createdBookingId = $stmt->insert_id;
                     $_SESSION['last_booking_id'] = $createdBookingId;
                     $_SESSION['last_booking_hash'] = $bookingHash;
+
+                    // Email admin(s) about new booking (send once per booking id)
+                    $alreadySentFor = (int)($_SESSION['last_booking_admin_email_sent_id'] ?? 0);
+                    if (!empty($createdBookingId) && $alreadySentFor !== (int)$createdBookingId) {
+                        try {
+                            $config = include __DIR__ . '/../includes/email_config.php';
+                            if (is_array($config) && !empty($config['host']) && !empty($config['username']) && !empty($config['from_email'])) {
+                                $admins = [];
+                                if ($adminStmt = $conn->prepare("SELECT name, email FROM users WHERE role = 'admin' AND email IS NOT NULL AND email <> ''")) {
+                                    $adminStmt->execute();
+                                    $adminRes = $adminStmt->get_result();
+                                    while ($r = $adminRes->fetch_assoc()) {
+                                        $admins[] = $r;
+                                    }
+                                    $adminStmt->close();
+                                }
+
+                                // Always include this recipient (requested)
+                                $forcedAdminEmail = 'adrianmalika01@gmail.com';
+
+                                if (!empty($admins) || !empty($forcedAdminEmail)) {
+                                    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                                    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                                    $adminLink = $scheme . '://' . $host . '/FES/Pages/admin/booking-details.php?id=' . urlencode((string)$createdBookingId);
+
+                                    $mail = new PHPMailer(true);
+                                    $mail->SMTPDebug = 0;
+                                    $mail->Debugoutput = function ($str, $level) {
+                                        error_log("PHPMailer Debug: $str");
+                                    };
+                                    $mail->isSMTP();
+                                    $mail->Host       = $config['host'];
+                                    $mail->SMTPAuth   = true;
+                                    $mail->Username   = $config['username'];
+                                    $mail->Password   = $config['password'];
+                                    $mail->SMTPSecure = $config['encryption'];
+                                    $mail->Port       = $config['port'];
+                                    $mail->SMTPOptions = [
+                                        'ssl' => [
+                                            'verify_peer' => false,
+                                            'verify_peer_name' => false,
+                                            'allow_self_signed' => true
+                                        ]
+                                    ];
+                                    $mail->Timeout = 30;
+
+                                    $mail->setFrom($config['from_email'], $config['from_name'] ?? 'FES');
+                                    $added = [];
+                                    if (!empty($forcedAdminEmail)) {
+                                        $mail->addAddress($forcedAdminEmail, 'Admin');
+                                        $added[strtolower($forcedAdminEmail)] = true;
+                                    }
+                                    foreach ($admins as $a) {
+                                        $email = trim((string)($a['email'] ?? ''));
+                                        if ($email === '') continue;
+                                        $key = strtolower($email);
+                                        if (isset($added[$key])) continue;
+                                        $mail->addAddress($email, $a['name'] ?? 'Admin');
+                                        $added[$key] = true;
+                                    }
+                                    $mail->isHTML(true);
+
+                                    $safeEquip = htmlspecialchars((string)($equipment['equipment_name'] ?? $equipmentId), ENT_QUOTES, 'UTF-8');
+                                    $safeDate = htmlspecialchars((string)($bookingDate ?? ''), ENT_QUOTES, 'UTF-8');
+                                    $safeDays = htmlspecialchars((string)$serviceDays, ENT_QUOTES, 'UTF-8');
+                                    $safeType = htmlspecialchars((string)ucfirst(str_replace('_', ' ', $serviceType)), ENT_QUOTES, 'UTF-8');
+                                    $safeLoc  = htmlspecialchars((string)($serviceLocation ?: $displayLocation), ENT_QUOTES, 'UTF-8');
+                                    $safeCost = number_format((float)($estimatedTotal ?? 0));
+
+                                    $mail->Subject = 'New booking received: BK-' . (string)$createdBookingId;
+                                    $mail->Body = "
+                                        <div style='font-family: Arial, sans-serif; max-width: 680px; margin: 0 auto; padding: 16px; background: #f8f9fa;'>
+                                          <div style='background: #ffffff; padding: 22px; border-radius: 10px; border: 1px solid #eee;'>
+                                            <h2 style='margin: 0 0 8px 0; color: #D32F2F;'>New booking received</h2>
+                                            <p style='margin: 0 0 14px 0; color: #444;'>A customer has submitted a new booking request.</p>
+                                            <div style='background: #f8f9fa; padding: 14px; border-radius: 8px;'>
+                                              <p style='margin: 0;'><b>Booking ID:</b> BK-{$createdBookingId}</p>
+                                              <p style='margin: 6px 0 0 0;'><b>Equipment:</b> {$safeEquip}</p>
+                                              <p style='margin: 6px 0 0 0;'><b>Date:</b> {$safeDate}</p>
+                                              <p style='margin: 6px 0 0 0;'><b>Days:</b> {$safeDays}</p>
+                                              <p style='margin: 6px 0 0 0;'><b>Service type:</b> {$safeType}</p>
+                                              <p style='margin: 6px 0 0 0;'><b>Location:</b> {$safeLoc}</p>
+                                              <p style='margin: 6px 0 0 0;'><b>Estimated total:</b> MK {$safeCost}</p>
+                                            </div>
+                                            <div style='margin-top: 16px; text-align: center;'>
+                                              <a href='{$adminLink}' style='display: inline-block; padding: 12px 18px; background: #D32F2F; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold;'>
+                                                View booking
+                                              </a>
+                                            </div>
+                                          </div>
+                                        </div>
+                                    ";
+                                    $mail->AltBody =
+                                        "New booking received\n\n" .
+                                        "Booking ID: BK-{$createdBookingId}\n" .
+                                        "Equipment: " . ($equipment['equipment_name'] ?? $equipmentId) . "\n" .
+                                        "Date: " . ($bookingDate ?? '') . "\n" .
+                                        "Days: {$serviceDays}\n" .
+                                        "Service type: " . ucfirst(str_replace('_', ' ', $serviceType)) . "\n" .
+                                        "Location: " . ($serviceLocation ?: $displayLocation) . "\n" .
+                                        "Estimated total: MK {$safeCost}\n\n" .
+                                        "View booking: {$adminLink}\n";
+
+                                    $mail->send();
+                                    $_SESSION['last_booking_admin_email_sent_id'] = (int)$createdBookingId;
+                                } else {
+                                    error_log('Admin booking email skipped: no admin emails found.');
+                                }
+                            } else {
+                                error_log('Admin booking email skipped: invalid email_config.php.');
+                            }
+                        } catch (MailException $e) {
+                            error_log('Admin booking email failed: ' . $e->getMessage());
+                        } catch (Exception $e) {
+                            error_log('Admin booking email error: ' . $e->getMessage());
+                        }
+                    }
                 }
                 $stmt->close();
             }

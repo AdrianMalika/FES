@@ -15,6 +15,10 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
 }
 
 require_once '../../../includes/database.php';
+require_once '../../../vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as MailException;
 
 $booking_id = (int)($_POST['booking_id'] ?? 0);
 $operator_id_raw = trim((string)($_POST['operator_id'] ?? ''));
@@ -29,7 +33,7 @@ if ($booking_id <= 0) {
 try {
     $conn = getDBConnection();
 
-    $bkStmt = $conn->prepare('SELECT booking_id, booking_date, service_type, equipment_id FROM bookings WHERE booking_id = ?');
+    $bkStmt = $conn->prepare('SELECT booking_id, booking_date, service_type, equipment_id, status FROM bookings WHERE booking_id = ?');
     $bkStmt->bind_param('i', $booking_id);
     $bkStmt->execute();
     $bkRes = $bkStmt->get_result();
@@ -50,7 +54,7 @@ try {
     $eqStmt->close();
 
     if ($operator_id !== null) {
-        $opStmt = $conn->prepare("SELECT user_id, name FROM users WHERE user_id = ? AND role = 'operator'");
+        $opStmt = $conn->prepare("SELECT user_id, name, email FROM users WHERE user_id = ? AND role = 'operator'");
         $opStmt->bind_param('i', $operator_id);
         $opStmt->execute();
         $opRes = $opStmt->get_result();
@@ -140,6 +144,146 @@ try {
 
     if ($updStmt->execute()) {
         $_SESSION['success'] = 'Operator assignment updated successfully.';
+
+        // Update equipment availability based on assignment
+        try {
+            $equipmentId = (string)($booking['equipment_id'] ?? '');
+            if ($equipmentId !== '') {
+                if ($operator_id !== null) {
+                    // Mark equipment as in use only when this booking is active.
+                    // This prevents cancelled/completed bookings from flipping equipment back to in_use.
+                    $bookingStatus = (string)($booking['status'] ?? '');
+                    $isActiveBooking = in_array($bookingStatus, ['pending', 'confirmed', 'in_progress'], true);
+
+                    if ($isActiveBooking) {
+                        $eqUpd = $conn->prepare("UPDATE equipment SET status = 'in_use', updated_at = NOW() WHERE equipment_id = ?");
+                        if ($eqUpd) {
+                            $eqUpd->bind_param('s', $equipmentId);
+                            $eqUpd->execute();
+                            $eqUpd->close();
+                        }
+                    } else {
+                        // If booking is not active, set equipment back to available
+                        // only if there are no other active assigned bookings for this equipment.
+                        $chk = $conn->prepare("SELECT booking_id FROM bookings WHERE equipment_id = ? AND operator_id IS NOT NULL AND status IN ('pending','confirmed','in_progress') AND booking_id <> ? LIMIT 1");
+                        if ($chk) {
+                            $chk->bind_param('si', $equipmentId, $booking_id);
+                            $chk->execute();
+                            $res = $chk->get_result();
+                            $hasOther = (bool)$res->fetch_assoc();
+                            $chk->close();
+
+                            if (!$hasOther) {
+                                $eqUpd = $conn->prepare("UPDATE equipment SET status = 'available', updated_at = NOW() WHERE equipment_id = ?");
+                                if ($eqUpd) {
+                                    $eqUpd->bind_param('s', $equipmentId);
+                                    $eqUpd->execute();
+                                    $eqUpd->close();
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // If unassigning operator, only set equipment back to available if no other active assigned booking exists
+                    $chk = $conn->prepare("SELECT booking_id FROM bookings WHERE equipment_id = ? AND operator_id IS NOT NULL AND status IN ('pending','confirmed','in_progress') AND booking_id <> ? LIMIT 1");
+                    if ($chk) {
+                        $chk->bind_param('si', $equipmentId, $booking_id);
+                        $chk->execute();
+                        $res = $chk->get_result();
+                        $hasOther = (bool)$res->fetch_assoc();
+                        $chk->close();
+
+                        if (!$hasOther) {
+                            $eqUpd = $conn->prepare("UPDATE equipment SET status = 'available', updated_at = NOW() WHERE equipment_id = ?");
+                            if ($eqUpd) {
+                                $eqUpd->bind_param('s', $equipmentId);
+                                $eqUpd->execute();
+                                $eqUpd->close();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log('Equipment status update error: ' . $e->getMessage());
+        }
+
+        // Email notify operator when assigned
+        if ($operator_id !== null && !empty($operator['email'])) {
+            try {
+                $config = include '../../../includes/email_config.php';
+                if (is_array($config) && !empty($config['host']) && !empty($config['username'])) {
+                    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                    $jobLink = $scheme . '://' . $host . '/FES/Pages/operator/job_details.php?id=' . urlencode((string)$booking_id);
+
+                    $mail = new PHPMailer(true);
+                    $mail->SMTPDebug = 0;
+                    $mail->Debugoutput = function ($str, $level) {
+                        error_log("PHPMailer Debug: $str");
+                    };
+                    $mail->isSMTP();
+                    $mail->Host       = $config['host'];
+                    $mail->SMTPAuth   = true;
+                    $mail->Username   = $config['username'];
+                    $mail->Password   = $config['password'];
+                    $mail->SMTPSecure = $config['encryption'];
+                    $mail->Port       = $config['port'];
+                    $mail->SMTPOptions = [
+                        'ssl' => [
+                            'verify_peer' => false,
+                            'verify_peer_name' => false,
+                            'allow_self_signed' => true
+                        ]
+                    ];
+                    $mail->Timeout = 30;
+
+                    $mail->setFrom($config['from_email'], $config['from_name']);
+                    $mail->addAddress($operator['email'], $operator['name'] ?? 'Operator');
+                    $mail->isHTML(true);
+
+                    $safeName = htmlspecialchars((string)($operator['name'] ?? 'Operator'), ENT_QUOTES, 'UTF-8');
+                    $safeDate = htmlspecialchars((string)($booking['booking_date'] ?? ''), ENT_QUOTES, 'UTF-8');
+                    $safeEquip = htmlspecialchars((string)($booking['equipment_id'] ?? ''), ENT_QUOTES, 'UTF-8');
+                    $safeService = htmlspecialchars((string)($booking['service_type'] ?? ''), ENT_QUOTES, 'UTF-8');
+
+                    $mail->Subject = 'New job assigned: BK-' . (string)$booking_id;
+                    $mail->Body = "
+                        <div style='font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 16px; background: #f8f9fa;'>
+                          <div style='background: #ffffff; padding: 22px; border-radius: 10px; border: 1px solid #eee;'>
+                            <h2 style='margin: 0 0 8px 0; color: #D32F2F;'>New job assigned</h2>
+                            <p style='margin: 0 0 14px 0; color: #444;'>Hello {$safeName}, you have been assigned a new booking/job.</p>
+                            <div style='background: #f8f9fa; padding: 14px; border-radius: 8px;'>
+                              <p style='margin: 0;'><b>Booking ID:</b> BK-{$booking_id}</p>
+                              <p style='margin: 6px 0 0 0;'><b>Date:</b> {$safeDate}</p>
+                              <p style='margin: 6px 0 0 0;'><b>Equipment:</b> {$safeEquip}</p>
+                              <p style='margin: 6px 0 0 0;'><b>Service:</b> {$safeService}</p>
+                            </div>
+                            <div style='margin-top: 16px; text-align: center;'>
+                              <a href='{$jobLink}' style='display: inline-block; padding: 12px 18px; background: #D32F2F; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold;'>
+                                View job details
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                    ";
+
+                    $mail->AltBody =
+                        "New job assigned\n\n" .
+                        "Booking ID: BK-{$booking_id}\n" .
+                        "Date: " . ($booking['booking_date'] ?? '') . "\n" .
+                        "Equipment: " . ($booking['equipment_id'] ?? '') . "\n" .
+                        "Service: " . ($booking['service_type'] ?? '') . "\n\n" .
+                        "View job: {$jobLink}\n";
+
+                    $mail->send();
+                }
+            } catch (MailException $e) {
+                error_log('Operator assignment email failed: ' . $e->getMessage());
+            } catch (Exception $e) {
+                error_log('Operator assignment email error: ' . $e->getMessage());
+            }
+        }
     } else {
         $_SESSION['error'] = 'Failed to update operator assignment.';
     }

@@ -327,11 +327,11 @@ try {
 
 
     <!-- ═══════════ MODAL ═══════════ -->
-    <div class="fixed inset-0 bg-black/70 z-50 hidden items-center justify-center p-4" id="modalOv">
-        <div id="modalContent" class="bg-white rounded-sm shadow-2xl max-w-5xl w-full max-h-[92vh] overflow-y-auto">
+    <div class="fixed inset-0 bg-black/70 z-50 hidden items-start justify-center p-4 pt-14 md:p-5 md:pt-20" id="modalOv">
+        <div id="modalContent" class="bg-white rounded-sm shadow-2xl w-full max-w-4xl max-h-[calc(100vh-2.25rem)] md:max-h-[calc(100vh-3.25rem)] overflow-hidden flex flex-col">
 
             <!-- Modal Header -->
-            <div class="sticky top-0 bg-white border-b border-gray-100 px-8 py-5 flex items-start justify-between z-10">
+            <div class="bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between z-10 shrink-0">
                 <div>
                     <h2 class="font-display font-800 text-2xl text-gray-900" id="mName">—</h2>
                     <div id="mBadge" class="mt-2"></div>
@@ -343,12 +343,12 @@ try {
             </div>
 
             <!-- Modal Body -->
-            <div class="p-8">
+            <div class="p-6 overflow-y-auto flex-1">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
 
                     <!-- LEFT: Image + quick stats -->
                     <div class="space-y-5">
-                        <div class="bg-gray-100 rounded-sm overflow-hidden h-72 flex items-center justify-center relative" id="mImg">
+                        <div class="bg-gray-100 rounded-sm overflow-hidden h-[240px] md:h-[300px] flex items-center justify-center relative" id="mImg">
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
@@ -404,7 +404,7 @@ try {
             </div>
 
             <!-- Modal Footer -->
-            <div class="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-8 py-5 flex gap-4">
+            <div class="bg-gray-50 border-t border-gray-100 px-6 py-4 flex gap-4 shrink-0">
                 <button onclick="closeModal()"
                         class="flex-1 py-3 border-2 border-gray-200 text-gray-600 hover:border-gray-400 font-display font-700 uppercase tracking-wider text-sm rounded-sm transition-all duration-200">
                     Close
