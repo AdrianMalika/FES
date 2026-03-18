@@ -27,8 +27,6 @@ $error = $_SESSION['error'] ?? '';
 unset($_SESSION['success'], $_SESSION['error']);
 
 $equipment = [];
-$operators = [];
-$busyOperators = [];
 
 try {
     $conn = getDBConnection();
@@ -43,53 +41,24 @@ try {
             e.description,
             e.status,
             e.location,
-            e.operator_id,
             e.purchase_date,
             e.daily_rate,
             e.hourly_rate,
+            e.per_hectare_rate,
             e.fuel_type,
             e.total_usage_hours,
             e.year_manufactured,
             e.weight_kg,
             e.last_maintenance,
             e.icon,
-            e.image_path,
-            u.name AS operator_name
+            e.image_path
         FROM equipment e
-        LEFT JOIN users u ON u.user_id = e.operator_id
         ORDER BY e.created_at DESC, e.id DESC
     ";
     $eqRes = $conn->query($eqSql);
     if ($eqRes) {
         while ($row = $eqRes->fetch_assoc()) {
             $equipment[] = $row;
-        }
-    }
-
-    $opSql = "SELECT user_id, name FROM users WHERE role = 'operator' ORDER BY name ASC";
-    $opRes = $conn->query($opSql);
-    if ($opRes) {
-        while ($row = $opRes->fetch_assoc()) {
-            $operators[] = $row;
-        }
-    }
-
-    $busySql = "
-        SELECT
-            e.operator_id,
-            e.equipment_id,
-            e.equipment_name
-        FROM equipment e
-        WHERE e.operator_id IS NOT NULL
-          AND e.status = 'in_use'
-    ";
-    $busyRes = $conn->query($busySql);
-    if ($busyRes) {
-        while ($row = $busyRes->fetch_assoc()) {
-            $busyOperators[(int)$row['operator_id']] = [
-                'equipment_id' => $row['equipment_id'],
-                'equipment_name' => $row['equipment_name']
-            ];
         }
     }
 
@@ -201,14 +170,13 @@ try {
                                     <th class="py-3 pr-4">Equipment</th>
                                     <th class="py-3 pr-4">Category</th>
                                     <th class="py-3 pr-4">Status</th>
-                                    <th class="py-3 pr-4">Current Operator</th>
                                     <th class="py-3">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="text-sm text-gray-900">
                                 <?php if (empty($equipment)): ?>
                                     <tr>
-                                        <td colspan="6" class="py-10 text-center text-gray-500">No equipment found.</td>
+                                        <td colspan="5" class="py-10 text-center text-gray-500">No equipment found.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($equipment as $row): ?>
@@ -233,13 +201,6 @@ try {
                                                     <?php echo htmlspecialchars(str_replace('_', ' ', ucfirst($status))); ?>
                                                 </span>
                                             </td>
-                                            <td class="py-3 pr-4">
-                                                <?php if (!empty($row['operator_name'])): ?>
-                                                    <span class="font-medium"><?php echo htmlspecialchars($row['operator_name']); ?></span>
-                                                <?php else: ?>
-                                                    <span class="text-gray-500">Unassigned</span>
-                                                <?php endif; ?>
-                                            </td>
                                             <td class="py-3">
                                                 <div class="flex items-center gap-2">
                                                     <button type="button"
@@ -256,12 +217,6 @@ try {
                                                             <i class="fas fa-trash"></i>
                                                         </button>
                                                     </form>
-                                                    <button type="button"
-                                                        class="inline-flex items-center justify-center h-12 w-12 rounded-md text-amber-500 hover:bg-amber-50 transition"
-                                                        title="Assign operator"
-                                                        data-target="assign-row-<?php echo (int)$row['id']; ?>">
-                                                        <i class="fas fa-user"></i>
-                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -407,44 +362,6 @@ try {
                                                         <button type="button"
                                                             class="row-toggle inline-flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-medium px-4 py-2.5 rounded-lg transition"
                                                             data-target="edit-row-<?php echo (int)$row['id']; ?>">
-                                                            <i class="fas fa-times"></i>
-                                                            Cancel
-                                                        </button>
-                                                    </div>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                        <tr id="assign-row-<?php echo (int)$row['id']; ?>" class="hidden bg-gray-50">
-                                            <td colspan="5" class="py-3 px-3 border-b">
-                                                <form action="include/process_assign_operator.php" method="POST" class="flex flex-col md:flex-row md:items-center gap-2">
-                                                    <input type="hidden" name="equipment_id" value="<?php echo (int)$row['id']; ?>">
-                                                    <label class="text-sm text-gray-600 min-w-[170px]">Assign operator to <?php echo htmlspecialchars($row['equipment_id']); ?>:</label>
-                                                    <select name="operator_id" class="min-w-[260px] border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
-                                                        <option value="">Unassigned</option>
-                                                        <?php foreach ($operators as $op): ?>
-                                                            <?php
-                                                            $opId = (int)$op['user_id'];
-                                                            $isCurrent = ((int)$row['operator_id'] === $opId);
-                                                            $isBusyElsewhere = isset($busyOperators[$opId]) && !$isCurrent;
-                                                            $busyLabel = $isBusyElsewhere
-                                                                ? ' (Busy: ' . $busyOperators[$opId]['equipment_id'] . ')'
-                                                                : '';
-                                                            ?>
-                                                            <option value="<?php echo $opId; ?>"
-                                                                <?php echo $isCurrent ? 'selected' : ''; ?>
-                                                                <?php echo $isBusyElsewhere ? 'disabled' : ''; ?>>
-                                                                <?php echo htmlspecialchars($op['name'] . $busyLabel); ?>
-                                                            </option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                    <div class="flex items-center gap-2">
-                                                        <button type="submit" class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-4 py-2.5 rounded-lg shadow transition">
-                                                            <i class="fas fa-link"></i>
-                                                            Save
-                                                        </button>
-                                                        <button type="button"
-                                                            class="row-toggle inline-flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-medium px-4 py-2.5 rounded-lg transition"
-                                                            data-target="assign-row-<?php echo (int)$row['id']; ?>">
                                                             <i class="fas fa-times"></i>
                                                             Cancel
                                                         </button>

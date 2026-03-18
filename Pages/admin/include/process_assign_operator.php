@@ -16,6 +16,10 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
 
 require_once '../../../includes/database.php';
 
+$_SESSION['error'] = 'Operator assignment to equipment is disabled. Assign operators to bookings based on skill set instead.';
+header('Location: ../equipment.php');
+exit();
+
 $equipment_id = (int)($_POST['equipment_id'] ?? 0);
 $operator_id_raw = trim((string)($_POST['operator_id'] ?? ''));
 $operator_id = ($operator_id_raw === '') ? null : (int)$operator_id_raw;
