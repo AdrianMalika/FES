@@ -26,6 +26,167 @@ $operatorName = $_SESSION['name'] ?? 'Operator';
 $bookingId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $booking = null;
 
+// Prevent browser caching and "resubmit" prompts after POST.
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
+$statusUpdated = (int)($_GET['status_updated'] ?? 0);
+// (Optional param used by redirects; not required for rendering.)
+// $statusUpdatedNew = trim((string)($_GET['new_status'] ?? ''));
+
+// Handle operator status update from within this page.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST['new_status'])) {
+    $postBookingId = (int)($_POST['booking_id'] ?? 0);
+    $newStatus = trim((string)($_POST['new_status'] ?? ''));
+    $allowed = ['in_progress', 'completed'];
+
+    if ($postBookingId > 0 && in_array($newStatus, $allowed, true)) {
+        $updated = false;
+        $conn = null;
+
+        try {
+            $conn = getDBConnection();
+
+            $fullOk = false;
+            $fullError = '';
+            $equipmentId = '';
+
+            // Fetch equipment_id for equipment status updates.
+            $equipStmt = $conn->prepare("SELECT equipment_id FROM bookings WHERE booking_id = ? AND operator_id = ? LIMIT 1");
+            if ($equipStmt) {
+                $equipStmt->bind_param('ii', $postBookingId, $operatorId);
+                $equipStmt->execute();
+                $equipRes = $equipStmt->get_result();
+                $equipRow = $equipRes ? $equipRes->fetch_assoc() : null;
+                $equipmentId = (string)($equipRow['equipment_id'] ?? '');
+                $equipStmt->close();
+            }
+
+            // Primary update includes operator start/end time columns (may not exist).
+            try {
+                $sqlFull = "UPDATE bookings 
+                            SET status = ?,
+                                operator_start_time = IF(?, IFNULL(operator_start_time, NOW()), operator_start_time),
+                                operator_end_time = IF(?, IFNULL(operator_end_time, NOW()), operator_end_time),
+                                updated_at = NOW()
+                            WHERE booking_id = ? AND operator_id = ?";
+
+                $stmt = $conn->prepare($sqlFull);
+                if ($stmt) {
+                    $isStart = $newStatus === 'in_progress' ? 1 : 0;
+                    $isEnd = $newStatus === 'completed' ? 1 : 0;
+                    $stmt->bind_param('siiii', $newStatus, $isStart, $isEnd, $postBookingId, $operatorId);
+                    $fullOk = $stmt->execute();
+                    $fullError = $stmt->error ?? '';
+                    $stmt->close();
+                } else {
+                    $fullError = $conn->error ?? 'prepare failed';
+                }
+            } catch (Exception $e) {
+                $fullOk = false;
+                $fullError = $e->getMessage();
+            }
+
+            // Fallback for older/mismatched schema: update status only.
+            if (!$fullOk) {
+                try {
+                    $sqlSimple = "UPDATE bookings SET status = ?, updated_at = NOW() WHERE booking_id = ? AND operator_id = ?";
+                    $stmt2 = $conn->prepare($sqlSimple);
+                    if ($stmt2) {
+                        $stmt2->bind_param('sii', $newStatus, $postBookingId, $operatorId);
+                        $updated = $stmt2->execute();
+                        $stmt2->close();
+                    } else {
+                        $updated = false;
+                        error_log('Operator status fallback prepare failed: ' . ($conn->error ?? 'unknown'));
+                    }
+                } catch (Exception $e) {
+                    $updated = false;
+                    error_log('Operator status fallback error: ' . $e->getMessage());
+                }
+            } else {
+                $updated = true;
+            }
+
+            // Always log full update failure details for debugging.
+            if (!$fullOk) {
+                error_log(sprintf(
+                    'Operator status update full query failed; booking_id=%d operator_id=%d new_status=%s error=%s',
+                    $postBookingId,
+                    $operatorId,
+                    $newStatus,
+                    $fullError
+                ));
+            }
+
+            // Equipment lifecycle update:
+            // - If any booking for this equipment is `in_progress` => equipment `in_use`
+            // - Else if any booking is `pending`/`confirmed` => equipment `retired`
+            // - Else => equipment `available`
+            if ($updated && $equipmentId !== '') {
+                try {
+                    $inProgressCount = 0;
+                    $pendingConfirmedCount = 0;
+
+                    $inStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM bookings WHERE equipment_id = ? AND status = 'in_progress'");
+                    if ($inStmt) {
+                        $inStmt->bind_param('s', $equipmentId);
+                        $inStmt->execute();
+                        $res = $inStmt->get_result();
+                        $row = $res ? $res->fetch_assoc() : null;
+                        $inProgressCount = (int)($row['cnt'] ?? 0);
+                        $inStmt->close();
+                    }
+
+                    $pcStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM bookings WHERE equipment_id = ? AND status IN ('pending','confirmed')");
+                    if ($pcStmt) {
+                        $pcStmt->bind_param('s', $equipmentId);
+                        $pcStmt->execute();
+                        $res = $pcStmt->get_result();
+                        $row = $res ? $res->fetch_assoc() : null;
+                        $pendingConfirmedCount = (int)($row['cnt'] ?? 0);
+                        $pcStmt->close();
+                    }
+
+                    if ($inProgressCount > 0) {
+                        $newEquipStatus = 'in_use';
+                    } elseif ($pendingConfirmedCount > 0) {
+                        $newEquipStatus = 'retired';
+                    } else {
+                        $newEquipStatus = 'available';
+                    }
+
+                    $eqUpd = $conn->prepare("UPDATE equipment SET status = ?, updated_at = NOW() WHERE equipment_id = ?");
+                    if ($eqUpd) {
+                        $eqUpd->bind_param('ss', $newEquipStatus, $equipmentId);
+                        $eqUpd->execute();
+                        $eqUpd->close();
+                    }
+                } catch (Exception $e) {
+                    // Do not fail booking status update because of equipment status issues.
+                    error_log('Equipment lifecycle update error: ' . $e->getMessage());
+                }
+            }
+        } catch (Exception $e) {
+            error_log('Operator job status update error: ' . $e->getMessage());
+            $updated = false;
+        } finally {
+            if ($conn instanceof mysqli) {
+                $conn->close();
+            }
+        }
+
+        $qs = http_build_query([
+            'id' => $postBookingId,
+            'status_updated' => $updated ? 1 : 0,
+            'new_status' => $newStatus,
+        ]);
+        header('Location: job_details.php?' . $qs);
+        exit();
+    }
+}
+
 if ($bookingId > 0) {
     try {
         $conn = getDBConnection();
@@ -225,12 +386,39 @@ if (!empty($serviceLocation)) {
 
                     <section class="bg-white rounded-xl shadow-card p-6">
                         <h2 class="text-base font-semibold text-gray-900 mb-4">Job Actions</h2>
-                        <div class="space-y-3">
-                            <a href="job_status.php?id=<?php echo urlencode((string)$bookingId); ?>" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
-                                <i class="fas fa-tasks text-fes-red"></i>
-                                Update Job Status
-                            </a>
-                            <a href="job_hours.php?id=<?php echo urlencode((string)$bookingId); ?>" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
+                        <div class="space-y-4">
+                            <?php if (isset($_GET['status_updated'])): ?>
+                                <?php if ($statusUpdated === 1): ?>
+                                    <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                                        Job status updated.
+                                    </div>
+                                <?php else: ?>
+                                    <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                                        Failed to update job status.
+                                    </div>
+                                <?php endif; ?>
+                            <?php endif; ?>
+
+                            <?php if ($booking): ?>
+                                <form method="post" class="space-y-3">
+                                    <input type="hidden" name="booking_id" value="<?php echo htmlspecialchars((string)$bookingId); ?>">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                                        <select name="new_status" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                            <option value="in_progress" <?php echo ($booking['status'] ?? '') === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
+                                            <option value="completed" <?php echo ($booking['status'] ?? '') === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="flex items-center gap-2">
+                                        <button type="submit" class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-4 py-2.5 rounded-lg shadow">
+                                            <i class="fas fa-save"></i> Save Status
+                                        </button>
+                                    </div>
+                                </form>
+                            <?php endif; ?>
+
+                             <a href="job_hours.php?id=<?php echo urlencode((string)$bookingId); ?>" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
                                 <i class="fas fa-clock text-fes-red"></i>
                                 Record Work Hours
                             </a>

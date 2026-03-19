@@ -145,63 +145,46 @@ try {
     if ($updStmt->execute()) {
         $_SESSION['success'] = 'Operator assignment updated successfully.';
 
-        // Update equipment availability based on assignment
+        // Recalculate equipment status based on booking statuses for this equipment.
         try {
             $equipmentId = (string)($booking['equipment_id'] ?? '');
             if ($equipmentId !== '') {
-                if ($operator_id !== null) {
-                    // Mark equipment as in use only when this booking is active.
-                    // This prevents cancelled/completed bookings from flipping equipment back to in_use.
-                    $bookingStatus = (string)($booking['status'] ?? '');
-                    $isActiveBooking = in_array($bookingStatus, ['pending', 'confirmed', 'in_progress'], true);
+                $inProgressCount = 0;
+                $pendingConfirmedCount = 0;
 
-                    if ($isActiveBooking) {
-                        $eqUpd = $conn->prepare("UPDATE equipment SET status = 'in_use', updated_at = NOW() WHERE equipment_id = ?");
-                        if ($eqUpd) {
-                            $eqUpd->bind_param('s', $equipmentId);
-                            $eqUpd->execute();
-                            $eqUpd->close();
-                        }
-                    } else {
-                        // If booking is not active, set equipment back to available
-                        // only if there are no other active assigned bookings for this equipment.
-                        $chk = $conn->prepare("SELECT booking_id FROM bookings WHERE equipment_id = ? AND operator_id IS NOT NULL AND status IN ('pending','confirmed','in_progress') AND booking_id <> ? LIMIT 1");
-                        if ($chk) {
-                            $chk->bind_param('si', $equipmentId, $booking_id);
-                            $chk->execute();
-                            $res = $chk->get_result();
-                            $hasOther = (bool)$res->fetch_assoc();
-                            $chk->close();
+                $inStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM bookings WHERE equipment_id = ? AND status = 'in_progress'");
+                if ($inStmt) {
+                    $inStmt->bind_param('s', $equipmentId);
+                    $inStmt->execute();
+                    $res = $inStmt->get_result();
+                    $row = $res ? $res->fetch_assoc() : null;
+                    $inProgressCount = (int)($row['cnt'] ?? 0);
+                    $inStmt->close();
+                }
 
-                            if (!$hasOther) {
-                                $eqUpd = $conn->prepare("UPDATE equipment SET status = 'available', updated_at = NOW() WHERE equipment_id = ?");
-                                if ($eqUpd) {
-                                    $eqUpd->bind_param('s', $equipmentId);
-                                    $eqUpd->execute();
-                                    $eqUpd->close();
-                                }
-                            }
-                        }
-                    }
+                $pcStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM bookings WHERE equipment_id = ? AND status IN ('pending','confirmed')");
+                if ($pcStmt) {
+                    $pcStmt->bind_param('s', $equipmentId);
+                    $pcStmt->execute();
+                    $res = $pcStmt->get_result();
+                    $row = $res ? $res->fetch_assoc() : null;
+                    $pendingConfirmedCount = (int)($row['cnt'] ?? 0);
+                    $pcStmt->close();
+                }
+
+                if ($inProgressCount > 0) {
+                    $newStatus = 'in_use';
+                } elseif ($pendingConfirmedCount > 0) {
+                    $newStatus = 'retired';
                 } else {
-                    // If unassigning operator, only set equipment back to available if no other active assigned booking exists
-                    $chk = $conn->prepare("SELECT booking_id FROM bookings WHERE equipment_id = ? AND operator_id IS NOT NULL AND status IN ('pending','confirmed','in_progress') AND booking_id <> ? LIMIT 1");
-                    if ($chk) {
-                        $chk->bind_param('si', $equipmentId, $booking_id);
-                        $chk->execute();
-                        $res = $chk->get_result();
-                        $hasOther = (bool)$res->fetch_assoc();
-                        $chk->close();
+                    $newStatus = 'available';
+                }
 
-                        if (!$hasOther) {
-                            $eqUpd = $conn->prepare("UPDATE equipment SET status = 'available', updated_at = NOW() WHERE equipment_id = ?");
-                            if ($eqUpd) {
-                                $eqUpd->bind_param('s', $equipmentId);
-                                $eqUpd->execute();
-                                $eqUpd->close();
-                            }
-                        }
-                    }
+                $eqUpd = $conn->prepare("UPDATE equipment SET status = ?, updated_at = NOW() WHERE equipment_id = ?");
+                if ($eqUpd) {
+                    $eqUpd->bind_param('ss', $newStatus, $equipmentId);
+                    $eqUpd->execute();
+                    $eqUpd->close();
                 }
             }
         } catch (Exception $e) {

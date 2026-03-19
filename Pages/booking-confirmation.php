@@ -278,6 +278,23 @@ if ($isConfirmed && $equipment && $bookingData) {
                     $_SESSION['last_booking_id'] = $createdBookingId;
                     $_SESSION['last_booking_hash'] = $bookingHash;
 
+                    // Equipment lifecycle:
+                    // - When a booking is created (pending), equipment becomes `retired` (reserved).
+                    // - Operator status updates will flip to `in_use` and later back to `available`.
+                    if (!empty($equipmentId)) {
+                        try {
+                            // Do not override if already in use by an active in_progress booking.
+                            $eqUpd = $conn->prepare("UPDATE equipment SET status = 'retired', updated_at = NOW() WHERE equipment_id = ? AND status <> 'in_use'");
+                            if ($eqUpd) {
+                                $eqUpd->bind_param('s', $equipmentId);
+                                $eqUpd->execute();
+                                $eqUpd->close();
+                            }
+                        } catch (Exception $e) {
+                            error_log('Equipment retired on booking create failed: ' . $e->getMessage());
+                        }
+                    }
+
                     // Email admin(s) about new booking (send once per booking id)
                     $alreadySentFor = (int)($_SESSION['last_booking_admin_email_sent_id'] ?? 0);
                     if (!empty($createdBookingId) && $alreadySentFor !== (int)$createdBookingId) {

@@ -211,6 +211,26 @@ if ($equipmentId === '') {
         $error = 'An unexpected error occurred while loading the equipment details.';
     }
 }
+
+$equipmentStatus = (string)($equipment['status'] ?? '');
+$canBook = ($equipmentStatus === 'available');
+
+// Status pill styling (used on the customer booking page too).
+$statusCls = 'bg-gray-100 text-gray-700 border-gray-200';
+$dotCls = 'bg-gray-500';
+if ($equipmentStatus === 'available') {
+    $statusCls = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    $dotCls = 'bg-emerald-500';
+} elseif ($equipmentStatus === 'in_use') {
+    $statusCls = 'bg-amber-50 text-amber-700 border-amber-200';
+    $dotCls = 'bg-amber-500';
+} elseif ($equipmentStatus === 'maintenance') {
+    $statusCls = 'bg-red-50 text-red-700 border-red-200';
+    $dotCls = 'bg-red-500';
+} elseif ($equipmentStatus === 'retired') {
+    $statusCls = 'bg-gray-100 text-gray-700 border-gray-200';
+    $dotCls = 'bg-gray-500';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -390,8 +410,8 @@ if ($equipmentId === '') {
                                 </div>
                                 <div>
                                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Status</p>
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-green-50 text-green-700 border border-green-200">
-                                        <span class="status-dot bg-green-500"></span>
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider <?php echo $statusCls; ?>">
+                                        <span class="status-dot <?php echo $dotCls; ?>"></span>
                                         <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $equipment['status'] ?? 'unknown'))); ?>
                                     </span>
                                 </div>
@@ -488,10 +508,10 @@ if ($equipmentId === '') {
                                         <i class="fas fa-arrow-left text-xs"></i>
                                         Cancel
                                     </a>
-                                    <button type="submit" 
-                                            class="inline-flex items-center gap-3 bg-fes-red hover:bg-red-700 text-white font-display font-700 uppercase tracking-wider px-8 py-4 rounded-sm shadow-lg transition-all duration-300 hover:shadow-fes-red/40 hover:shadow-xl" style="font-size:1rem; letter-spacing:0.1em;">
+                                    <button type="submit" <?php echo $canBook ? '' : 'disabled'; ?>
+                                            class="inline-flex items-center gap-3 bg-fes-red hover:bg-red-700 text-white font-display font-700 uppercase tracking-wider px-8 py-4 rounded-sm shadow-lg transition-all duration-300 hover:shadow-fes-red/40 hover:shadow-xl <?php echo $canBook ? '' : 'opacity-50 cursor-not-allowed'; ?>" style="font-size:1rem; letter-spacing:0.1em;">
                                         <i class="fas fa-calendar-check text-sm"></i>
-                                        Submit Booking Request
+                                        <?php echo $canBook ? 'Submit Booking Request' : 'Equipment Not Available'; ?>
                                     </button>
                                 </div>
                             </form>
