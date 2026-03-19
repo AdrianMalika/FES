@@ -52,10 +52,12 @@ try {
             u.name,
             u.email,
             u.created_at,
-            COUNT(e.id) AS assigned_equipment,
-            SUM(CASE WHEN e.status = 'in_use' THEN 1 ELSE 0 END) AS active_jobs
+            COUNT(DISTINCT b.equipment_id) AS assigned_equipment,
+            COUNT(b.booking_id) AS active_jobs
         FROM users u
-        LEFT JOIN equipment e ON e.operator_id = u.user_id
+        LEFT JOIN bookings b
+            ON b.operator_id = u.user_id
+            AND b.status IN ('pending','confirmed','in_progress')
         WHERE u.role = 'operator'
     ";
 

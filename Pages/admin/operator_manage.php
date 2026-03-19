@@ -31,6 +31,7 @@ $operator = null;
 $skills = [];
 $availability = [];
 $assigned_equipment = [];
+$activeCount = 0; // Active bookings count (pending/confirmed/in_progress) for this operator.
 
 if ($operator_id <= 0) {
     header('Location: users.php');
@@ -80,8 +81,25 @@ try {
         }
 
         // Load assigned equipment / workload summary
-        $eqSql = '
-            SELECT
+        // Workload is driven by bookings/operator assignment (not equipment.operator_id),
+        // because operator-to-equipment assignment happens via bookings.
+        $activeJobsSql = "
+            SELECT COUNT(*) AS cnt
+            FROM bookings
+            WHERE operator_id = ?
+              AND status IN ('pending','confirmed','in_progress')
+        ";
+        if ($stmt = $conn->prepare($activeJobsSql)) {
+            $stmt->bind_param('i', $operator_id);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = $res ? $res->fetch_assoc() : null;
+            $activeCount = (int)($row['cnt'] ?? 0);
+            $stmt->close();
+        }
+
+        $eqSql = "
+            SELECT DISTINCT
                 e.id,
                 e.equipment_id,
                 e.equipment_name,
@@ -89,9 +107,11 @@ try {
                 e.status,
                 e.location
             FROM equipment e
-            WHERE e.operator_id = ?
+            INNER JOIN bookings b ON b.equipment_id = e.equipment_id
+            WHERE b.operator_id = ?
+              AND b.status IN ('pending','confirmed','in_progress')
             ORDER BY e.status DESC, e.equipment_name ASC
-        ';
+        ";
         $stmt = $conn->prepare($eqSql);
         if ($stmt) {
             $stmt->bind_param('i', $operator_id);
@@ -215,14 +235,6 @@ try {
                                     <div class="text-xs text-gray-500 uppercase">Assigned Equipment</div>
                                     <div class="mt-1 text-xl font-semibold text-gray-900"><?php echo count($assigned_equipment); ?></div>
                                 </div>
-                                <?php
-                                $activeCount = 0;
-                                foreach ($assigned_equipment as $eq) {
-                                    if ($eq['status'] === 'in_use') {
-                                        $activeCount++;
-                                    }
-                                }
-                                ?>
                                 <div class="px-4 py-3 rounded-lg bg-gray-50 border border-gray-200">
                                     <div class="text-xs text-gray-500 uppercase">Active Jobs</div>
                                     <div class="mt-1 text-xl font-semibold text-gray-900"><?php echo $activeCount; ?></div>
