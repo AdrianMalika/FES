@@ -182,6 +182,10 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
             <i class="fas fa-briefcase w-5"></i>
             My Jobs
         </a>
+        <a href="job_damage.php" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg <?php echo $current_page === 'job_damage' ? 'bg-fes-red shadow-md shadow-black/10 font-medium' : 'text-white/80 hover:text-white hover:bg-white/5'; ?> transition">
+            <i class="fas fa-exclamation-triangle w-5"></i>
+            Report damage
+        </a>
         <a href="notifications.php" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg <?php echo $current_page === 'notifications' ? 'bg-fes-red shadow-md shadow-black/10 font-medium' : 'text-white/80 hover:text-white hover:bg-white/5'; ?> transition">
             <i class="fas fa-bell w-5"></i>
             Notifications

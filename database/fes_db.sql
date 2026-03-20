@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Mar 18, 2026 at 01:37 PM
+-- Generation Time: Mar 20, 2026 at 02:38 AM
 -- Server version: 9.1.0
 -- PHP Version: 8.3.14
 
@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS `bookings` (
   `notes` text,
   `estimated_total_cost` decimal(12,2) NOT NULL DEFAULT '0.00',
   `status` enum('pending','confirmed','in_progress','completed','cancelled') NOT NULL DEFAULT 'pending',
+  `operator_start_time` datetime DEFAULT NULL COMMENT 'Set when operator marks job In progress',
+  `operator_end_time` datetime DEFAULT NULL COMMENT 'Set when operator marks job Completed',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`booking_id`),
@@ -53,15 +55,14 @@ CREATE TABLE IF NOT EXISTS `bookings` (
   KEY `equipment_id` (`equipment_id`),
   KEY `status` (`status`),
   KEY `idx_bookings_operator_id` (`operator_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `bookings`
 --
 
-INSERT INTO `bookings` (`booking_id`, `customer_id`, `operator_id`, `equipment_id`, `booking_date`, `service_days`, `service_type`, `service_location`, `contact_phone`, `field_lat`, `field_lng`, `field_address`, `field_polygon`, `field_hectares`, `notes`, `estimated_total_cost`, `status`, `created_at`, `updated_at`) VALUES
-(5, 16, NULL, 'EQ-002', '2026-03-19', 1, 'harvesting', 'Lat -15.802805415416017, Lng 35.04574500482184', '0123456789', -15.8028054, 35.0457450, '', '[[35.04572688549649,-15.802009238430443],[35.04669324945749,-15.801945311675837],[35.046795925628345,-15.802660127878369],[35.04574500482184,-15.802805415416017]]', 0.92, 'NAONRAW', 113423.78, 'pending', '2026-03-17 11:24:05', '2026-03-18 11:00:05'),
-(6, 16, 23, 'EQ-002', '2026-03-26', 1, 'land_prep', 'Lat -15.814461767184198, Lng 34.99920895591592', '0987654321', -15.8144618, 34.9992090, '', '[[34.99942948711649,-15.813744730572495],[35.00028119382523,-15.813920331610746],[35.000151916914035,-15.814622734237304],[34.99920895591592,-15.814461767184198]]', 0.79, 'Please call me on 0987654321 to confirm this booking and discuss any details', 106955.12, 'pending', '2026-03-18 11:26:17', '2026-03-18 11:39:52');
+INSERT INTO `bookings` (`booking_id`, `customer_id`, `operator_id`, `equipment_id`, `booking_date`, `service_days`, `service_type`, `service_location`, `contact_phone`, `field_lat`, `field_lng`, `field_address`, `field_polygon`, `field_hectares`, `notes`, `estimated_total_cost`, `status`, `operator_start_time`, `operator_end_time`, `created_at`, `updated_at`) VALUES
+(9, 16, 23, 'EQ-001', '2026-03-20', 1, 'harvesting', 'Lat -15.813997782742078, Lng 35.000212914097375', '0987654321', -15.8139978, 35.0002129, '', '[[34.999402249576605,-15.81374363113106],[34.9991198832833,-15.81440091912404],[34.99995787357352,-15.81467259753731],[35.000212914097375,-15.813997782742078]]', 0.74, 'rfgehngdhngfdsa', 106512.54, 'in_progress', '2026-03-20 04:23:34', NULL, '2026-03-18 14:26:35', '2026-03-20 02:23:34');
 
 -- --------------------------------------------------------
 
@@ -121,14 +122,14 @@ CREATE TABLE IF NOT EXISTS `equipment` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `operator_id` (`operator_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `equipment`
 --
 
 INSERT INTO `equipment` (`id`, `equipment_name`, `category`, `equipment_id`, `model`, `description`, `status`, `location`, `operator_id`, `purchase_date`, `daily_rate`, `hourly_rate`, `per_hectare_rate`, `fuel_type`, `total_usage_hours`, `year_manufactured`, `weight_kg`, `last_maintenance`, `icon`, `image_path`, `created_at`, `updated_at`) VALUES
-(3, 'Tractor MF 315', 'harvester', 'EQ-002', 'forgess', 'HAARVESTER', 'available', 'Blantyre Depot', 0, '2026-03-17', 40000.00, 15000.00, 30000.00, 'diesel', 0, 2024, 3500.00, '2026-03-17', 'fa-wheat-awn', 'assets/images/equipment/1773746505_farmers-portrait.png', '2026-03-17 11:21:45', '2026-03-17 11:21:45');
+(4, 'Tractor MF 315', 'harvester', 'EQ-001', 'forgess', 'Crop harvester', 'in_use', 'Blantyre Depot', 0, '2026-03-17', 40000.00, 15000.00, 30000.00, 'diesel', 0, 2024, 3500.00, '2026-03-18', 'fa-wheat-awn', 'assets/images/equipment/1773842640_images (2).jpg', '2026-03-18 14:04:00', '2026-03-20 02:23:34');
 
 -- --------------------------------------------------------
 
@@ -195,8 +196,8 @@ CREATE TABLE IF NOT EXISTS `users` (
 INSERT INTO `users` (`user_id`, `name`, `email`, `password_hash`, `role`, `created_at`, `updated_at`, `password_reset_token`, `password_reset_expires`) VALUES
 (16, 'Customer 1', 'customer@mail.com', '$2y$10$DAFtazNfYgEdrNrWU6Kt8ulGTcSHKDbo/dTKxQiVzt1Y7YL5PuGCO', 'customer', '2026-03-01 20:39:33', '2026-03-01 20:39:33', NULL, NULL),
 (18, 'Admin', 'Admin@mail.com', '$2y$10$kUWPC5RtFGjyXj/4R1sKMeBCSb5f/7MmJJob0j6GBZANtcBse0Cpe', 'admin', '2026-03-01 20:54:34', '2026-03-01 20:54:52', NULL, NULL),
-(23, 'Adrian Malik a 61', 'adrianmalika61@gmail.com', '$2y$10$d/i6tBSHLCYDWFvmavCjxue8TRutyCjKLLX8NjnXAnPP2wckomXWi', 'operator', '2026-03-09 08:41:09', '2026-03-18 11:39:29', NULL, NULL),
-(26, 'Adrian Malik a 03', 'adrianmalika03@gmail.com', '$2y$10$chIfx6qEoHV2oid5IGb13.REJIXe336V0A3PKNhCT3fVID8cXdchK', 'operator', '2026-03-10 01:57:32', '2026-03-18 11:39:41', NULL, NULL);
+(23, 'Adrian Malika 61', 'adrianmalika61@gmail.com', '$2y$10$d/i6tBSHLCYDWFvmavCjxue8TRutyCjKLLX8NjnXAnPP2wckomXWi', 'operator', '2026-03-09 08:41:09', '2026-03-18 11:39:29', NULL, NULL),
+(26, 'Adrian Malika 03', 'adrianmalika03@gmail.com', '$2y$10$chIfx6qEoHV2oid5IGb13.REJIXe336V0A3PKNhCT3fVID8cXdchK', 'operator', '2026-03-10 01:57:32', '2026-03-18 11:39:41', NULL, NULL);
 
 --
 -- Constraints for dumped tables

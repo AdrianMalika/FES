@@ -23,6 +23,7 @@ if ($_SESSION['role'] !== 'admin') {
 }
 
 require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/equipment_status_from_bookings.php';
 
 $message = '';
 $bookings = [];
@@ -42,12 +43,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
     if ($bookingId > 0 && in_array($newStatus, $allowed, true)) {
         try {
             $conn = getDBConnection();
-            $sql = "UPDATE bookings SET status = ?, updated_at = NOW() WHERE booking_id = ?";
+
+            $equipmentId = '';
+            $eqStmt = $conn->prepare('SELECT equipment_id FROM bookings WHERE booking_id = ?');
+            if ($eqStmt) {
+                $eqStmt->bind_param('i', $bookingId);
+                $eqStmt->execute();
+                $eqRes = $eqStmt->get_result();
+                $eqRow = $eqRes ? $eqRes->fetch_assoc() : null;
+                $equipmentId = (string)($eqRow['equipment_id'] ?? '');
+                $eqStmt->close();
+            }
+
+            $sql = 'UPDATE bookings SET status = ?, updated_at = NOW() WHERE booking_id = ?';
             if ($stmt = $conn->prepare($sql)) {
                 $stmt->bind_param('si', $newStatus, $bookingId);
-                $stmt->execute();
+                if ($stmt->execute()) {
+                    $message = 'Booking status updated.';
+                    try {
+                        recalculate_equipment_status_from_bookings($conn, $equipmentId);
+                    } catch (Exception $eqEx) {
+                        error_log('Equipment status recalc after admin booking update: ' . $eqEx->getMessage());
+                    }
+                }
                 $stmt->close();
-                $message = 'Booking status updated.';
             }
             $conn->close();
         } catch (Exception $e) {

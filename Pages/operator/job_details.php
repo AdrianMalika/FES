@@ -20,6 +20,7 @@ if (($_SESSION['role'] ?? '') !== 'operator') {
 }
 
 require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/equipment_status_from_bookings.php';
 
 $operatorId = (int)($_SESSION['user_id'] ?? 0);
 $operatorName = $_SESSION['name'] ?? 'Operator';
@@ -63,7 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
                 $equipStmt->close();
             }
 
-            // Primary update includes operator start/end time columns (may not exist).
+            // Primary update: status + operator_start_time (first In progress) + operator_end_time (Completed).
+            // Requires columns operator_start_time, operator_end_time on bookings (see database/fes_db.sql).
             try {
                 $sqlFull = "UPDATE bookings 
                             SET status = ?,
@@ -88,10 +90,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
                 $fullError = $e->getMessage();
             }
 
-            // Fallback for older/mismatched schema: update status only.
+            // Fallback: status only, then try timestamp columns separately (if DB was migrated after deploy).
             if (!$fullOk) {
                 try {
-                    $sqlSimple = "UPDATE bookings SET status = ?, updated_at = NOW() WHERE booking_id = ? AND operator_id = ?";
+                    $sqlSimple = 'UPDATE bookings SET status = ?, updated_at = NOW() WHERE booking_id = ? AND operator_id = ?';
                     $stmt2 = $conn->prepare($sqlSimple);
                     if ($stmt2) {
                         $stmt2->bind_param('sii', $newStatus, $postBookingId, $operatorId);
@@ -104,6 +106,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
                 } catch (Exception $e) {
                     $updated = false;
                     error_log('Operator status fallback error: ' . $e->getMessage());
+                }
+
+                if ($updated) {
+                    try {
+                        if ($newStatus === 'in_progress') {
+                            $ts = $conn->prepare('UPDATE bookings SET operator_start_time = IFNULL(operator_start_time, NOW()) WHERE booking_id = ? AND operator_id = ?');
+                            if ($ts) {
+                                $ts->bind_param('ii', $postBookingId, $operatorId);
+                                $ts->execute();
+                                $ts->close();
+                            }
+                        } elseif ($newStatus === 'completed') {
+                            $ts = $conn->prepare('UPDATE bookings SET operator_end_time = IFNULL(operator_end_time, NOW()) WHERE booking_id = ? AND operator_id = ?');
+                            if ($ts) {
+                                $ts->bind_param('ii', $postBookingId, $operatorId);
+                                $ts->execute();
+                                $ts->close();
+                            }
+                        }
+                    } catch (Exception $e) {
+                        error_log('Operator job time columns update skipped or failed: ' . $e->getMessage());
+                    }
                 }
             } else {
                 $updated = true;
@@ -120,51 +144,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
                 ));
             }
 
-            // Equipment lifecycle update:
-            // - If any booking for this equipment is `in_progress` => equipment `in_use`
-            // - Else if any booking is `pending`/`confirmed` => equipment `retired`
-            // - Else => equipment `available`
+            // Keep equipment.status in sync with all bookings for this machine (same as admin flow).
             if ($updated && $equipmentId !== '') {
                 try {
-                    $inProgressCount = 0;
-                    $pendingConfirmedCount = 0;
-
-                    $inStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM bookings WHERE equipment_id = ? AND status = 'in_progress'");
-                    if ($inStmt) {
-                        $inStmt->bind_param('s', $equipmentId);
-                        $inStmt->execute();
-                        $res = $inStmt->get_result();
-                        $row = $res ? $res->fetch_assoc() : null;
-                        $inProgressCount = (int)($row['cnt'] ?? 0);
-                        $inStmt->close();
-                    }
-
-                    $pcStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM bookings WHERE equipment_id = ? AND status IN ('pending','confirmed')");
-                    if ($pcStmt) {
-                        $pcStmt->bind_param('s', $equipmentId);
-                        $pcStmt->execute();
-                        $res = $pcStmt->get_result();
-                        $row = $res ? $res->fetch_assoc() : null;
-                        $pendingConfirmedCount = (int)($row['cnt'] ?? 0);
-                        $pcStmt->close();
-                    }
-
-                    if ($inProgressCount > 0) {
-                        $newEquipStatus = 'in_use';
-                    } elseif ($pendingConfirmedCount > 0) {
-                        $newEquipStatus = 'retired';
-                    } else {
-                        $newEquipStatus = 'available';
-                    }
-
-                    $eqUpd = $conn->prepare("UPDATE equipment SET status = ?, updated_at = NOW() WHERE equipment_id = ?");
-                    if ($eqUpd) {
-                        $eqUpd->bind_param('ss', $newEquipStatus, $equipmentId);
-                        $eqUpd->execute();
-                        $eqUpd->close();
-                    }
+                    recalculate_equipment_status_from_bookings($conn, $equipmentId);
                 } catch (Exception $e) {
-                    // Do not fail booking status update because of equipment status issues.
                     error_log('Equipment lifecycle update error: ' . $e->getMessage());
                 }
             }
@@ -191,7 +175,7 @@ if ($bookingId > 0) {
     try {
         $conn = getDBConnection();
         $sql = "SELECT b.*, 
-                       e.equipment_name, e.category, e.location AS equipment_location,
+                       e.equipment_name, e.category, e.location AS equipment_location, e.status AS equipment_status,
                        u.name AS customer_name, u.email AS customer_email
                 FROM bookings b
                 LEFT JOIN equipment e ON e.equipment_id = b.equipment_id
@@ -327,6 +311,13 @@ if (!empty($serviceLocation)) {
                                     <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Equipment</div>
                                     <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($booking['equipment_name'] ?? 'N/A'); ?></div>
                                     <div class="text-xs text-gray-500"><?php echo htmlspecialchars(ucfirst($booking['category'] ?? '')); ?></div>
+                                    <?php if (!empty($booking['equipment_status'])): ?>
+                                        <div class="mt-1">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                                                Equipment: <?php echo htmlspecialchars(str_replace('_', ' ', ucfirst($booking['equipment_status']))); ?>
+                                            </span>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                                 <div>
                                     <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Service Date</div>
@@ -399,33 +390,43 @@ if (!empty($serviceLocation)) {
                                 <?php endif; ?>
                             <?php endif; ?>
 
-                            <?php if ($booking): ?>
-                                <form method="post" class="space-y-3">
+                            <?php
+                            $jobStatus = (string)($booking['status'] ?? '');
+                            $canEditJobStatus = in_array($jobStatus, ['pending', 'confirmed', 'in_progress'], true);
+                            $selInProgress = in_array($jobStatus, ['pending', 'confirmed', 'in_progress'], true);
+                            $selCompleted = ($jobStatus === 'completed');
+                            ?>
+                            <?php if ($booking && $canEditJobStatus): ?>
+                                <form method="post" id="fes-job-status-form" class="space-y-3">
                                     <input type="hidden" name="booking_id" value="<?php echo htmlspecialchars((string)$bookingId); ?>">
                                     <div>
-                                        <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
-                                        <select name="new_status" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
-                                            <option value="in_progress" <?php echo ($booking['status'] ?? '') === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
-                                            <option value="completed" <?php echo ($booking['status'] ?? '') === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Booking status</label>
+                                        <select name="new_status" id="fes-job-new-status" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                            <option value="in_progress" <?php echo $selInProgress ? 'selected' : ''; ?>>In progress</option>
+                                            <option value="completed" <?php echo $selCompleted ? 'selected' : ''; ?>>Completed</option>
                                         </select>
+                                        <p class="mt-1 text-xs text-gray-500">
+                                            <strong>In progress</strong> records the start time when you first save it.
+                                            <strong>Completed</strong> records the end time. Equipment status is updated too.
+                                        </p>
                                     </div>
 
                                     <div class="flex items-center gap-2">
                                         <button type="submit" class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-4 py-2.5 rounded-lg shadow">
-                                            <i class="fas fa-save"></i> Save Status
+                                            <i class="fas fa-save"></i> Save status
                                         </button>
                                     </div>
                                 </form>
+                            <?php elseif ($booking && $jobStatus === 'completed'): ?>
+                                <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                    This job is completed. Status cannot be changed here.
+                                </div>
+                            <?php elseif ($booking && $jobStatus === 'cancelled'): ?>
+                                <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                                    This booking was cancelled.
+                                </div>
                             <?php endif; ?>
 
-                             <a href="job_hours.php?id=<?php echo urlencode((string)$bookingId); ?>" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
-                                <i class="fas fa-clock text-fes-red"></i>
-                                Record Work Hours
-                            </a>
-                            <a href="job_damage.php?id=<?php echo urlencode((string)$bookingId); ?>" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
-                                <i class="fas fa-tools text-fes-red"></i>
-                                Report Equipment Damage
-                            </a>
                         </div>
                         <div class="mt-5 text-xs text-gray-500">
                             Last updated: <?php echo !empty($booking['updated_at']) ? htmlspecialchars(date('M d, Y — H:i', strtotime($booking['updated_at']))) : 'N/A'; ?>
@@ -465,6 +466,20 @@ if (!empty($serviceLocation)) {
         });
 
         overlay.addEventListener('click', closeSidebar);
+    })();
+
+    // Confirm before marking job completed (updates booking + equipment).
+    (function () {
+        var form = document.getElementById('fes-job-status-form');
+        var sel = document.getElementById('fes-job-new-status');
+        if (!form || !sel) return;
+        form.addEventListener('submit', function (e) {
+            if (sel.value !== 'completed') return;
+            var msg = 'Are you sure you want to mark this job as completed?\n\nThis will confirm completion, record the end time, and update equipment availability.';
+            if (!window.confirm(msg)) {
+                e.preventDefault();
+            }
+        });
     })();
 
     // Initialize field map if polygon data exists

@@ -15,6 +15,7 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
 }
 
 require_once '../../../includes/database.php';
+require_once '../../../includes/equipment_status_from_bookings.php';
 require_once '../../../vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
@@ -148,45 +149,7 @@ try {
         // Recalculate equipment status based on booking statuses for this equipment.
         try {
             $equipmentId = (string)($booking['equipment_id'] ?? '');
-            if ($equipmentId !== '') {
-                $inProgressCount = 0;
-                $pendingConfirmedCount = 0;
-
-                $inStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM bookings WHERE equipment_id = ? AND status = 'in_progress'");
-                if ($inStmt) {
-                    $inStmt->bind_param('s', $equipmentId);
-                    $inStmt->execute();
-                    $res = $inStmt->get_result();
-                    $row = $res ? $res->fetch_assoc() : null;
-                    $inProgressCount = (int)($row['cnt'] ?? 0);
-                    $inStmt->close();
-                }
-
-                $pcStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM bookings WHERE equipment_id = ? AND status IN ('pending','confirmed')");
-                if ($pcStmt) {
-                    $pcStmt->bind_param('s', $equipmentId);
-                    $pcStmt->execute();
-                    $res = $pcStmt->get_result();
-                    $row = $res ? $res->fetch_assoc() : null;
-                    $pendingConfirmedCount = (int)($row['cnt'] ?? 0);
-                    $pcStmt->close();
-                }
-
-                if ($inProgressCount > 0) {
-                    $newStatus = 'in_use';
-                } elseif ($pendingConfirmedCount > 0) {
-                    $newStatus = 'retired';
-                } else {
-                    $newStatus = 'available';
-                }
-
-                $eqUpd = $conn->prepare("UPDATE equipment SET status = ?, updated_at = NOW() WHERE equipment_id = ?");
-                if ($eqUpd) {
-                    $eqUpd->bind_param('ss', $newStatus, $equipmentId);
-                    $eqUpd->execute();
-                    $eqUpd->close();
-                }
-            }
+            recalculate_equipment_status_from_bookings($conn, $equipmentId);
         } catch (Exception $e) {
             error_log('Equipment status update error: ' . $e->getMessage());
         }
