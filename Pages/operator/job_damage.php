@@ -23,6 +23,103 @@ require_once __DIR__ . '/../../includes/database.php';
 
 $operatorId = (int)($_SESSION['user_id'] ?? 0);
 $bookingId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$damageFormError = '';
+$reportSaved = isset($_GET['saved']) && $_GET['saved'] === '1';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST['description'], $_POST['severity'])) {
+    $postBid = (int)$_POST['booking_id'];
+    $description = trim((string)$_POST['description']);
+    $severity = trim((string)$_POST['severity']);
+    $allowedSev = ['minor', 'major', 'critical'];
+
+    if ($postBid <= 0) {
+        $damageFormError = 'Invalid booking.';
+    } elseif ($description === '' || mb_strlen($description) > 8000) {
+        $damageFormError = 'Please enter a description (max 8000 characters).';
+    } elseif (!in_array($severity, $allowedSev, true)) {
+        $damageFormError = 'Please select a valid severity.';
+    } else {
+        $photoPath = '';
+        if (!empty($_FILES['photo']['name']) || (isset($_FILES['photo']['error']) && (int)$_FILES['photo']['error'] !== UPLOAD_ERR_NO_FILE)) {
+            if (!isset($_FILES['photo']['error']) || (int)$_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
+                $damageFormError = 'Photo upload failed. Try a smaller file or a different image.';
+            } elseif ((int)$_FILES['photo']['size'] > 5 * 1024 * 1024) {
+                $damageFormError = 'Photo must be 5 MB or less.';
+            } else {
+                $finfo = new finfo(FILEINFO_MIME_TYPE);
+                $mime = $finfo->file($_FILES['photo']['tmp_name']);
+                $mimeToExt = [
+                    'image/jpeg' => 'jpg',
+                    'image/png' => 'png',
+                    'image/webp' => 'webp',
+                ];
+                if (!isset($mimeToExt[$mime])) {
+                    $damageFormError = 'Photo must be JPEG, PNG, or WebP.';
+                } else {
+                    $uploadDir = __DIR__ . '/../../assets/uploads/damage_reports/';
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
+                    }
+                    $ext = $mimeToExt[$mime];
+                    $newName = 'dr_' . bin2hex(random_bytes(8)) . '.' . $ext;
+                    $target = $uploadDir . $newName;
+                    if (move_uploaded_file($_FILES['photo']['tmp_name'], $target)) {
+                        $photoPath = 'assets/uploads/damage_reports/' . $newName;
+                    } else {
+                        $damageFormError = 'Could not save the photo.';
+                    }
+                }
+            }
+        }
+
+        if ($damageFormError === '') {
+            try {
+                $conn = getDBConnection();
+                $pb = (int)$postBid;
+                $oid = (int)$operatorId;
+                $chkSql = "SELECT b.booking_id, b.equipment_id FROM bookings b WHERE b.booking_id = {$pb} AND b.operator_id = {$oid} LIMIT 1";
+                $chkRes = $conn->query($chkSql);
+                $brow = ($chkRes && ($r = $chkRes->fetch_assoc())) ? $r : null;
+                if (!$brow) {
+                    $damageFormError = 'This booking was not found or is not assigned to you.';
+                } else {
+                    $eqId = (string)$brow['equipment_id'];
+                    $ins = false;
+                    if ($photoPath !== '') {
+                        $ins = $conn->prepare('INSERT INTO damage_reports (booking_id, operator_id, equipment_id, description, severity, photo_path) VALUES (?, ?, ?, ?, ?, ?)');
+                        if ($ins) {
+                            $ins->bind_param('iissss', $postBid, $operatorId, $eqId, $description, $severity, $photoPath);
+                        }
+                    } else {
+                        $ins = $conn->prepare('INSERT INTO damage_reports (booking_id, operator_id, equipment_id, description, severity) VALUES (?, ?, ?, ?, ?)');
+                        if ($ins) {
+                            $ins->bind_param('iisss', $postBid, $operatorId, $eqId, $description, $severity);
+                        }
+                    }
+                    if (!empty($ins) && $ins->execute()) {
+                        $ins->close();
+                        $conn->close();
+                        header('Location: job_damage.php?id=' . $postBid . '&saved=1');
+                        exit();
+                    }
+                    if (!empty($ins)) {
+                        $ins->close();
+                    }
+                    $damageFormError = 'Could not save the report. If this persists, ask an admin to run the database migration (add_damage_reports.sql).';
+                }
+                $conn->close();
+            } catch (Exception $e) {
+                error_log('Operator damage report save: ' . $e->getMessage());
+                $damageFormError = 'Could not save the report. Check that the damage_reports table exists (see database/add_damage_reports.sql).';
+            }
+        }
+    }
+
+    if ($damageFormError !== '') {
+        $bookingId = $postBid;
+    }
+}
+
 $booking = null;
 $jobPickerList = [];
 
@@ -30,35 +127,30 @@ try {
     $conn = getDBConnection();
 
     if ($bookingId > 0) {
+        $bid = (int)$bookingId;
+        $oid = (int)$operatorId;
         $sql = "SELECT b.booking_id, b.equipment_id, b.status,
                        e.equipment_name
                 FROM bookings b
                 LEFT JOIN equipment e ON e.equipment_id = b.equipment_id
-                WHERE b.booking_id = ? AND b.operator_id = ?";
-        if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param('ii', $bookingId, $operatorId);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            if ($row = $res->fetch_assoc()) {
-                $booking = $row;
-            }
-            $stmt->close();
+                WHERE b.booking_id = {$bid} AND b.operator_id = {$oid}";
+        $res = $conn->query($sql);
+        if ($res && ($row = $res->fetch_assoc())) {
+            $booking = $row;
         }
     } else {
+        $oid = (int)$operatorId;
         $sql = "SELECT b.booking_id, b.booking_date, b.status, b.service_type,
                        e.equipment_name, e.equipment_id AS eq_code
                 FROM bookings b
                 LEFT JOIN equipment e ON e.equipment_id = b.equipment_id
-                WHERE b.operator_id = ? AND b.status <> 'cancelled'
+                WHERE b.operator_id = {$oid} AND b.status <> 'cancelled'
                 ORDER BY b.booking_date DESC, b.booking_id DESC";
-        if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param('i', $operatorId);
-            $stmt->execute();
-            $res = $stmt->get_result();
+        $res = $conn->query($sql);
+        if ($res) {
             while ($row = $res->fetch_assoc()) {
                 $jobPickerList[] = $row;
             }
-            $stmt->close();
         }
     }
 
@@ -220,6 +312,16 @@ function fes_damage_status_badge_class(string $status): string
 
             <?php else: ?>
                 <section class="bg-white rounded-xl shadow-card p-6">
+                    <?php if ($reportSaved): ?>
+                        <div class="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                            Your damage report was submitted successfully. An administrator will review it.
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($damageFormError !== ''): ?>
+                        <div class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                            <?php echo htmlspecialchars($damageFormError); ?>
+                        </div>
+                    <?php endif; ?>
                     <p class="text-sm text-gray-600 mb-5">Reports are sent to the admin for review and follow-up.</p>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 text-sm">
@@ -233,7 +335,7 @@ function fes_damage_status_badge_class(string $status): string
                         </div>
                     </div>
 
-                    <form method="post" action="#" enctype="multipart/form-data" class="space-y-5">
+                    <form method="post" action="job_damage.php?id=<?php echo (int)$booking['booking_id']; ?>" enctype="multipart/form-data" class="space-y-5">
                         <input type="hidden" name="booking_id" value="<?php echo (int)$booking['booking_id']; ?>">
 
                         <div>

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Mar 20, 2026 at 02:38 AM
+-- Generation Time: Mar 30, 2026 at 12:43 AM
 -- Server version: 9.1.0
 -- PHP Version: 8.3.14
 
@@ -89,6 +89,37 @@ CREATE TABLE IF NOT EXISTS `customers` (
 
 INSERT INTO `customers` (`customer_id`, `user_id`, `phone`, `address`, `city`, `created_at`, `updated_at`) VALUES
 (2, 16, NULL, NULL, NULL, '2026-03-01 20:39:33', '2026-03-01 20:39:33');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `damage_reports`
+--
+
+DROP TABLE IF EXISTS `damage_reports`;
+CREATE TABLE IF NOT EXISTS `damage_reports` (
+  `damage_report_id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `booking_id` int NOT NULL,
+  `operator_id` int NOT NULL,
+  `equipment_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `severity` enum('minor','major','critical') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `photo_path` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` enum('submitted','acknowledged','closed') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'submitted',
+  `admin_notes` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`damage_report_id`),
+  KEY `idx_damage_booking` (`booking_id`),
+  KEY `idx_damage_operator` (`operator_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `damage_reports`
+--
+
+INSERT INTO `damage_reports` (`damage_report_id`, `booking_id`, `operator_id`, `equipment_id`, `description`, `severity`, `photo_path`, `status`, `admin_notes`, `created_at`, `updated_at`) VALUES
+(1, 9, 23, 'EQ-001', 'flat tire', 'major', 'assets/uploads/damage_reports/dr_3eb7bd7874cad70d.jpg', 'submitted', NULL, '2026-03-30 00:42:26', NULL);
 
 -- --------------------------------------------------------
 
@@ -196,8 +227,8 @@ CREATE TABLE IF NOT EXISTS `users` (
 INSERT INTO `users` (`user_id`, `name`, `email`, `password_hash`, `role`, `created_at`, `updated_at`, `password_reset_token`, `password_reset_expires`) VALUES
 (16, 'Customer 1', 'customer@mail.com', '$2y$10$DAFtazNfYgEdrNrWU6Kt8ulGTcSHKDbo/dTKxQiVzt1Y7YL5PuGCO', 'customer', '2026-03-01 20:39:33', '2026-03-01 20:39:33', NULL, NULL),
 (18, 'Admin', 'Admin@mail.com', '$2y$10$kUWPC5RtFGjyXj/4R1sKMeBCSb5f/7MmJJob0j6GBZANtcBse0Cpe', 'admin', '2026-03-01 20:54:34', '2026-03-01 20:54:52', NULL, NULL),
-(23, 'Adrian Malika 61', 'adrianmalika61@gmail.com', '$2y$10$d/i6tBSHLCYDWFvmavCjxue8TRutyCjKLLX8NjnXAnPP2wckomXWi', 'operator', '2026-03-09 08:41:09', '2026-03-18 11:39:29', NULL, NULL),
-(26, 'Adrian Malika 03', 'adrianmalika03@gmail.com', '$2y$10$chIfx6qEoHV2oid5IGb13.REJIXe336V0A3PKNhCT3fVID8cXdchK', 'operator', '2026-03-10 01:57:32', '2026-03-18 11:39:41', NULL, NULL);
+(23, 'Adrian Malika 61', 'adrianmalika61@gmail.com', '$2y$10$d/i6tBSHLCYDWFvmavCjxue8TRutyCjKLLX8NjnXAnPP2wckomXWi', 'operator', '2026-03-09 08:41:09', '2026-03-20 02:39:38', NULL, NULL),
+(26, 'Adrian Malika 03', 'adrianmalika03@gmail.com', '$2y$10$chIfx6qEoHV2oid5IGb13.REJIXe336V0A3PKNhCT3fVID8cXdchK', 'operator', '2026-03-10 01:57:32', '2026-03-20 02:39:46', NULL, NULL);
 
 --
 -- Constraints for dumped tables
