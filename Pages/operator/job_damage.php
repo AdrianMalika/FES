@@ -122,6 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
 
 $booking = null;
 $jobPickerList = [];
+$bookingDamageReports = [];
 
 try {
     $conn = getDBConnection();
@@ -132,18 +133,33 @@ try {
         $sql = "SELECT b.booking_id, b.equipment_id, b.status,
                        e.equipment_name
                 FROM bookings b
-                LEFT JOIN equipment e ON e.equipment_id = b.equipment_id
+                LEFT JOIN equipment e ON e.equipment_id COLLATE utf8mb4_unicode_ci = b.equipment_id COLLATE utf8mb4_unicode_ci
                 WHERE b.booking_id = {$bid} AND b.operator_id = {$oid}";
         $res = $conn->query($sql);
         if ($res && ($row = $res->fetch_assoc())) {
             $booking = $row;
+            $drSql = "SELECT damage_report_id, description, severity, status, admin_notes, created_at, updated_at, photo_path
+                      FROM damage_reports
+                      WHERE booking_id = {$bid} AND operator_id = {$oid}
+                      ORDER BY created_at DESC";
+            try {
+                $drRes = $conn->query($drSql);
+            } catch (mysqli_sql_exception $e) {
+                $drRes = false;
+                error_log('Operator job_damage damage_reports list: ' . $e->getMessage());
+            }
+            if ($drRes) {
+                while ($drRow = $drRes->fetch_assoc()) {
+                    $bookingDamageReports[] = $drRow;
+                }
+            }
         }
     } else {
         $oid = (int)$operatorId;
         $sql = "SELECT b.booking_id, b.booking_date, b.status, b.service_type,
                        e.equipment_name, e.equipment_id AS eq_code
                 FROM bookings b
-                LEFT JOIN equipment e ON e.equipment_id = b.equipment_id
+                LEFT JOIN equipment e ON e.equipment_id COLLATE utf8mb4_unicode_ci = b.equipment_id COLLATE utf8mb4_unicode_ci
                 WHERE b.operator_id = {$oid} AND b.status <> 'cancelled'
                 ORDER BY b.booking_date DESC, b.booking_id DESC";
         $res = $conn->query($sql);
@@ -187,6 +203,21 @@ function fes_damage_status_badge_class(string $status): string
         'cancelled' => 'bg-gray-100 text-gray-700',
     ];
     return $map[$status] ?? 'bg-gray-100 text-gray-700';
+}
+
+/** Damage report workflow status (submitted / acknowledged / closed) */
+function fes_operator_dr_report_status_badge_class(string $status): string
+{
+    switch ($status) {
+        case 'submitted':
+            return 'bg-amber-50 text-amber-800';
+        case 'acknowledged':
+            return 'bg-blue-50 text-blue-800';
+        case 'closed':
+            return 'bg-gray-100 text-gray-700';
+        default:
+            return 'bg-gray-100 text-gray-700';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -334,6 +365,57 @@ function fes_damage_status_badge_class(string $status): string
                             <div class="text-gray-900 font-medium"><?php echo htmlspecialchars($equipmentDisplay); ?></div>
                         </div>
                     </div>
+
+                    <?php if (!empty($bookingDamageReports)): ?>
+                        <div class="mb-6 rounded-xl border border-slate-200 bg-slate-50/80 overflow-hidden">
+                            <div class="px-4 py-3 border-b border-slate-200 bg-white/80">
+                                <h2 class="text-sm font-semibold text-gray-900">
+                                    <i class="fas fa-clipboard-check text-slate-500 mr-2"></i>
+                                    Your reports for this job
+                                </h2>
+                                <p class="text-xs text-gray-500 mt-1">Office status and messages from the administrator appear here.</p>
+                            </div>
+                            <ul class="divide-y divide-slate-200">
+                                <?php foreach ($bookingDamageReports as $dr):
+                                    $drSt = (string)($dr['status'] ?? '');
+                                    $drBadge = fes_operator_dr_report_status_badge_class($drSt);
+                                    $submitted = !empty($dr['created_at']) ? date('M j, Y — H:i', strtotime($dr['created_at'])) : '—';
+                                    $updated = !empty($dr['updated_at']) ? date('M j, Y — H:i', strtotime($dr['updated_at'])) : '';
+                                    $notes = trim((string)($dr['admin_notes'] ?? ''));
+                                    ?>
+                                    <li class="px-4 py-4 bg-white">
+                                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                                            <span class="text-sm font-semibold text-gray-900">Report #<?php echo (int)$dr['damage_report_id']; ?></span>
+                                            <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo $drBadge; ?>">
+                                                <?php echo htmlspecialchars(ucfirst($drSt)); ?>
+                                            </span>
+                                            <span class="text-xs text-gray-500">
+                                                Submitted <?php echo htmlspecialchars($submitted); ?>
+                                            </span>
+                                            <?php if ($updated !== '' && $updated !== $submitted): ?>
+                                                <span class="text-xs text-gray-400">· Updated <?php echo htmlspecialchars($updated); ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Your description</div>
+                                        <p class="text-sm text-gray-700 whitespace-pre-wrap mb-3"><?php echo htmlspecialchars((string)($dr['description'] ?? '')); ?></p>
+                                        <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Severity</div>
+                                        <div class="text-sm text-gray-800 mb-3"><?php echo htmlspecialchars(ucfirst((string)($dr['severity'] ?? ''))); ?></div>
+                                        <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Message from office</div>
+                                        <div class="text-sm text-gray-800 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 whitespace-pre-wrap">
+                                            <?php echo $notes !== '' ? htmlspecialchars($notes) : '<span class="text-gray-400 italic">No message yet — the admin will add notes when they review your report.</span>'; ?>
+                                        </div>
+                                        <?php if (!empty($dr['photo_path'])): ?>
+                                            <div class="mt-3">
+                                                <a href="../../<?php echo htmlspecialchars((string)$dr['photo_path']); ?>" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-sm font-medium text-fes-red hover:underline">
+                                                    <i class="fas fa-image"></i> View your photo
+                                                </a>
+                                            </div>
+                                        <?php endif; ?>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
 
                     <form method="post" action="job_damage.php?id=<?php echo (int)$booking['booking_id']; ?>" enctype="multipart/form-data" class="space-y-5">
                         <input type="hidden" name="booking_id" value="<?php echo (int)$booking['booking_id']; ?>">

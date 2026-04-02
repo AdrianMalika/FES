@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS `bookings` (
   `field_hectares` decimal(10,2) DEFAULT NULL,
   `notes` text,
   `estimated_total_cost` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `payment_status` enum('unpaid','pending','paid','failed') NOT NULL DEFAULT 'unpaid',
+  `payment_tx_ref` varchar(120) DEFAULT NULL,
+  `payment_paid_at` datetime DEFAULT NULL,
   `status` enum('pending','confirmed','in_progress','completed','cancelled') NOT NULL DEFAULT 'pending',
   `operator_start_time` datetime DEFAULT NULL COMMENT 'Set when operator marks job In progress',
   `operator_end_time` datetime DEFAULT NULL COMMENT 'Set when operator marks job Completed',
@@ -61,8 +64,32 @@ CREATE TABLE IF NOT EXISTS `bookings` (
 -- Dumping data for table `bookings`
 --
 
-INSERT INTO `bookings` (`booking_id`, `customer_id`, `operator_id`, `equipment_id`, `booking_date`, `service_days`, `service_type`, `service_location`, `contact_phone`, `field_lat`, `field_lng`, `field_address`, `field_polygon`, `field_hectares`, `notes`, `estimated_total_cost`, `status`, `operator_start_time`, `operator_end_time`, `created_at`, `updated_at`) VALUES
-(9, 16, 23, 'EQ-001', '2026-03-20', 1, 'harvesting', 'Lat -15.813997782742078, Lng 35.000212914097375', '0987654321', -15.8139978, 35.0002129, '', '[[34.999402249576605,-15.81374363113106],[34.9991198832833,-15.81440091912404],[34.99995787357352,-15.81467259753731],[35.000212914097375,-15.813997782742078]]', 0.74, 'rfgehngdhngfdsa', 106512.54, 'in_progress', '2026-03-20 04:23:34', NULL, '2026-03-18 14:26:35', '2026-03-20 02:23:34');
+INSERT INTO `bookings` (`booking_id`, `customer_id`, `operator_id`, `equipment_id`, `booking_date`, `service_days`, `service_type`, `service_location`, `contact_phone`, `field_lat`, `field_lng`, `field_address`, `field_polygon`, `field_hectares`, `notes`, `estimated_total_cost`, `payment_status`, `payment_tx_ref`, `payment_paid_at`, `status`, `operator_start_time`, `operator_end_time`, `created_at`, `updated_at`) VALUES
+(9, 16, 23, 'EQ-001', '2026-03-20', 1, 'harvesting', 'Lat -15.813997782742078, Lng 35.000212914097375', '0987654321', -15.8139978, 35.0002129, '', '[[34.999402249576605,-15.81374363113106],[34.9991198832833,-15.81440091912404],[34.99995787357352,-15.81467259753731],[35.000212914097375,-15.813997782742078]]', 0.74, 'rfgehngdhngfdsa', 106512.54, 'unpaid', NULL, NULL, 'in_progress', '2026-03-20 04:23:34', NULL, '2026-03-18 14:26:35', '2026-03-20 02:23:34');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `booking_payments`
+--
+
+DROP TABLE IF EXISTS `booking_payments`;
+CREATE TABLE IF NOT EXISTS `booking_payments` (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `booking_id` int NOT NULL,
+  `user_id` int NOT NULL COMMENT 'users.user_id (matches bookings.customer_id in this app)',
+  `tx_ref` varchar(120) NOT NULL,
+  `amount` int NOT NULL COMMENT 'Whole units (e.g. MWK)',
+  `currency` varchar(3) NOT NULL DEFAULT 'MWK',
+  `provider` varchar(20) NOT NULL DEFAULT 'stripe',
+  `status` enum('pending','paid','failed','cancelled') NOT NULL DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tx_ref` (`tx_ref`),
+  KEY `idx_booking` (`booking_id`),
+  KEY `idx_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
