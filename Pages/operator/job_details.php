@@ -21,6 +21,7 @@ if (($_SESSION['role'] ?? '') !== 'operator') {
 
 require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/equipment_status_from_bookings.php';
+require_once __DIR__ . '/../../includes/fes_date.php';
 
 $operatorId = (int)($_SESSION['user_id'] ?? 0);
 $operatorName = $_SESSION['name'] ?? 'Operator';
@@ -178,7 +179,7 @@ if ($bookingId > 0) {
                        e.equipment_name, e.category, e.location AS equipment_location, e.status AS equipment_status,
                        u.name AS customer_name, u.email AS customer_email
                 FROM bookings b
-                LEFT JOIN equipment e ON e.equipment_id = b.equipment_id
+                LEFT JOIN equipment e ON e.equipment_id COLLATE utf8mb4_unicode_ci = b.equipment_id COLLATE utf8mb4_unicode_ci
                 LEFT JOIN users u ON u.user_id = b.customer_id
                 WHERE b.booking_id = ? AND b.operator_id = ?";
         if ($stmt = $conn->prepare($sql)) {
@@ -321,7 +322,7 @@ if (!empty($serviceLocation)) {
                                 </div>
                                 <div>
                                     <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Service Date</div>
-                                    <div class="text-gray-900 font-medium"><?php echo !empty($booking['booking_date']) ? htmlspecialchars(date('M d, Y', strtotime($booking['booking_date']))) : 'N/A'; ?></div>
+                                    <div class="text-gray-900 font-medium"><?php echo htmlspecialchars(fes_format_date_safe($booking['booking_date'] ?? null, 'M d, Y', 'N/A')); ?></div>
                                 </div>
                                 <div>
                                     <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Service Type</div>
@@ -341,11 +342,11 @@ if (!empty($serviceLocation)) {
                                 </div>
                                 <div>
                                     <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Start Time</div>
-                                    <div class="text-gray-900 font-medium"><?php echo !empty($booking['operator_start_time']) ? htmlspecialchars(date('M d, Y H:i', strtotime($booking['operator_start_time']))) : 'Not started'; ?></div>
+                                    <div class="text-gray-900 font-medium"><?php echo htmlspecialchars(fes_format_date_safe($booking['operator_start_time'] ?? null, 'M d, Y H:i', 'Not started')); ?></div>
                                 </div>
                                 <div>
                                     <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">End Time</div>
-                                    <div class="text-gray-900 font-medium"><?php echo !empty($booking['operator_end_time']) ? htmlspecialchars(date('M d, Y H:i', strtotime($booking['operator_end_time']))) : 'Not completed'; ?></div>
+                                    <div class="text-gray-900 font-medium"><?php echo htmlspecialchars(fes_format_date_safe($booking['operator_end_time'] ?? null, 'M d, Y H:i', 'Not completed')); ?></div>
                                 </div>
                             </div>
 
@@ -429,7 +430,7 @@ if (!empty($serviceLocation)) {
 
                         </div>
                         <div class="mt-5 text-xs text-gray-500">
-                            Last updated: <?php echo !empty($booking['updated_at']) ? htmlspecialchars(date('M d, Y — H:i', strtotime($booking['updated_at']))) : 'N/A'; ?>
+                            Last updated: <?php echo htmlspecialchars(fes_format_date_safe($booking['updated_at'] ?? null, 'M d, Y — H:i', 'N/A')); ?>
                         </div>
                     </section>
                 </div>

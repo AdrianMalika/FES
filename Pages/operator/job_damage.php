@@ -20,6 +20,7 @@ if (($_SESSION['role'] ?? '') !== 'operator') {
 }
 
 require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/fes_date.php';
 
 $operatorId = (int)($_SESSION['user_id'] ?? 0);
 $bookingId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -322,7 +323,7 @@ function fes_operator_dr_report_status_badge_class(string $status): string
                                             </div>
                                             <div class="text-xs text-gray-500 mt-1">
                                                 <?php echo htmlspecialchars($j['equipment_name'] ?? 'Equipment'); ?>
-                                                · <?php echo !empty($j['booking_date']) ? htmlspecialchars(date('M j, Y', strtotime($j['booking_date']))) : ''; ?>
+                                                · <?php echo htmlspecialchars(fes_format_date_safe($j['booking_date'] ?? null, 'M j, Y', '')); ?>
                                             </div>
                                         </div>
                                         <i class="fas fa-chevron-right text-gray-400 shrink-0"></i>
@@ -379,8 +380,8 @@ function fes_operator_dr_report_status_badge_class(string $status): string
                                 <?php foreach ($bookingDamageReports as $dr):
                                     $drSt = (string)($dr['status'] ?? '');
                                     $drBadge = fes_operator_dr_report_status_badge_class($drSt);
-                                    $submitted = !empty($dr['created_at']) ? date('M j, Y — H:i', strtotime($dr['created_at'])) : '—';
-                                    $updated = !empty($dr['updated_at']) ? date('M j, Y — H:i', strtotime($dr['updated_at'])) : '';
+                                    $submitted = fes_format_date_safe($dr['created_at'] ?? null, 'M j, Y — H:i', '—');
+                                    $updated = fes_format_date_safe($dr['updated_at'] ?? null, 'M j, Y — H:i', '');
                                     $notes = trim((string)($dr['admin_notes'] ?? ''));
                                     ?>
                                     <li class="px-4 py-4 bg-white">

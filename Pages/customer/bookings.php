@@ -23,6 +23,7 @@ if ($_SESSION['role'] !== 'customer') {
 }
 
 require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/fes_date.php';
 
 $bookingStats = [
     'pending' => 0,
@@ -55,7 +56,7 @@ try {
                    COALESCE(NULLIF(b.service_location, ''), b.field_address) AS service_location,
                    b.status, b.estimated_total_cost, e.equipment_name
             FROM bookings b
-            JOIN equipment e ON e.equipment_id = b.equipment_id
+            JOIN equipment e ON e.equipment_id COLLATE utf8mb4_unicode_ci = b.equipment_id COLLATE utf8mb4_unicode_ci
             WHERE b.customer_id = ?
             ORDER BY b.created_at DESC";
     if ($stmt = $conn->prepare($sql)) {
@@ -219,7 +220,7 @@ $customerName = $_SESSION['name'] ?? 'Customer';
                                                 <td class="py-3 pr-4 font-medium text-fes-red">#BK-<?php echo htmlspecialchars((string)$row['booking_id']); ?></td>
                                                 <td class="py-3 pr-4 text-gray-900"><?php echo htmlspecialchars($row['equipment_name'] ?? 'N/A'); ?></td>
                                                 <td class="py-3 pr-4">
-                                                    <?php echo !empty($row['booking_date']) ? htmlspecialchars(date('M d, Y', strtotime($row['booking_date']))) : 'N/A'; ?>
+                                                    <?php echo htmlspecialchars(fes_format_date_safe($row['booking_date'] ?? null, 'M d, Y', 'N/A')); ?>
                                                 </td>
                                                 <td class="py-3 pr-4"><?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $row['service_type'] ?? 'N/A'))); ?></td>
                                                 <td class="py-3 pr-4"><?php echo htmlspecialchars($row['service_location'] ?? 'N/A'); ?></td>

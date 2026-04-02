@@ -30,6 +30,7 @@ if (!in_array($statusFilter, $allowedStatuses, true)) {
 }
 
 require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/fes_date.php';
 try {
     $conn = getDBConnection();
     $sql = "SELECT b.booking_id, b.booking_date, b.service_type, b.service_days, b.status,
@@ -38,7 +39,7 @@ try {
                    e.equipment_name,
                    u.name AS customer_name
             FROM bookings b
-            LEFT JOIN equipment e ON e.equipment_id = b.equipment_id
+            LEFT JOIN equipment e ON e.equipment_id COLLATE utf8mb4_unicode_ci = b.equipment_id COLLATE utf8mb4_unicode_ci
             LEFT JOIN users u ON u.user_id = b.customer_id
             WHERE b.operator_id = ?";
     if ($statusFilter !== 'all') {
@@ -198,7 +199,7 @@ try {
                                     <td class="py-3 pr-4"><?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $row['service_type'] ?? 'N/A'))); ?></td>
                                     <td class="py-3 pr-4"><?php echo htmlspecialchars($row['service_location'] ?? 'N/A'); ?></td>
                                     <td class="py-3 pr-4"><?php echo htmlspecialchars((string)($row['field_hectares'] ?? 'N/A')); ?> acres</td>
-                                    <td class="py-3 pr-4"><?php echo !empty($row['booking_date']) ? htmlspecialchars(date('M d, Y', strtotime($row['booking_date']))) : 'N/A'; ?></td>
+                                    <td class="py-3 pr-4"><?php echo htmlspecialchars(fes_format_date_safe($row['booking_date'] ?? null, 'M d, Y', 'N/A')); ?></td>
                                     <td class="py-3 pr-4">
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium <?php echo $badgeClass; ?>">
                                             <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $status))); ?>

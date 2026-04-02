@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 $current_page = basename($_SERVER['PHP_SELF'], '.php');
 $is_bookings = in_array($current_page, ['bookings', 'booking-details'], true);
 $is_payments = ($current_page === 'payments');
+$is_profile = ($current_page === 'profile');
 ?>
 <style>
 #fes-dashboard-sidebar {
@@ -190,7 +191,7 @@ $is_payments = ($current_page === 'payments');
             <i class="fas fa-file-invoice-dollar w-5"></i>
             Payments
         </a>
-        <a href="#" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:text-white hover:bg-white/5 transition">
+        <a href="profile.php" class="mt-1 flex items-center gap-3 px-4 py-3 rounded-lg <?php echo $is_profile ? 'bg-fes-red shadow-md shadow-black/10 font-medium' : 'text-white/80 hover:text-white hover:bg-white/5'; ?> transition">
             <i class="fas fa-user w-5"></i>
             Profile
         </a>

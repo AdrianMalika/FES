@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/fes_date.php';
+
 /**
  * Minimal HTML for Dompdf (no external CSS/JS). Uses DejaVu Sans (bundled with Dompdf).
  *
@@ -18,14 +20,10 @@ function fes_build_receipt_pdf_html(
     };
 
     $bid = (int)$receipt['booking_id'];
-    $bkDate = !empty($receipt['booking_date'])
-        ? date('M d, Y', strtotime((string)$receipt['booking_date']))
-        : '—';
+    $bkDate = fes_format_date_safe($receipt['booking_date'] ?? null, 'M d, Y', '—');
     $equip = (string)($receipt['equipment_name'] ?? '—');
     $svc = ucfirst(str_replace('_', ' ', (string)($receipt['service_type'] ?? '')));
-    $paidAt = !empty($receipt['payment_paid_at'])
-        ? date('M d, Y · H:i', strtotime((string)$receipt['payment_paid_at']))
-        : '—';
+    $paidAt = fes_format_date_safe($receipt['payment_paid_at'] ?? null, 'M d, Y · H:i', '—');
     $issued = date('M d, Y · H:i');
     $amountMk = 'MK ' . number_format($amountWhole);
 

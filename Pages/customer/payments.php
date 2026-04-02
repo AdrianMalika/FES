@@ -21,6 +21,7 @@ if ($_SESSION['role'] !== 'customer') {
 }
 
 require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/fes_date.php';
 require_once __DIR__ . '/../../includes/stripe_checkout.php';
 
 $rows = [];
@@ -280,7 +281,7 @@ function fes_job_status_badge(string $st): string
                                                 <td class="py-3 pr-4 font-medium text-fes-red">#BK-<?php echo $bid; ?></td>
                                                 <td class="py-3 pr-4"><?php echo htmlspecialchars($row['equipment_name'] ?? '—'); ?></td>
                                                 <td class="py-3 pr-4">
-                                                    <?php echo !empty($row['booking_date']) ? htmlspecialchars(date('M d, Y', strtotime($row['booking_date']))) : '—'; ?>
+                                                    <?php echo htmlspecialchars(fes_format_date_safe($row['booking_date'] ?? null, 'M d, Y', '—')); ?>
                                                 </td>
                                                 <td class="py-3 pr-4">
                                                     <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium <?php echo $jobClass; ?>">

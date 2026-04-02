@@ -24,6 +24,7 @@ if (($_SESSION['role'] ?? '') !== 'operator') {
 }
 
 require_once '../../includes/database.php';
+require_once '../../includes/fes_date.php';
 
 $operatorId   = (int)($_SESSION['user_id'] ?? 0);
 $operatorName = $_SESSION['name'] ?? 'Operator';
@@ -438,7 +439,7 @@ $dayNames = [
                                         <div>
                                             <div class="font-medium text-gray-900"><?php echo htmlspecialchars($skill['skill_name']); ?></div>
                                             <div class="text-xs text-gray-500">
-                                                <?php echo !empty($skill['created_at']) ? 'Added ' . htmlspecialchars(date('M d, Y', strtotime($skill['created_at']))) : ''; ?>
+                                                <?php echo (($added = fes_format_date_safe($skill['created_at'] ?? null, 'M d, Y', '')) !== '') ? 'Added ' . htmlspecialchars($added) : ''; ?>
                                             </div>
                                         </div>
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">

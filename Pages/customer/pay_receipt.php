@@ -16,6 +16,7 @@ if ($bookingId < 1) {
 $download = isset($_GET['dl']) && $_GET['dl'] === '1';
 
 require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/fes_date.php';
 if (is_readable(__DIR__ . '/../../includes/payment_config.php')) {
     require_once __DIR__ . '/../../includes/payment_config.php';
 }
@@ -68,9 +69,7 @@ if (!$receipt) {
 }
 
 $amountWhole = $paymentRow ? (int)$paymentRow['amount'] : (int)max(1, (int)ceil((float)($receipt['estimated_total_cost'] ?? 0)));
-$paidAt = !empty($receipt['payment_paid_at'])
-    ? date('M d, Y · H:i', strtotime((string)$receipt['payment_paid_at']))
-    : '—';
+$paidAt = fes_format_date_safe($receipt['payment_paid_at'] ?? null, 'M d, Y · H:i', '—');
 $txRef = trim((string)($receipt['payment_tx_ref'] ?? ''));
 if ($txRef === '' && is_array($paymentRow)) {
     $txRef = trim((string)($paymentRow['tx_ref'] ?? ''));
@@ -82,9 +81,7 @@ $bid = (int)$receipt['booking_id'];
 $equip = htmlspecialchars((string)($receipt['equipment_name'] ?? '—'), ENT_QUOTES, 'UTF-8');
 $svc = htmlspecialchars(ucfirst(str_replace('_', ' ', (string)($receipt['service_type'] ?? ''))), ENT_QUOTES, 'UTF-8');
 
-$bkDate = !empty($receipt['booking_date'])
-    ? htmlspecialchars(date('M d, Y', strtotime((string)$receipt['booking_date'])), ENT_QUOTES, 'UTF-8')
-    : '—';
+$bkDate = htmlspecialchars(fes_format_date_safe($receipt['booking_date'] ?? null, 'M d, Y', '—'), ENT_QUOTES, 'UTF-8');
 $amountMk = 'MK ' . number_format($amountWhole);
 $custNameH = htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8');
 $custEmailH = htmlspecialchars($customerEmail, ENT_QUOTES, 'UTF-8');

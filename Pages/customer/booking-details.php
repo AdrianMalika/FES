@@ -23,6 +23,7 @@ if ($_SESSION['role'] !== 'customer') {
 }
 
 require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/fes_date.php';
 
 $bookingId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $booking = null;
@@ -150,7 +151,7 @@ if ($bookingId > 0) {
         $conn = getDBConnection();
         $sql = "SELECT b.*, e.equipment_name, e.category, e.location AS equipment_location, e.daily_rate, e.hourly_rate, e.per_hectare_rate, e.status AS equipment_status
                 FROM bookings b
-                JOIN equipment e ON e.equipment_id = b.equipment_id
+                JOIN equipment e ON e.equipment_id COLLATE utf8mb4_unicode_ci = b.equipment_id COLLATE utf8mb4_unicode_ci
                 WHERE b.booking_id = ? AND b.customer_id = ?";
         if ($stmt = $conn->prepare($sql)) {
             $customerId = intval($_SESSION['user_id']);
@@ -275,7 +276,7 @@ $costBreakdown = $booking ? calculateBookingCost($booking, $RATES) : null;
                             <div class="bg-white rounded-xl shadow-card p-5">
                                 <div class="text-xs text-gray-500 uppercase tracking-wider">Service Date</div>
                                 <div class="mt-2 text-2xl font-semibold text-gray-900">
-                                    <?php echo !empty($booking['booking_date']) ? htmlspecialchars(date('M d, Y', strtotime($booking['booking_date']))) : 'N/A'; ?>
+                                    <?php echo htmlspecialchars(fes_format_date_safe($booking['booking_date'] ?? null, 'M d, Y', 'N/A')); ?>
                                 </div>
                                 <div class="mt-2 text-sm text-gray-600">Days: <?php echo htmlspecialchars((string)($booking['service_days'] ?? 1)); ?></div>
                             </div>
@@ -333,11 +334,11 @@ $costBreakdown = $booking ? calculateBookingCost($booking, $RATES) : null;
                                 <div class="space-y-4 text-sm text-gray-600">
                                     <div class="flex items-center gap-3">
                                         <span class="h-2 w-2 rounded-full bg-amber-500"></span>
-                                        <div>Submitted: <?php echo !empty($booking['created_at']) ? htmlspecialchars(date('M d, Y · H:i', strtotime($booking['created_at']))) : 'N/A'; ?></div>
+                                        <div>Submitted: <?php echo htmlspecialchars(fes_format_date_safe($booking['created_at'] ?? null, 'M d, Y · H:i', 'N/A')); ?></div>
                                     </div>
                                     <div class="flex items-center gap-3">
                                         <span class="h-2 w-2 rounded-full bg-gray-300"></span>
-                                        <div>Last Update: <?php echo !empty($booking['updated_at']) ? htmlspecialchars(date('M d, Y · H:i', strtotime($booking['updated_at']))) : 'N/A'; ?></div>
+                                        <div>Last Update: <?php echo htmlspecialchars(fes_format_date_safe($booking['updated_at'] ?? null, 'M d, Y · H:i', 'N/A')); ?></div>
                                     </div>
                                 </div>
                             </section>

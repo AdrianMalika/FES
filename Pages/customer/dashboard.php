@@ -24,6 +24,7 @@ if ($_SESSION['role'] !== 'customer') {
 }
 
 require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/fes_date.php';
 
 $customerName = trim((string)($_SESSION['name'] ?? 'Customer'));
 $customerEmail = trim((string)($_SESSION['email'] ?? ''));
@@ -346,7 +347,7 @@ function fes_dashboard_teaser(string $text, int $max = 110): string
                                                 <td class="py-3 pr-4 font-medium">#BK-<?php echo htmlspecialchars((string)$row['booking_id']); ?></td>
                                                 <td class="py-3 pr-4"><?php echo htmlspecialchars($row['equipment_name'] ?? 'N/A'); ?></td>
                                                 <td class="py-3 pr-4">
-                                                    <?php echo !empty($row['booking_date']) ? htmlspecialchars(date('M d, Y', strtotime($row['booking_date']))) : 'N/A'; ?>
+                                                    <?php echo htmlspecialchars(fes_format_date_safe($row['booking_date'] ?? null, 'M d, Y', 'N/A')); ?>
                                                 </td>
                                                 <td class="py-3 pr-4">
                                                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium <?php echo $badgeClass; ?>">
@@ -359,7 +360,7 @@ function fes_dashboard_teaser(string $text, int $max = 110): string
                                                     </span>
                                                 </td>
                                                 <td class="py-3 text-right">
-                                                    <a href="booking-details.php?booking_id=<?php echo $rid; ?>" class="text-fes-red hover:text-[#b71c1c] text-xs font-semibold whitespace-nowrap">View</a>
+                                                    <a href="booking-details.php?id=<?php echo $rid; ?>" class="text-fes-red hover:text-[#b71c1c] text-xs font-semibold whitespace-nowrap">View</a>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
