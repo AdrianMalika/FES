@@ -23,6 +23,9 @@ require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/equipment_status_from_bookings.php';
 require_once __DIR__ . '/../../includes/fes_date.php';
 
+/** Minimum damage reports (this booking + operator) before status can be set to Completed. */
+$fesMinDamageReportsToComplete = 3;
+
 $operatorId = (int)($_SESSION['user_id'] ?? 0);
 $operatorName = $_SESSION['name'] ?? 'Operator';
 $bookingId = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -53,6 +56,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
             $fullOk = false;
             $fullError = '';
             $equipmentId = '';
+
+            if ($newStatus === 'completed') {
+                $drc = 0;
+                $cntStmt = $conn->prepare('SELECT COUNT(*) AS c FROM damage_reports WHERE booking_id = ? AND operator_id = ?');
+                if ($cntStmt) {
+                    $cntStmt->bind_param('ii', $postBookingId, $operatorId);
+                    $cntStmt->execute();
+                    $cr = $cntStmt->get_result();
+                    if ($cr && ($crow = $cr->fetch_assoc())) {
+                        $drc = (int)($crow['c'] ?? 0);
+                    }
+                    $cntStmt->close();
+                }
+                if ($drc < $fesMinDamageReportsToComplete) {
+                    $conn->close();
+                    header('Location: job_details.php?' . http_build_query([
+                        'id' => $postBookingId,
+                        'status_updated' => 0,
+                        'new_status' => $newStatus,
+                        'damage_reports_required' => $fesMinDamageReportsToComplete,
+                        'damage_reports_have' => $drc,
+                    ]));
+                    exit();
+                }
+            }
 
             // Fetch equipment_id for equipment status updates.
             $equipStmt = $conn->prepare("SELECT equipment_id FROM bookings WHERE booking_id = ? AND operator_id = ? LIMIT 1");
@@ -221,6 +249,57 @@ if (!empty($serviceLocation)) {
         $mapLng = $coords[2];
     }
 }
+
+/** Damage counts + up to 3 most recent statuses for sidebar (full text & history on job_damage_status.php). */
+$damageReportCount = 0;
+$recentDamageReports = [];
+if ($bookingId > 0 && $booking) {
+    try {
+        $connDr = getDBConnection();
+        $csql = 'SELECT COUNT(*) AS c FROM damage_reports WHERE booking_id = ? AND operator_id = ?';
+        if ($cst = $connDr->prepare($csql)) {
+            $cst->bind_param('ii', $bookingId, $operatorId);
+            $cst->execute();
+            $cRes = $cst->get_result();
+            if ($cRes && ($crow = $cRes->fetch_assoc())) {
+                $damageReportCount = (int)($crow['c'] ?? 0);
+            }
+            $cst->close();
+        }
+        if ($damageReportCount > 0) {
+            $dsql = 'SELECT damage_report_id, status FROM damage_reports WHERE booking_id = ? AND operator_id = ? ORDER BY created_at DESC LIMIT 3';
+            if ($dst = $connDr->prepare($dsql)) {
+                $dst->bind_param('ii', $bookingId, $operatorId);
+                $dst->execute();
+                $drRes = $dst->get_result();
+                if ($drRes) {
+                    while ($drRow = $drRes->fetch_assoc()) {
+                        $recentDamageReports[] = $drRow;
+                    }
+                }
+                $dst->close();
+            }
+        }
+        $connDr->close();
+    } catch (Throwable $e) {
+        error_log('Operator job_details damage_reports: ' . $e->getMessage());
+    }
+}
+
+function fes_operator_dr_status_badge(string $s): string
+{
+    switch ($s) {
+        case 'submitted':
+            return 'bg-amber-50 text-amber-800';
+        case 'acknowledged':
+            return 'bg-blue-50 text-blue-800';
+        case 'closed':
+            return 'bg-gray-100 text-gray-700';
+        default:
+            return 'bg-gray-100 text-gray-700';
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -379,7 +458,16 @@ if (!empty($serviceLocation)) {
                     <section class="bg-white rounded-xl shadow-card p-6">
                         <h2 class="text-base font-semibold text-gray-900 mb-4">Job Actions</h2>
                         <div class="space-y-4">
-                            <?php if (isset($_GET['status_updated'])): ?>
+                            <?php if (isset($_GET['damage_reports_required'])): ?>
+                                <?php
+                                $needDr = (int)($_GET['damage_reports_required'] ?? $fesMinDamageReportsToComplete);
+                                $haveDr = (int)($_GET['damage_reports_have'] ?? 0);
+                                ?>
+                                <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                    Complete is blocked: you need at least <?php echo (int)$needDr; ?> damage report<?php echo $needDr === 1 ? '' : 's'; ?> for this job before marking it completed. You currently have <?php echo (int)$haveDr; ?>.
+                                    <a href="job_damage.php?id=<?php echo (int)$bookingId; ?>" class="font-semibold text-fes-red hover:underline">Submit damage reports</a>
+                                </div>
+                            <?php elseif (isset($_GET['status_updated'])): ?>
                                 <?php if ($statusUpdated === 1): ?>
                                     <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
                                         Job status updated.
@@ -398,7 +486,9 @@ if (!empty($serviceLocation)) {
                             $selCompleted = ($jobStatus === 'completed');
                             ?>
                             <?php if ($booking && $canEditJobStatus): ?>
-                                <form method="post" id="fes-job-status-form" class="space-y-3">
+                                <form method="post" id="fes-job-status-form" class="space-y-3"
+                                      data-min-damage-reports="<?php echo (int)$fesMinDamageReportsToComplete; ?>"
+                                      data-damage-report-count="<?php echo (int)$damageReportCount; ?>">
                                     <input type="hidden" name="booking_id" value="<?php echo htmlspecialchars((string)$bookingId); ?>">
                                     <div>
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Booking status</label>
@@ -427,6 +517,33 @@ if (!empty($serviceLocation)) {
                                     This booking was cancelled.
                                 </div>
                             <?php endif; ?>
+
+                            <div class="pt-4 border-t border-gray-100">
+                                <div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Equipment damage</div>
+                                <?php if ($damageReportCount <= 0 || empty($recentDamageReports)): ?>
+                                    <a href="job_damage.php?id=<?php echo (int)$bookingId; ?>" class="text-sm font-medium text-fes-red hover:underline">Report damage</a>
+                                <?php else: ?>
+                                    <ul class="space-y-1.5 mb-2" aria-label="Most recent damage reports">
+                                        <?php foreach ($recentDamageReports as $drRow):
+                                            $drSt = (string)($drRow['status'] ?? 'submitted');
+                                            ?>
+                                            <li class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                                                <span class="font-mono text-gray-600">#<?php echo (int)$drRow['damage_report_id']; ?></span>
+                                                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium <?php echo fes_operator_dr_status_badge($drSt); ?>">
+                                                    <?php echo htmlspecialchars(ucfirst($drSt)); ?>
+                                                </span>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                    <?php if ($damageReportCount > count($recentDamageReports)): ?>
+                                        <p class="text-xs text-gray-400 mb-2">Older reports are in history.</p>
+                                    <?php endif; ?>
+                                    <div class="flex flex-col gap-1.5 text-sm">
+                                        <a href="job_damage_status.php?id=<?php echo (int)$bookingId; ?>" class="text-fes-red font-medium hover:underline">Office replies &amp; history</a>
+                                        <a href="job_damage.php?id=<?php echo (int)$bookingId; ?>" class="text-gray-600 hover:text-gray-900 hover:underline">Add another report</a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
 
                         </div>
                         <div class="mt-5 text-xs text-gray-500">
@@ -476,6 +593,13 @@ if (!empty($serviceLocation)) {
         if (!form || !sel) return;
         form.addEventListener('submit', function (e) {
             if (sel.value !== 'completed') return;
+            var min = parseInt(form.getAttribute('data-min-damage-reports') || '0', 10);
+            var cnt = parseInt(form.getAttribute('data-damage-report-count') || '0', 10);
+            if (min > 0 && cnt < min) {
+                e.preventDefault();
+                window.alert('You must submit at least ' + min + ' damage report' + (min === 1 ? '' : 's') + ' for this job before marking it completed. You currently have ' + cnt + '.');
+                return;
+            }
             var msg = 'Are you sure you want to mark this job as completed?\n\nThis will confirm completion, record the end time, and update equipment availability.';
             if (!window.confirm(msg)) {
                 e.preventDefault();
