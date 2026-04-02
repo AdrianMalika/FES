@@ -35,7 +35,7 @@ try {
                    COALESCE(NULLIF(b.service_location, ''), b.field_address) AS service_location,
                    e.equipment_name
             FROM bookings b
-            JOIN equipment e ON e.equipment_id = b.equipment_id
+            JOIN equipment e ON e.equipment_id COLLATE utf8mb4_unicode_ci = b.equipment_id COLLATE utf8mb4_unicode_ci
             WHERE b.customer_id = ?
             ORDER BY b.created_at DESC";
     $stmt = $conn->prepare($sql);
@@ -104,6 +104,18 @@ switch ($pay) {
         break;
     case 'error':
         $flash = 'Something went wrong. Please try again.';
+        $flashType = 'error';
+        break;
+    case 'receipt_unavailable':
+        $flash = 'Receipt is not available for that booking. It may not be paid yet or does not belong to your account.';
+        $flashType = 'warning';
+        break;
+    case 'pdf_unavailable':
+        $flash = 'PDF download is not available. Run composer install on the server, then try again.';
+        $flashType = 'warning';
+        break;
+    case 'pdf_error':
+        $flash = 'The receipt PDF could not be generated. Please try again or use Print / Save as PDF on the receipt page.';
         $flashType = 'error';
         break;
     default:
@@ -290,7 +302,14 @@ function fes_job_status_badge(string $st): string
                                                             </button>
                                                         </form>
                                                     <?php elseif ($paySt === 'paid'): ?>
-                                                        <span class="text-xs text-gray-400">—</span>
+                                                        <div class="flex flex-col items-end gap-1.5 sm:flex-row sm:flex-wrap sm:justify-end sm:items-center">
+                                                            <a href="pay_receipt.php?booking_id=<?php echo $bid; ?>" class="inline-flex items-center gap-1.5 text-fes-red hover:text-[#b71c1c] text-xs font-semibold whitespace-nowrap">
+                                                                <i class="fas fa-file-invoice"></i> View receipt
+                                                            </a>
+                                                            <a href="pay_receipt.php?booking_id=<?php echo $bid; ?>&amp;dl=1" class="inline-flex items-center gap-1.5 text-gray-600 hover:text-gray-900 text-xs font-medium border border-gray-200 rounded-lg px-2.5 py-1 whitespace-nowrap bg-white hover:bg-gray-50">
+                                                                <i class="fas fa-download"></i> PDF
+                                                            </a>
+                                                        </div>
                                                     <?php elseif ($jobSt === 'cancelled'): ?>
                                                         <span class="text-xs text-gray-400">N/A</span>
                                                     <?php else: ?>

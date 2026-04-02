@@ -25,6 +25,9 @@ if ($_SESSION['role'] !== 'customer') {
 
 require_once __DIR__ . '/../../includes/database.php';
 
+$customerName = trim((string)($_SESSION['name'] ?? 'Customer'));
+$customerEmail = trim((string)($_SESSION['email'] ?? ''));
+
 $bookingStats = [
     'pending' => 0,
     'confirmed' => 0,
@@ -33,12 +36,15 @@ $bookingStats = [
     'cancelled' => 0
 ];
 $recentBookings = [];
+$recommendedEquipment = [];
+$outstandingMk = 0;
+$unpaidBookingCount = 0;
+$preferredCategory = '';
 
 try {
     $conn = getDBConnection();
-    $customerId = intval($_SESSION['user_id']);
+    $customerId = (int)$_SESSION['user_id'];
 
-    // Status counts
     $sql = "SELECT status, COUNT(*) as total FROM bookings WHERE customer_id = ? GROUP BY status";
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param('i', $customerId);
@@ -47,16 +53,29 @@ try {
         while ($row = $res->fetch_assoc()) {
             $status = $row['status'];
             if (isset($bookingStats[$status])) {
-                $bookingStats[$status] = intval($row['total']);
+                $bookingStats[$status] = (int)$row['total'];
             }
         }
         $stmt->close();
     }
 
-    // Recent bookings
-    $sql = "SELECT b.booking_id, b.booking_date, b.status, e.equipment_name
+    $sql = "SELECT COALESCE(SUM(CEIL(estimated_total_cost)), 0) AS owed, COUNT(*) AS cnt
+            FROM bookings
+            WHERE customer_id = ? AND status <> 'cancelled' AND payment_status <> 'paid'";
+    if ($stmt = $conn->prepare($sql)) {
+        $stmt->bind_param('i', $customerId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        if ($row) {
+            $outstandingMk = (int)$row['owed'];
+            $unpaidBookingCount = (int)$row['cnt'];
+        }
+        $stmt->close();
+    }
+
+    $sql = "SELECT b.booking_id, b.booking_date, b.status, b.payment_status, e.equipment_name
             FROM bookings b
-            JOIN equipment e ON e.equipment_id = b.equipment_id
+            JOIN equipment e ON e.equipment_id COLLATE utf8mb4_unicode_ci = b.equipment_id COLLATE utf8mb4_unicode_ci
             WHERE b.customer_id = ?
             ORDER BY b.created_at DESC
             LIMIT 5";
@@ -70,12 +89,99 @@ try {
         $stmt->close();
     }
 
+    $sql = "SELECT e.category
+            FROM bookings b
+            JOIN equipment e ON e.equipment_id COLLATE utf8mb4_unicode_ci = b.equipment_id COLLATE utf8mb4_unicode_ci
+            WHERE b.customer_id = ?
+            ORDER BY b.created_at DESC
+            LIMIT 1";
+    if ($stmt = $conn->prepare($sql)) {
+        $stmt->bind_param('i', $customerId);
+        $stmt->execute();
+        $r = $stmt->get_result()->fetch_assoc();
+        if ($r && !empty($r['category'])) {
+            $preferredCategory = (string)$r['category'];
+        }
+        $stmt->close();
+    }
+
+    if ($preferredCategory !== '') {
+        $sql = "SELECT equipment_id, equipment_name, category, model, description
+                FROM equipment
+                WHERE status = 'available' AND category = ?
+                ORDER BY created_at DESC
+                LIMIT 2";
+        if ($stmt = $conn->prepare($sql)) {
+            $stmt->bind_param('s', $preferredCategory);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $recommendedEquipment[] = $row;
+            }
+            $stmt->close();
+        }
+    }
+    if (count($recommendedEquipment) < 2) {
+        $seen = [];
+        foreach ($recommendedEquipment as $r) {
+            $seen[(string)($r['equipment_id'] ?? '')] = true;
+        }
+        $sql = "SELECT equipment_id, equipment_name, category, model, description
+                FROM equipment
+                WHERE status = 'available'
+                ORDER BY created_at DESC
+                LIMIT 24";
+        if ($res = $conn->query($sql)) {
+            while ($row = $res->fetch_assoc()) {
+                $eid = (string)($row['equipment_id'] ?? '');
+                if ($eid === '' || isset($seen[$eid])) {
+                    continue;
+                }
+                $recommendedEquipment[] = $row;
+                $seen[$eid] = true;
+                if (count($recommendedEquipment) >= 2) {
+                    break;
+                }
+            }
+        }
+    }
+
     $conn->close();
 } catch (Exception $e) {
     error_log('Customer dashboard data error: ' . $e->getMessage());
 }
 
 $activeBookings = $bookingStats['confirmed'] + $bookingStats['in_progress'];
+$outstandingLabel = 'MK ' . number_format($outstandingMk);
+
+function fes_dashboard_payment_badge(string $ps): array
+{
+    switch ($ps) {
+        case 'paid':
+            return ['Paid', 'bg-emerald-50 text-emerald-800'];
+        case 'pending':
+            return ['Pending', 'bg-amber-50 text-amber-800'];
+        case 'failed':
+            return ['Failed', 'bg-red-50 text-red-800'];
+        default:
+            return ['Unpaid', 'bg-gray-100 text-gray-700'];
+    }
+}
+
+function fes_dashboard_teaser(string $text, int $max = 110): string
+{
+    $t = trim(preg_replace('/\s+/', ' ', $text));
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        if (mb_strlen($t, 'UTF-8') <= $max) {
+            return $t;
+        }
+        return rtrim(mb_substr($t, 0, $max - 1, 'UTF-8')) . '…';
+    }
+    if (strlen($t) <= $max) {
+        return $t;
+    }
+    return rtrim(substr($t, 0, $max - 1)) . '…';
+}
 ?>
 
 <!DOCTYPE html>
@@ -138,14 +244,14 @@ $activeBookings = $bookingStats['confirmed'] + $bookingStats['in_progress'];
                         <div>
                             <div class="text-sm text-gray-500">Customer</div>
                             <h1 class="text-xl font-semibold text-gray-900">Dashboard</h1>
+                            <p class="text-xs text-gray-500 mt-1">Welcome back, <?php echo htmlspecialchars($customerName); ?></p>
+                            <?php if ($customerEmail !== ''): ?>
+                                <p class="text-xs text-gray-400 mt-0.5"><?php echo htmlspecialchars($customerEmail); ?></p>
+                            <?php endif; ?>
                         </div>
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <button class="relative h-10 w-10 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" aria-label="Notifications">
-                            <i class="fas fa-bell"></i>
-                            <span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-fes-red"></span>
-                        </button>
                         <a href="../equipment.php" class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-4 py-2 rounded-lg shadow">
                             <i class="fas fa-plus"></i>
                             New Booking
@@ -186,8 +292,13 @@ $activeBookings = $bookingStats['confirmed'] + $bookingStats['in_progress'];
                         </div>
                         <div class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between">
                             <div>
-                                <div class="text-sm text-gray-500">Outstanding Balance</div>
-                                <div class="mt-1 text-2xl font-semibold text-gray-900">MK 0</div>
+                                <div class="text-sm text-gray-500">Outstanding balance</div>
+                                <div class="mt-1 text-2xl font-semibold text-gray-900"><?php echo htmlspecialchars($outstandingLabel); ?></div>
+                                <?php if ($unpaidBookingCount > 0): ?>
+                                    <div class="mt-1 text-xs text-gray-500"><?php echo (int)$unpaidBookingCount; ?> unpaid booking<?php echo $unpaidBookingCount === 1 ? '' : 's'; ?></div>
+                                <?php elseif ($outstandingMk === 0): ?>
+                                    <div class="mt-1 text-xs text-gray-500">You are all caught up</div>
+                                <?php endif; ?>
                             </div>
                             <div class="h-11 w-11 rounded-xl bg-red-50 text-fes-red flex items-center justify-center">
                                 <i class="fas fa-file-invoice-dollar"></i>
@@ -199,18 +310,19 @@ $activeBookings = $bookingStats['confirmed'] + $bookingStats['in_progress'];
                     <section class="bg-white rounded-xl shadow-card p-5">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-base font-semibold text-gray-900">Recent Bookings</h2>
-                            <a href="#" class="text-sm font-medium text-fes-red hover:underline">View All</a>
+                            <a href="bookings.php" class="text-sm font-medium text-fes-red hover:underline">View all</a>
                         </div>
 
                         <div class="overflow-x-auto">
                             <table class="min-w-full">
                                 <thead>
-                                    <tr class="text-left text-xs font-medium text-gray-500 border-b">
+                                    <tr class="text-left text-xs font-medium text-gray-500 border-b uppercase tracking-wider">
                                         <th class="py-3 pr-4">ID</th>
                                         <th class="py-3 pr-4">Equipment</th>
-                                        <th class="py-3 pr-4">Dates</th>
-                                        <th class="py-3 pr-4">Status</th>
-                                        <th class="py-3">Action</th>
+                                        <th class="py-3 pr-4">Date</th>
+                                        <th class="py-3 pr-4">Job</th>
+                                        <th class="py-3 pr-4">Payment</th>
+                                        <th class="py-3 text-right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody class="text-sm text-gray-900">
@@ -226,6 +338,9 @@ $activeBookings = $bookingStats['confirmed'] + $bookingStats['in_progress'];
                                                     'cancelled' => 'bg-gray-100 text-gray-700'
                                                 ];
                                                 $badgeClass = $badgeClasses[$status] ?? 'bg-gray-100 text-gray-700';
+                                                $paySt = $row['payment_status'] ?? 'unpaid';
+                                                [$payLabel, $payClass] = fes_dashboard_payment_badge($paySt);
+                                                $rid = (int)($row['booking_id'] ?? 0);
                                             ?>
                                             <tr class="border-b hover:bg-gray-50">
                                                 <td class="py-3 pr-4 font-medium">#BK-<?php echo htmlspecialchars((string)$row['booking_id']); ?></td>
@@ -238,14 +353,19 @@ $activeBookings = $bookingStats['confirmed'] + $bookingStats['in_progress'];
                                                         <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $status))); ?>
                                                     </span>
                                                 </td>
-                                                <td class="py-3">
-                                                    <button class="text-gray-500 hover:text-gray-900" aria-label="More"><i class="fas fa-ellipsis-h"></i></button>
+                                                <td class="py-3 pr-4">
+                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium <?php echo $payClass; ?>">
+                                                        <?php echo htmlspecialchars($payLabel); ?>
+                                                    </span>
+                                                </td>
+                                                <td class="py-3 text-right">
+                                                    <a href="booking-details.php?booking_id=<?php echo $rid; ?>" class="text-fes-red hover:text-[#b71c1c] text-xs font-semibold whitespace-nowrap">View</a>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <tr>
-                                            <td class="py-6 text-center text-sm text-gray-500" colspan="5">No bookings yet.</td>
+                                            <td class="py-6 text-center text-sm text-gray-500" colspan="6">No bookings yet. <a href="../equipment.php" class="text-fes-red font-medium hover:underline">Browse equipment</a> to get started.</td>
                                         </tr>
                                     <?php endif; ?>
                                 </tbody>
@@ -256,18 +376,43 @@ $activeBookings = $bookingStats['confirmed'] + $bookingStats['in_progress'];
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
                         <!-- Recommended -->
                         <section class="lg:col-span-2 bg-white rounded-xl shadow-card p-5">
-                            <h2 class="text-base font-semibold text-gray-900 mb-4">Recommended For You</h2>
+                            <div class="flex items-start justify-between gap-3 mb-4">
+                                <div>
+                                    <h2 class="text-base font-semibold text-gray-900">Recommended for you</h2>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        <?php if ($preferredCategory !== ''): ?>
+                                            Based on your recent <?php echo htmlspecialchars($preferredCategory); ?> bookings.
+                                        <?php else: ?>
+                                            Available equipment you can book next.
+                                        <?php endif; ?>
+                                    </p>
+                                </div>
+                            </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div class="rounded-xl border border-gray-200 p-4 hover:bg-gray-50 transition">
-                                    <div class="text-sm text-gray-500">Tractor</div>
-                                    <div class="mt-1 font-semibold text-gray-900">Massey Ferguson 2600</div>
-                                    <div class="mt-2 text-xs text-gray-500">Popular for land prep and haulage</div>
-                                </div>
-                                <div class="rounded-xl border border-gray-200 p-4 hover:bg-gray-50 transition">
-                                    <div class="text-sm text-gray-500">Harvester</div>
-                                    <div class="mt-1 font-semibold text-gray-900">Harvester X5</div>
-                                    <div class="mt-2 text-xs text-gray-500">High throughput harvesting</div>
-                                </div>
+                                <?php if (!empty($recommendedEquipment)): ?>
+                                    <?php foreach ($recommendedEquipment as $eq): ?>
+                                        <?php
+                                            $ename = htmlspecialchars((string)($eq['equipment_name'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                            $ecat = htmlspecialchars(ucfirst((string)($eq['category'] ?? '')), ENT_QUOTES, 'UTF-8');
+                                            $emodel = trim((string)($eq['model'] ?? ''));
+                                            $emodelH = htmlspecialchars($emodel, ENT_QUOTES, 'UTF-8');
+                                            $teaser = fes_dashboard_teaser((string)($eq['description'] ?? ''));
+                                        ?>
+                                        <a href="../booking.php?equipment_id=<?php echo rawurlencode((string)($eq['equipment_id'] ?? '')); ?>" class="block rounded-xl border border-gray-200 p-4 hover:bg-gray-50 hover:border-gray-300 transition text-left no-underline">
+                                            <div class="text-sm text-gray-500"><?php echo $ecat !== '' ? $ecat : 'Equipment'; ?></div>
+                                            <div class="mt-1 font-semibold text-gray-900"><?php echo $ename; ?></div>
+                                            <?php if ($emodel !== ''): ?>
+                                                <div class="text-xs text-gray-600 mt-0.5"><?php echo $emodelH; ?></div>
+                                            <?php endif; ?>
+                                            <div class="mt-2 text-xs text-gray-500"><?php echo htmlspecialchars($teaser, ENT_QUOTES, 'UTF-8'); ?></div>
+                                            <div class="mt-3 text-xs font-semibold text-fes-red">Book now →</div>
+                                        </a>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="sm:col-span-2 rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-500">
+                                        No available equipment to suggest right now. <a href="../equipment.php" class="text-fes-red font-medium hover:underline">View catalogue</a>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </section>
 
@@ -281,12 +426,16 @@ $activeBookings = $bookingStats['confirmed'] + $bookingStats['in_progress'];
                                 </a>
                                 <a href="../equipment.php" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition text-sm font-medium">
                                     <i class="fas fa-calendar-plus text-fes-red"></i>
-                                    Request Booking
+                                    New booking
                                 </a>
-                                <button class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition text-sm font-medium">
+                                <a href="payments.php" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition text-sm font-medium">
                                     <i class="fas fa-file-invoice-dollar text-fes-red"></i>
-                                    View Payments
-                                </button>
+                                    Payments
+                                </a>
+                                <a href="bookings.php" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition text-sm font-medium">
+                                    <i class="fas fa-list text-fes-red"></i>
+                                    My bookings
+                                </a>
                             </div>
                         </section>
                     </div>
