@@ -32,6 +32,8 @@ $skills = [];
 $availability = [];
 $assigned_equipment = [];
 $activeCount = 0; // Active bookings count (pending/confirmed/in_progress) for this operator.
+$feedbackAvg = null;
+$feedbackCount = 0;
 
 if ($operator_id <= 0) {
     header('Location: users.php');
@@ -121,6 +123,24 @@ try {
                 $assigned_equipment[] = $row;
             }
             $stmt->close();
+        }
+
+        try {
+            $fbStmt = $conn->prepare('SELECT AVG(rating) AS av, COUNT(*) AS c FROM booking_feedback WHERE operator_id = ?');
+            if ($fbStmt) {
+                $fbStmt->bind_param('i', $operator_id);
+                $fbStmt->execute();
+                $fbRes = $fbStmt->get_result();
+                if ($fbRes && ($fbRow = $fbRes->fetch_assoc())) {
+                    $feedbackCount = (int)($fbRow['c'] ?? 0);
+                    if ($feedbackCount > 0 && $fbRow['av'] !== null) {
+                        $feedbackAvg = round((float)$fbRow['av'], 2);
+                    }
+                }
+                $fbStmt->close();
+            }
+        } catch (Throwable $fbe) {
+            error_log('operator_manage booking_feedback: ' . $fbe->getMessage());
         }
     }
 
@@ -311,6 +331,17 @@ try {
                                 <li class="flex items-center justify-between">
                                     <span class="text-gray-500">Active Jobs</span>
                                     <span class="font-medium"><?php echo $activeCount; ?></span>
+                                </li>
+                                <li class="flex items-center justify-between">
+                                    <span class="text-gray-500">Customer rating</span>
+                                    <span class="font-medium text-right">
+                                        <?php if ($feedbackAvg !== null && $feedbackCount > 0): ?>
+                                            <span class="text-amber-600"><?php echo htmlspecialchars((string)$feedbackAvg); ?>/5</span>
+                                            <span class="text-gray-500 font-normal text-xs block"><?php echo (int)$feedbackCount; ?> review<?php echo $feedbackCount === 1 ? '' : 's'; ?></span>
+                                        <?php else: ?>
+                                            <span class="text-gray-400">No reviews yet</span>
+                                        <?php endif; ?>
+                                    </span>
                                 </li>
                             </ul>
                         </section>

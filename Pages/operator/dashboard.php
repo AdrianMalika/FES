@@ -32,15 +32,21 @@ $operatorName = $_SESSION['name'] ?? 'Operator';
 $equipment    = [];
 $skills       = [];
 $availability = [];
+$completedJobs = [];
 $stats = [
     'assigned'     => 0,
     'active'       => 0,
     'slots'        => 0,
     'skills'       => 0,
     'jobs_total'   => 0,
+    'jobs_pending' => 0,
     'jobs_in_progress' => 0,
-    'jobs_completed_today' => 0,
-    'unread_notifications' => 0,
+    'jobs_completed' => 0,
+    'jobs_upcoming_week' => 0,
+    'feedback_avg' => null,
+    'feedback_count' => 0,
+    'damage_open' => 0,
+    'dashboard_alerts' => 0,
 ];
 $loadError = '';
 
@@ -112,7 +118,7 @@ try {
     $jobSql = "SELECT
                     COUNT(*) AS total,
                     SUM(status = 'in_progress') AS in_progress,
-                    SUM(status = 'completed' AND DATE(COALESCE(operator_end_time, updated_at)) = CURDATE()) AS completed_today
+                    SUM(status = 'completed') AS completed_all
                FROM bookings
                WHERE operator_id = ?";
     if ($stmt = $conn->prepare($jobSql)) {
@@ -122,13 +128,87 @@ try {
         if ($row = $res->fetch_assoc()) {
             $stats['jobs_total'] = (int)($row['total'] ?? 0);
             $stats['jobs_in_progress'] = (int)($row['in_progress'] ?? 0);
-            $stats['jobs_completed_today'] = (int)($row['completed_today'] ?? 0);
+            $stats['jobs_completed'] = (int)($row['completed_all'] ?? 0);
         }
         $stmt->close();
     }
 
-    // Notifications placeholder (add table later)
-    $stats['unread_notifications'] = 0;
+    $pendSql = "SELECT COUNT(*) AS c FROM bookings WHERE operator_id = ? AND status IN ('pending','confirmed')";
+    if ($stmt = $conn->prepare($pendSql)) {
+        $stmt->bind_param('i', $operatorId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($row = $res->fetch_assoc()) {
+            $stats['jobs_pending'] = (int)($row['c'] ?? 0);
+        }
+        $stmt->close();
+    }
+
+    $upSql = "SELECT COUNT(*) AS c FROM bookings WHERE operator_id = ?
+              AND status IN ('pending','confirmed','in_progress')
+              AND booking_date >= CURDATE() AND booking_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)";
+    if ($stmt = $conn->prepare($upSql)) {
+        $stmt->bind_param('i', $operatorId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($row = $res->fetch_assoc()) {
+            $stats['jobs_upcoming_week'] = (int)($row['c'] ?? 0);
+        }
+        $stmt->close();
+    }
+
+    try {
+        $fbSql = 'SELECT AVG(rating) AS av, COUNT(*) AS c FROM booking_feedback WHERE operator_id = ?';
+        if ($stmt = $conn->prepare($fbSql)) {
+            $stmt->bind_param('i', $operatorId);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            if ($row = $res->fetch_assoc()) {
+                $stats['feedback_count'] = (int)($row['c'] ?? 0);
+                if ($stats['feedback_count'] > 0 && $row['av'] !== null) {
+                    $stats['feedback_avg'] = round((float)$row['av'], 2);
+                }
+            }
+            $stmt->close();
+        }
+    } catch (Throwable $e) {
+        error_log('Operator dashboard feedback stats: ' . $e->getMessage());
+    }
+
+    try {
+        $drSql = "SELECT COUNT(*) AS c FROM damage_reports WHERE operator_id = ? AND status IN ('submitted','acknowledged')";
+        if ($stmt = $conn->prepare($drSql)) {
+            $stmt->bind_param('i', $operatorId);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            if ($row = $res->fetch_assoc()) {
+                $stats['damage_open'] = (int)($row['c'] ?? 0);
+            }
+            $stmt->close();
+        }
+    } catch (Throwable $e) {
+        error_log('Operator dashboard damage stats: ' . $e->getMessage());
+    }
+
+    $cjSql = 'SELECT b.booking_id, b.booking_date, b.service_type, b.status, b.service_location,
+                     e.equipment_name,
+                     COALESCE(b.operator_end_time, b.updated_at) AS completed_at
+              FROM bookings b
+              LEFT JOIN equipment e ON e.equipment_id = b.equipment_id
+              WHERE b.operator_id = ?
+              AND b.status = \'completed\'
+              ORDER BY COALESCE(b.operator_end_time, b.updated_at) DESC, b.booking_id DESC';
+    if ($stmt = $conn->prepare($cjSql)) {
+        $stmt->bind_param('i', $operatorId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $completedJobs[] = $row;
+        }
+        $stmt->close();
+    }
+
+    $stats['dashboard_alerts'] = (int)$stats['damage_open'] + (int)$stats['jobs_pending'];
 
     $conn->close();
 } catch (Exception $e) {
@@ -145,6 +225,22 @@ $dayNames = [
     5 => 'Friday',
     6 => 'Saturday',
 ];
+
+$availabilityByDay = array_fill_keys([1, 2, 3, 4, 5, 6, 0], 'none');
+foreach ($availability as $slot) {
+    $d = (int)($slot['day_of_week'] ?? 0);
+    if (!isset($availabilityByDay[$d])) {
+        continue;
+    }
+    $isAvail = (int)($slot['is_available'] ?? 1) === 1;
+    if ($isAvail) {
+        $availabilityByDay[$d] = 'open';
+    } elseif ($availabilityByDay[$d] === 'none') {
+        $availabilityByDay[$d] = 'closed';
+    }
+}
+$weekOrder = [1, 2, 3, 4, 5, 6, 0];
+$weekShort = [1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat', 0 => 'Sun'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -219,10 +315,12 @@ $dayNames = [
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <button class="relative h-10 w-10 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" aria-label="Notifications">
+                        <a href="jobs.php" class="relative h-10 w-10 inline-flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" aria-label="Open my jobs" title="Jobs needing attention: pending work or damage follow-up">
                             <i class="fas fa-bell"></i>
-                            <span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-fes-red"></span>
-                        </button>
+                            <?php if ((int)$stats['dashboard_alerts'] > 0): ?>
+                                <span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-fes-red"></span>
+                            <?php endif; ?>
+                        </a>
                     </div>
             </header>
 
@@ -235,222 +333,234 @@ $dayNames = [
                     </div>
                 <?php endif; ?>
 
-                <!-- Job & notification overview -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-5">
-                    <a href="jobs.php" class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between hover:shadow-md transition-shadow">
+                <!-- Core metrics only -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+                    <a href="jobs.php" class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between hover:shadow-md transition-shadow border <?php echo ((int)$stats['jobs_pending'] + (int)$stats['jobs_in_progress']) > 0 ? 'border-blue-100 ring-1 ring-blue-50' : 'border-transparent hover:border-gray-200'; ?>">
                         <div>
-                            <div class="text-sm text-gray-500">Total Assigned Jobs</div>
-                            <div class="mt-1 text-2xl font-semibold text-gray-900"><?php echo (int)$stats['jobs_total']; ?></div>
+                            <div class="text-sm text-gray-500">Active work</div>
+                            <div class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                                <span class="text-2xl font-semibold text-gray-900"><?php echo (int)$stats['jobs_pending']; ?></span>
+                                <span class="text-xs text-gray-500">pending</span>
+                                <span class="text-gray-300">·</span>
+                                <span class="text-2xl font-semibold text-gray-900"><?php echo (int)$stats['jobs_in_progress']; ?></span>
+                                <span class="text-xs text-gray-500">in progress</span>
+                            </div>
+                            <div class="mt-2 text-xs text-gray-400"><?php echo (int)$stats['jobs_upcoming_week']; ?> in the next 7 days</div>
                         </div>
-                        <div class="h-11 w-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <div class="h-11 w-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                             <i class="fas fa-briefcase"></i>
                         </div>
                     </a>
-                    <a href="jobs.php?status=in_progress" class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between hover:shadow-md transition-shadow">
+                    <a href="jobs.php?status=completed" class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between border border-gray-100 hover:shadow-md transition-shadow hover:border-emerald-100">
                         <div>
-                            <div class="text-sm text-gray-500">Jobs In Progress</div>
-                            <div class="mt-1 text-2xl font-semibold text-gray-900"><?php echo (int)$stats['jobs_in_progress']; ?></div>
+                            <div class="text-sm text-gray-500">Completed</div>
+                            <div class="mt-1 text-3xl font-semibold text-emerald-600"><?php echo (int)$stats['jobs_completed']; ?></div>
+                            <div class="mt-1 text-xs text-gray-500">All finished jobs</div>
                         </div>
-                        <div class="h-11 w-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                            <i class="fas fa-hourglass-half"></i>
-                        </div>
-                    </a>
-                    <div class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between">
-                        <div>
-                            <div class="text-sm text-gray-500">Completed Today</div>
-                            <div class="mt-1 text-2xl font-semibold text-gray-900"><?php echo (int)$stats['jobs_completed_today']; ?></div>
-                        </div>
-                        <div class="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <div class="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                             <i class="fas fa-check-circle"></i>
                         </div>
-                    </div>
-                    <a href="notifications.php" class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between hover:shadow-md transition-shadow relative">
-                        <div>
-                            <div class="text-sm text-gray-500">Unread Notifications</div>
-                            <div class="mt-1 text-2xl font-semibold text-gray-900"><?php echo (int)$stats['unread_notifications']; ?></div>
-                        </div>
-                        <div class="h-11 w-11 rounded-xl bg-red-50 text-fes-red flex items-center justify-center">
-                            <i class="fas fa-bell"></i>
-                        </div>
-                        <?php if ($stats['unread_notifications'] > 0): ?>
-                            <span class="absolute top-3 right-3 h-2 w-2 rounded-full bg-fes-red"></span>
-                        <?php endif; ?>
                     </a>
-                </div>
-
-                <!-- Equipment & availability stats -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
-                    <div class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between">
+                    <a href="feedback.php" class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between hover:shadow-md transition-shadow border border-transparent hover:border-amber-100">
                         <div>
-                            <div class="text-sm text-gray-500">Assigned Equipment</div>
-                            <div class="mt-1 text-2xl font-semibold text-gray-900"><?php echo (int)$stats['assigned']; ?></div>
-                        </div>
-                        <div class="h-11 w-11 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center">
-                            <i class="fas fa-tractor"></i>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between">
-                        <div>
-                            <div class="text-sm text-gray-500">Availability Slots</div>
-                            <div class="mt-1 text-2xl font-semibold text-gray-900"><?php echo (int)$stats['slots']; ?></div>
-                        </div>
-                        <div class="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                            <i class="fas fa-calendar-check"></i>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between">
-                        <div>
-                            <div class="text-sm text-gray-500">Skills</div>
-                            <div class="mt-1 text-2xl font-semibold text-gray-900"><?php echo (int)$stats['skills']; ?></div>
-                        </div>
-                        <div class="h-11 w-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-                            <i class="fas fa-tools"></i>
-                        </div>
-                    </div>
-                    <a href="jobs.php" class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between hover:shadow-md transition-shadow items-center">
-                        <span class="text-sm font-medium text-fes-red">View all jobs</span>
-                        <i class="fas fa-arrow-right text-fes-red"></i>
-                    </a>
-                </div>
-
-                <!-- Assigned equipment -->
-                <section class="bg-white rounded-xl shadow-card p-5">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-base font-semibold text-gray-900">Your Assigned Equipment</h2>
-                    </div>
-
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full">
-                            <thead>
-                                <tr class="text-left text-xs font-medium text-gray-500 border-b">
-                                    <th class="py-3 pr-4">Equipment</th>
-                                    <th class="py-3 pr-4">Category</th>
-                                    <th class="py-3 pr-4">Status</th>
-                                    <th class="py-3 pr-4">Location</th>
-                                </tr>
-                            </thead>
-                            <tbody class="text-sm text-gray-900">
-                                <?php if (empty($equipment)): ?>
-                                    <tr>
-                                        <td colspan="4" class="py-8 text-center text-gray-500">
-                                            <i class="fas fa-truck-moving text-2xl mb-2 block text-gray-300"></i>
-                                            No equipment is currently assigned to you.
-                                        </td>
-                                    </tr>
+                            <div class="text-sm text-gray-500">Your rating</div>
+                            <div class="mt-1 flex items-center gap-2">
+                                <?php if ($stats['feedback_avg'] !== null): ?>
+                                    <span class="text-2xl font-semibold text-amber-600"><?php echo htmlspecialchars((string)$stats['feedback_avg']); ?></span>
+                                    <span class="text-sm text-gray-500">/5</span>
                                 <?php else: ?>
-                                    <?php foreach ($equipment as $row): ?>
-                                        <tr class="border-b hover:bg-gray-50">
-                                            <td class="py-3 pr-4">
-                                                <div class="font-medium"><?php echo htmlspecialchars($row['equipment_name']); ?></div>
-                                                <div class="text-xs text-gray-500"><?php echo htmlspecialchars($row['equipment_id']); ?></div>
-                                            </td>
-                                            <td class="py-3 pr-4"><?php echo htmlspecialchars(ucfirst($row['category'] ?? '')); ?></td>
-                                            <td class="py-3 pr-4">
-                                                <?php
-                                                $status = $row['status'] ?? '';
-                                                $cls = 'bg-gray-100 text-gray-700';
-                                                if ($status === 'available') $cls = 'bg-emerald-50 text-emerald-700';
-                                                if ($status === 'in_use') $cls = 'bg-amber-50 text-amber-700';
-                                                if ($status === 'maintenance') $cls = 'bg-red-50 text-red-700';
-                                                ?>
-                                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium <?php echo $cls; ?>">
-                                                    <?php echo htmlspecialchars(str_replace('_', ' ', ucfirst($status))); ?>
-                                                </span>
-                                            </td>
-                                            <td class="py-3 pr-4 text-gray-600">
-                                                <?php echo htmlspecialchars($row['location'] ?? '-'); ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
+                                    <span class="text-2xl font-semibold text-gray-400">—</span>
                                 <?php endif; ?>
-                            </tbody>
-                        </table>
+                            </div>
+                            <div class="mt-2 flex gap-0.5 text-amber-400">
+                                <?php
+                                $stars = $stats['feedback_avg'] !== null ? (int)round((float)$stats['feedback_avg']) : 0;
+                                for ($si = 1; $si <= 5; $si++):
+                                    ?>
+                                    <i class="<?php echo $si <= $stars ? 'fas' : 'far'; ?> fa-star text-sm"></i>
+                                <?php endfor; ?>
+                            </div>
+                            <div class="mt-1 text-xs text-gray-500"><?php echo (int)$stats['feedback_count']; ?> review<?php echo (int)$stats['feedback_count'] === 1 ? '' : 's'; ?> · view feedback</div>
+                        </div>
+                        <div class="h-11 w-11 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </a>
+                    <a href="<?php echo (int)$stats['damage_open'] > 0 ? 'job_damage.php' : 'jobs.php'; ?>" class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between hover:shadow-md transition-shadow border <?php echo (int)$stats['damage_open'] > 0 ? 'border-orange-100 ring-1 ring-orange-50' : 'border-transparent hover:border-gray-200'; ?>">
+                        <div>
+                            <div class="text-sm text-gray-500">Damage queue</div>
+                            <div class="mt-1 text-3xl font-semibold <?php echo (int)$stats['damage_open'] > 0 ? 'text-orange-600' : 'text-gray-900'; ?>"><?php echo (int)$stats['damage_open']; ?></div>
+                            <div class="mt-1 text-xs text-gray-500"><?php echo (int)$stats['damage_open'] > 0 ? 'Open reports' : 'All clear'; ?></div>
+                        </div>
+                        <div class="h-11 w-11 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                            <i class="fas fa-hard-hat"></i>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="flex flex-wrap gap-2 mb-6">
+                    <a href="jobs.php" class="inline-flex items-center gap-2 rounded-full bg-fes-red px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#b71c1c]">My jobs</a>
+                    <a href="feedback.php" class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Customer feedback</a>
+                    <a href="job_damage.php" class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Damage reports</a>
+                </div>
+
+                <!-- Completed jobs — matches rest of operator UI (white cards) -->
+                <section class="mb-6 rounded-xl bg-white shadow-card border border-gray-100 overflow-hidden">
+                    <div class="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-gray-100">
+                        <div>
+                            <h2 class="display text-xl font-bold text-gray-900 tracking-tight">Completed jobs</h2>
+                            <p class="mt-1 text-sm text-gray-500">Every finished job assigned to you — open a row for details.</p>
+                        </div>
+                        <a href="jobs.php?status=completed" class="inline-flex items-center gap-2 self-start rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-100">View on jobs list <i class="fas fa-arrow-right text-xs text-gray-500"></i></a>
                     </div>
-                </section>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                    <!-- Weekly availability -->
-                    <section class="bg-white rounded-xl shadow-card p-5">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-base font-semibold text-gray-900">Weekly Availability</h2>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full">
-                                <thead>
-                                    <tr class="text-left text-xs font-medium text-gray-500 border-b">
-                                        <th class="py-3 pr-4">Day</th>
-                                        <th class="py-3 pr-4">Time</th>
-                                        <th class="py-3 pr-4">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="text-sm text-gray-900">
-                                    <?php if (empty($availability)): ?>
-                                        <tr>
-                                            <td colspan="3" class="py-8 text-center text-gray-500">
-                                                Your administrator has not configured your availability yet.
-                                            </td>
-                                        </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($availability as $slot): ?>
-                                            <tr class="border-b hover:bg-gray-50">
-                                                <td class="py-3 pr-4">
-                                                    <?php
-                                                    $d = (int)($slot['day_of_week'] ?? 0);
-                                                    echo htmlspecialchars($dayNames[$d] ?? ('Day ' . $d));
-                                                    ?>
-                                                </td>
-                                                <td class="py-3 pr-4 text-gray-700">
-                                                    <?php echo htmlspecialchars(substr($slot['start_time'], 0, 5)); ?>
-                                                    –
-                                                    <?php echo htmlspecialchars(substr($slot['end_time'], 0, 5)); ?>
-                                                </td>
-                                                <td class="py-3 pr-4">
-                                                    <?php if ((int)($slot['is_available'] ?? 1) === 1): ?>
-                                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
-                                                            Available
-                                                        </span>
-                                                    <?php else: ?>
-                                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                                            Unavailable
-                                                        </span>
-                                                    <?php endif; ?>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-
-                    <!-- Skills -->
-                    <section class="bg-white rounded-xl shadow-card p-5">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-base font-semibold text-gray-900">Skills</h2>
-                        </div>
-                        <?php if (empty($skills)): ?>
-                            <p class="text-sm text-gray-500">
-                                No skills have been recorded for your profile yet. Contact your administrator if this is incorrect.
-                            </p>
+                    <div class="p-4 sm:p-6 bg-gray-50/50">
+                        <?php if (empty($completedJobs)): ?>
+                            <div class="rounded-xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center">
+                                <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-3xl text-emerald-600"><i class="fas fa-check-circle"></i></div>
+                                <p class="text-lg font-semibold text-gray-900">No completed jobs yet</p>
+                                <p class="mt-2 max-w-md mx-auto text-sm text-gray-500">When you finish work and mark jobs complete, they will all appear here.</p>
+                                <a href="jobs.php" class="mt-5 inline-flex items-center gap-2 rounded-lg bg-fes-red px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#b71c1c]">Go to my jobs</a>
+                            </div>
                         <?php else: ?>
-                            <ul class="divide-y divide-gray-200">
-                                <?php foreach ($skills as $skill): ?>
-                                    <li class="py-3 flex items-center justify-between">
-                                        <div>
-                                            <div class="font-medium text-gray-900"><?php echo htmlspecialchars($skill['skill_name']); ?></div>
-                                            <div class="text-xs text-gray-500">
-                                                <?php echo (($added = fes_format_date_safe($skill['created_at'] ?? null, 'M d, Y', '')) !== '') ? 'Added ' . htmlspecialchars($added) : ''; ?>
+                            <ul class="space-y-2">
+                                <?php foreach ($completedJobs as $cj): ?>
+                                    <?php
+                                    $doneRaw = $cj['completed_at'] ?? $cj['booking_date'] ?? '';
+                                    $bdDow = fes_format_date_safe($doneRaw, 'D', '');
+                                    $bdDay = fes_format_date_safe($doneRaw, 'j', '');
+                                    $bdMon = fes_format_date_safe($doneRaw, 'M', '');
+                                    ?>
+                                    <li>
+                                        <a href="job_details.php?id=<?php echo (int)$cj['booking_id']; ?>" class="group flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-4 shadow-sm hover:border-emerald-200 hover:shadow-md transition">
+                                            <div class="flex items-center gap-4 min-w-0 flex-1">
+                                                <div class="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-emerald-50 text-center leading-tight py-1 text-emerald-800">
+                                                    <span class="text-[9px] uppercase tracking-wide text-emerald-600/80"><?php echo htmlspecialchars($bdDow); ?></span>
+                                                    <span class="text-xl font-bold leading-tight"><?php echo htmlspecialchars($bdDay); ?></span>
+                                                    <span class="text-[9px] text-emerald-600/70"><?php echo htmlspecialchars($bdMon); ?></span>
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <div class="font-semibold text-gray-900 truncate"><?php echo htmlspecialchars(ucfirst($cj['service_type'] ?? 'Service')); ?></div>
+                                                    <div class="text-sm text-gray-500 truncate"><?php echo htmlspecialchars($cj['service_location'] ?? ''); ?></div>
+                                                    <?php if (!empty($cj['equipment_name'])): ?>
+                                                        <div class="text-xs text-gray-400 mt-0.5"><i class="fas fa-tractor mr-1"></i><?php echo htmlspecialchars($cj['equipment_name']); ?></div>
+                                                    <?php endif; ?>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                                            <?php echo htmlspecialchars(ucfirst($skill['skill_level'] ?? '')); ?>
-                                        </span>
+                                            <div class="flex items-center gap-3 shrink-0">
+                                                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold bg-emerald-100 text-emerald-800">Completed</span>
+                                                <i class="fas fa-chevron-right text-gray-300 group-hover:text-emerald-600 text-sm"></i>
+                                            </div>
+                                        </a>
                                     </li>
                                 <?php endforeach; ?>
                             </ul>
                         <?php endif; ?>
-                    </section>
-                </div>
+                    </div>
+                </section>
+
+                <!-- Equipment + weekly rhythm — visual, not empty tables -->
+                <section class="rounded-2xl bg-white shadow-card border border-gray-100 overflow-hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
+                        <div class="p-6 sm:p-8 bg-gradient-to-br from-slate-50 to-white">
+                            <div class="flex items-start gap-4">
+                                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-white text-lg"><i class="fas fa-tractor"></i></span>
+                                <div>
+                                    <h2 class="text-lg font-semibold text-gray-900">Equipment</h2>
+                                    <p class="mt-1 text-sm text-gray-500">Machines linked to your operator profile.</p>
+                                </div>
+                            </div>
+                            <?php if (empty($equipment)): ?>
+                                <div class="mt-6 rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center">
+                                    <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-blue-500 text-2xl"><i class="fas fa-truck-pickup"></i></div>
+                                    <p class="text-sm font-medium text-gray-800">No fleet items assigned to you yet</p>
+                                    <p class="mt-2 text-sm text-gray-500">Equipment often appears when a job is matched to a machine. Check <strong>My jobs</strong> for what you are running next.</p>
+                                    <a href="jobs.php" class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-fes-red hover:underline">Open my jobs</a>
+                                </div>
+                            <?php else: ?>
+                                <ul class="mt-6 space-y-3">
+                                    <?php foreach ($equipment as $row): ?>
+                                        <?php
+                                        $status = $row['status'] ?? '';
+                                        $cls = 'bg-gray-100 text-gray-700';
+                                        if ($status === 'available') {
+                                            $cls = 'bg-emerald-50 text-emerald-700';
+                                        }
+                                        if ($status === 'in_use') {
+                                            $cls = 'bg-amber-50 text-amber-700';
+                                        }
+                                        if ($status === 'maintenance') {
+                                            $cls = 'bg-red-50 text-red-700';
+                                        }
+                                        ?>
+                                        <li class="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+                                            <div class="min-w-0">
+                                                <div class="font-medium text-gray-900 truncate"><?php echo htmlspecialchars($row['equipment_name']); ?></div>
+                                                <div class="text-xs text-gray-500"><?php echo htmlspecialchars($row['equipment_id']); ?> · <?php echo htmlspecialchars(ucfirst($row['category'] ?? '')); ?></div>
+                                            </div>
+                                            <span class="inline-flex shrink-0 items-center px-2.5 py-1 rounded-full text-xs font-medium <?php echo $cls; ?>">
+                                                <?php echo htmlspecialchars(str_replace('_', ' ', ucfirst($status))); ?>
+                                            </span>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php endif; ?>
+                        </div>
+                        <div class="p-6 sm:p-8 bg-gradient-to-br from-emerald-50/80 to-white">
+                            <div class="flex items-start gap-4">
+                                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white text-lg"><i class="fas fa-clock"></i></span>
+                                <div>
+                                    <h2 class="text-lg font-semibold text-gray-900">Weekly rhythm</h2>
+                                    <p class="mt-1 text-sm text-gray-500">When you are usually available for dispatch.</p>
+                                </div>
+                            </div>
+                            <?php if (empty($availability)): ?>
+                                <div class="mt-6 rounded-xl border border-dashed border-emerald-200 bg-white/80 p-6">
+                                    <p class="text-sm font-medium text-gray-800">Your hours are not on file</p>
+                                    <p class="mt-2 text-sm text-gray-600">Your administrator sets weekly availability. Once they do, you will see a green week strip here at a glance.</p>
+                                </div>
+                            <?php else: ?>
+                                <div class="mt-6 flex flex-wrap gap-2">
+                                    <?php foreach ($weekOrder as $d): ?>
+                                        <?php
+                                        $state = $availabilityByDay[$d] ?? 'none';
+                                        $pillCls = 'border-gray-200 bg-white text-gray-400';
+                                        if ($state === 'open') {
+                                            $pillCls = 'border-emerald-300 bg-emerald-500 text-white shadow-sm shadow-emerald-500/20';
+                                        }
+                                        if ($state === 'closed') {
+                                            $pillCls = 'border-gray-200 bg-gray-100 text-gray-500';
+                                        }
+                                        ?>
+                                        <span class="inline-flex min-w-[2.75rem] flex-col items-center rounded-xl border px-2 py-2 text-center text-xs font-semibold <?php echo $pillCls; ?>" title="<?php echo $state === 'open' ? 'Available' : ($state === 'closed' ? 'Marked unavailable' : 'No slot'); ?>">
+                                            <span class="uppercase tracking-wide opacity-80"><?php echo htmlspecialchars($weekShort[$d] ?? ''); ?></span>
+                                            <?php if ($state === 'open'): ?>
+                                                <i class="fas fa-check mt-1 text-[10px]"></i>
+                                            <?php elseif ($state === 'closed'): ?>
+                                                <i class="fas fa-minus mt-1 text-[10px]"></i>
+                                            <?php else: ?>
+                                                <span class="mt-1 h-1 w-1 rounded-full bg-current opacity-40"></span>
+                                            <?php endif; ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                </div>
+                                <p class="mt-4 text-xs text-gray-500">Green = at least one available slot that day. Gray = unavailable or not set.</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php if (!empty($skills)): ?>
+                        <div class="px-6 sm:px-8 py-5 bg-gray-50 border-t border-gray-100">
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Skills</div>
+                            <div class="flex flex-wrap gap-2">
+                                <?php foreach ($skills as $skill): ?>
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white border border-gray-200 px-3 py-1.5 text-sm text-gray-800">
+                                        <?php echo htmlspecialchars($skill['skill_name']); ?>
+                                        <span class="text-xs text-gray-400"><?php echo htmlspecialchars(ucfirst($skill['skill_level'] ?? '')); ?></span>
+                                    </span>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </section>
             </main>
             </div>
         </div>

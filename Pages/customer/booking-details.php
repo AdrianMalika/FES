@@ -25,8 +25,75 @@ if ($_SESSION['role'] !== 'customer') {
 require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/fes_date.php';
 
+$customerId = (int)($_SESSION['user_id'] ?? 0);
 $bookingId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $booking = null;
+$feedbackError = '';
+$feedbackSuccess = isset($_GET['feedback_saved']) && $_GET['feedback_saved'] === '1';
+$existingFeedback = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fes_booking_feedback'], $_POST['booking_id'])) {
+    $postBid = (int)$_POST['booking_id'];
+    $rating = (int)($_POST['rating'] ?? 0);
+    $comment = trim((string)($_POST['comment'] ?? ''));
+    if ($postBid <= 0 || $postBid !== $bookingId) {
+        $feedbackError = 'Invalid booking.';
+    } elseif ($rating < 1 || $rating > 5) {
+        $feedbackError = 'Please choose a rating from 1 to 5 stars.';
+    } elseif (mb_strlen($comment) > 2000) {
+        $feedbackError = 'Comment is too long (max 2000 characters).';
+    } else {
+        try {
+            $connFb = getDBConnection();
+            $chk = $connFb->prepare('SELECT booking_id, status, operator_id FROM bookings WHERE booking_id = ? AND customer_id = ? LIMIT 1');
+            if ($chk) {
+                $chk->bind_param('ii', $postBid, $customerId);
+                $chk->execute();
+                $brow = $chk->get_result()->fetch_assoc();
+                $chk->close();
+            } else {
+                $brow = null;
+            }
+            if (!$brow || ($brow['status'] ?? '') !== 'completed') {
+                $feedbackError = 'Feedback is only available after the service is completed.';
+            } else {
+                $dup = $connFb->prepare('SELECT feedback_id FROM booking_feedback WHERE booking_id = ? LIMIT 1');
+                $hasDup = false;
+                if ($dup) {
+                    $dup->bind_param('i', $postBid);
+                    $dup->execute();
+                    $hasDup = (bool)$dup->get_result()->fetch_assoc();
+                    $dup->close();
+                }
+                if ($hasDup) {
+                    $feedbackError = 'You have already submitted feedback for this booking.';
+                } else {
+                    $opRaw = $brow['operator_id'] ?? null;
+                    $opId = $opRaw !== null && (int)$opRaw > 0 ? (int)$opRaw : null;
+                    $ins = $connFb->prepare('INSERT INTO booking_feedback (booking_id, customer_id, operator_id, rating, comment) VALUES (?, ?, ?, ?, ?)');
+                    if ($ins) {
+                        $opBind = $opId;
+                        $ins->bind_param('iiiis', $postBid, $customerId, $opBind, $rating, $comment);
+                        if ($ins->execute()) {
+                            $ins->close();
+                            $connFb->close();
+                            header('Location: booking-details.php?id=' . $postBid . '&feedback_saved=1');
+                            exit();
+                        }
+                        $feedbackError = 'Could not save feedback. Ask an admin to run database/add_booking_feedback.sql.';
+                        $ins->close();
+                    } else {
+                        $feedbackError = 'Could not save feedback. Ask an admin to run database/add_booking_feedback.sql.';
+                    }
+                }
+            }
+            $connFb->close();
+        } catch (Throwable $e) {
+            error_log('booking-details feedback: ' . $e->getMessage());
+            $feedbackError = 'Could not save feedback. If this is a new install, run database/add_booking_feedback.sql.';
+        }
+    }
+}
 // FES Depot Configuration
 define('FES_DEPOT_LAT', -15.791381197859343);
 define('FES_DEPOT_LNG', 35.00946109783795);
@@ -154,7 +221,6 @@ if ($bookingId > 0) {
                 JOIN equipment e ON e.equipment_id COLLATE utf8mb4_unicode_ci = b.equipment_id COLLATE utf8mb4_unicode_ci
                 WHERE b.booking_id = ? AND b.customer_id = ?";
         if ($stmt = $conn->prepare($sql)) {
-            $customerId = intval($_SESSION['user_id']);
             $stmt->bind_param('ii', $bookingId, $customerId);
             $stmt->execute();
             $res = $stmt->get_result();
@@ -166,6 +232,26 @@ if ($bookingId > 0) {
         $conn->close();
     } catch (Exception $e) {
         error_log('Booking details error: ' . $e->getMessage());
+    }
+}
+
+if ($booking) {
+    try {
+        $connF = getDBConnection();
+        $fs = $connF->prepare('SELECT feedback_id, rating, comment, created_at FROM booking_feedback WHERE booking_id = ? AND customer_id = ? LIMIT 1');
+        if ($fs) {
+            $bid = (int)$booking['booking_id'];
+            $fs->bind_param('ii', $bid, $customerId);
+            $fs->execute();
+            $fr = $fs->get_result();
+            if ($fr && ($frow = $fr->fetch_assoc())) {
+                $existingFeedback = $frow;
+            }
+            $fs->close();
+        }
+        $connF->close();
+    } catch (Throwable $e) {
+        error_log('Booking details load feedback: ' . $e->getMessage());
     }
 }
 
@@ -344,6 +430,62 @@ $costBreakdown = $booking ? calculateBookingCost($booking, $RATES) : null;
                             </section>
                         </div>
 
+                        <?php if ($status === 'completed'): ?>
+                            <section class="bg-white rounded-xl shadow-card p-6 mt-6 border border-gray-100">
+                                <h2 class="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                    <i class="fas fa-star text-amber-500"></i>
+                                    Service feedback
+                                </h2>
+                                <?php if ($feedbackSuccess): ?>
+                                    <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                        Thank you — your feedback was saved.
+                                    </div>
+                                <?php elseif ($existingFeedback): ?>
+                                    <p class="text-sm text-gray-600 mb-3">You rated this booking on <?php echo htmlspecialchars(fes_format_date_safe($existingFeedback['created_at'] ?? null, 'M j, Y · H:i', '')); ?>.</p>
+                                    <div class="flex items-center gap-1 text-amber-500 text-lg mb-2" aria-label="Your rating">
+                                        <?php for ($s = 1; $s <= 5; $s++): ?>
+                                            <i class="<?php echo $s <= (int)$existingFeedback['rating'] ? 'fas fa-star' : 'far fa-star'; ?>"></i>
+                                        <?php endfor; ?>
+                                        <span class="ml-2 text-sm font-medium text-gray-800"><?php echo (int)$existingFeedback['rating']; ?>/5</span>
+                                    </div>
+                                    <?php if (trim((string)($existingFeedback['comment'] ?? '')) !== ''): ?>
+                                        <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Your comment</div>
+                                        <p class="text-sm text-gray-800 whitespace-pre-wrap"><?php echo htmlspecialchars((string)$existingFeedback['comment']); ?></p>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <p class="text-sm text-gray-600 mb-4">How was your experience? Your rating helps us improve service quality.</p>
+                                    <?php if ($feedbackError !== ''): ?>
+                                        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><?php echo htmlspecialchars($feedbackError); ?></div>
+                                    <?php endif; ?>
+                                    <form method="post" action="booking-details.php?id=<?php echo (int)$bookingId; ?>" id="fes-feedback-form" class="space-y-4 max-w-xl">
+                                        <input type="hidden" name="fes_booking_feedback" value="1">
+                                        <input type="hidden" name="booking_id" value="<?php echo (int)$booking['booking_id']; ?>">
+                                        <div>
+                                            <div class="text-xs font-medium text-gray-700 mb-2">Overall rating (required)</div>
+                                            <input type="hidden" name="rating" id="fes-rating-value" value="" required>
+                                            <div class="flex flex-wrap items-center gap-1 sm:gap-2" id="fes-star-picker" role="radiogroup" aria-label="Star rating from 1 to 5">
+                                                <?php for ($s = 1; $s <= 5; $s++): ?>
+                                                    <button type="button" class="fes-star-btn p-2 rounded-lg text-amber-400 hover:bg-amber-50 transition focus:outline-none focus:ring-2 focus:ring-fes-red focus:ring-offset-1" data-rating="<?php echo $s; ?>" aria-label="<?php echo $s; ?> out of 5 stars" aria-pressed="false">
+                                                        <i class="far fa-star text-3xl sm:text-4xl" data-star-index="<?php echo $s; ?>"></i>
+                                                    </button>
+                                                <?php endfor; ?>
+                                            </div>
+                                            <p class="mt-2 text-xs text-gray-500">Click a star to choose 1 (poor) through 5 (excellent). You can change it before submitting.</p>
+                                            <p id="fes-rating-picked" class="mt-2 text-sm font-medium text-gray-800" aria-live="polite"><span class="text-gray-400">No stars selected yet.</span></p>
+                                        </div>
+                                        <div>
+                                            <label for="fes-feedback-comment" class="block text-xs font-medium text-gray-700 mb-1">Comments (optional)</label>
+                                            <textarea id="fes-feedback-comment" name="comment" rows="4" maxlength="2000" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fes-red focus:border-fes-red" placeholder="Tell us what went well or what we could improve."></textarea>
+                                        </div>
+                                        <button type="submit" class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-5 py-2.5 rounded-lg text-sm shadow">
+                                            <i class="fas fa-paper-plane"></i>
+                                            Submit feedback
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
+                            </section>
+                        <?php endif; ?>
+
                         <section class="bg-white rounded-xl shadow-card p-6 mt-6">
                             <div class="flex items-center justify-between mb-4">
                                 <h2 class="text-base font-semibold text-gray-900">Service Location Map</h2>
@@ -494,6 +636,49 @@ $costBreakdown = $booking ? calculateBookingCost($booking, $RATES) : null;
                     panel.classList.add('hidden');
                 });
             }
+        })();
+
+        (function () {
+            var form = document.getElementById('fes-feedback-form');
+            var hidden = document.getElementById('fes-rating-value');
+            var picker = document.getElementById('fes-star-picker');
+            var picked = document.getElementById('fes-rating-picked');
+            if (!form || !hidden || !picker) return;
+
+            var buttons = picker.querySelectorAll('.fes-star-btn');
+
+            function setRating(n) {
+                hidden.value = String(n);
+                buttons.forEach(function (btn, idx) {
+                    var starNum = idx + 1;
+                    var icon = btn.querySelector('i');
+                    if (icon) {
+                        icon.classList.remove('far', 'fas');
+                        icon.classList.add(starNum <= n ? 'fas' : 'far', 'fa-star');
+                    }
+                    btn.setAttribute('aria-pressed', starNum <= n ? 'true' : 'false');
+                });
+                if (picked) {
+                    picked.innerHTML = 'You selected: <strong>' + n + '</strong> out of 5 stars.';
+                }
+            }
+
+            buttons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var n = parseInt(btn.getAttribute('data-rating'), 10);
+                    if (n >= 1 && n <= 5) {
+                        setRating(n);
+                    }
+                });
+            });
+
+            form.addEventListener('submit', function (e) {
+                var v = parseInt(hidden.value, 10);
+                if (!v || v < 1 || v > 5) {
+                    e.preventDefault();
+                    window.alert('Please click a star to choose your rating (1 to 5).');
+                }
+            });
         })();
     </script>
 
