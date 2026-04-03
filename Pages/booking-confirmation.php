@@ -31,6 +31,7 @@ if (empty($_SESSION[$pendingKey]) && ($_SERVER['REQUEST_METHOD'] !== 'POST' || e
 }
 
 require_once __DIR__ . '/../includes/database.php';
+require_once __DIR__ . '/../includes/fes_rates.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
@@ -41,19 +42,8 @@ define('FES_DEPOT_LAT', -15.791381197859343);
 define('FES_DEPOT_LNG', 35.00946109783795);
 define('FES_DEPOT_ADDRESS', 'Kaoshiung, Blantyre, Malawi');
 
-// Rates Configuration
-$RATES = [
-    'transport_per_km' => 5000,
-    'operator_per_hour' => 6000,
-    'base_fee' => 15000,
-    'equipment' => [
-        'tractor' => ['hourly' => 25000, 'areas' => 15000, 'daily' => 180000],
-        'plow' => ['hourly' => 15000, 'areas' => 8000, 'daily' => 100000],
-        'harvester' => ['hourly' => 35000, 'areas' => 20000, 'daily' => 250000],
-        'irrigation' => ['hourly' => 20000, 'areas' => 12000, 'daily' => 140000],
-        'default' => ['hourly' => 18000, 'areas' => 10000, 'daily' => 120000]
-    ]
-];
+// Centralized Rates Configuration
+$RATES = fes_get_rates();
 
 // Calculate distance using Haversine formula
 function calculateDistance($lat1, $lng1, $lat2, $lng2) {

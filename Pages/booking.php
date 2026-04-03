@@ -8,47 +8,15 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'customer') {
 }
 
 require_once __DIR__ . '/../includes/database.php';
+require_once __DIR__ . '/../includes/fes_rates.php';
 
 // FES Depot Configuration (Kaoshiung, Blantyre)
 define('FES_DEPOT_LAT', -15.791381197859343);
 define('FES_DEPOT_LNG', 35.00946109783795);
 define('FES_DEPOT_ADDRESS', 'Kaoshiung, Blantyre, Malawi');
 
-// Hardcoded Rates Configuration
-$RATES = [
-    'transport_per_km' => 5000,     // MK per km (increased)
-    'operator_per_hour' => 2000,    // MK per hour  
-    'base_fee' => 15000,            // MK base booking fee (increased)
-    
-    // Equipment rates per category (increased)
-    'equipment' => [
-        'tractor' => [
-            'hourly' => 25000,       // MK per hour
-            'areas' => 15000,        // MK per area
-            'daily' => 180000        // MK per day
-        ],
-        'plow' => [
-            'hourly' => 15000,       // MK per hour
-            'areas' => 8000,         // MK per area
-            'daily' => 100000        // MK per day
-        ],
-        'harvester' => [
-            'hourly' => 35000,       // MK per hour
-            'areas' => 20000,        // MK per area
-            'daily' => 250000        // MK per day
-        ],
-        'irrigation' => [
-            'hourly' => 20000,       // MK per hour
-            'areas' => 12000,        // MK per area
-            'daily' => 140000        // MK per day
-        ],
-        'default' => [
-            'hourly' => 18000,       // MK per hour
-            'areas' => 10000,        // MK per area
-            'daily' => 120000        // MK per day
-        ]
-    ]
-];
+// Centralized Rates Configuration
+$RATES = fes_get_rates();
 
 // Calculate distance using Haversine formula
 function calculateDistance($lat1, $lng1, $lat2, $lng2) {
@@ -777,9 +745,9 @@ document.addEventListener('DOMContentLoaded', function () {
         var rates = { hourly: hourly, areas: area, daily: daily };
         
         // Calculate costs
-        var transportCost = distance * 5000; // MK 5000 per km
-        var operatorCost = 8 * 2000; // 8 hours * MK 2,000 per hour
-        var baseFee = 15000; // MK base fee
+        var transportCost = distance * <?php echo FES_RATE_TRANSPORT_PER_KM; ?>; // MK per km
+        var operatorCost = 8 * <?php echo FES_RATE_OPERATOR_PER_HOUR; ?>; // 8 hours * MK per hour
+        var baseFee = <?php echo FES_RATE_BASE_FEE; ?>; // MK base fee
         var equipmentCost = 0;
         var pricingModel = '';
         
