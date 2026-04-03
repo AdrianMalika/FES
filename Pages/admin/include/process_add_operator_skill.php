@@ -15,6 +15,7 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
 }
 
 require_once '../../../includes/database.php';
+require_once '../../../includes/fes_skill_types.php';
 
 $operator_id = (int)($_POST['operator_id'] ?? 0);
 $skill_name = trim($_POST['skill_name'] ?? '');
@@ -22,9 +23,10 @@ $skill_level = trim($_POST['skill_level'] ?? 'intermediate');
 
 $allowed_levels = ['beginner', 'intermediate', 'advanced', 'expert'];
 
-if ($operator_id <= 0 || $skill_name === '') {
-    $_SESSION['error'] = 'Operator and skill are required.';
-    header('Location: ../users.php');
+if ($operator_id <= 0 || $skill_name === '' || !fes_is_operator_skill_type($skill_name)) {
+    $_SESSION['error'] = 'Choose a valid skill type from the list.';
+    $redir = $operator_id > 0 ? '../operator_manage.php?id=' . $operator_id : '../users.php';
+    header('Location: ' . $redir);
     exit();
 }
 

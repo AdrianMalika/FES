@@ -82,29 +82,6 @@ try {
             exit();
         }
 
-        // Availability rule: if availability records exist, operator must be available on booking day.
-        $availStmt = $conn->prepare('SELECT day_of_week, is_available FROM operator_availability WHERE operator_id = ?');
-        $availStmt->bind_param('i', $operator_id);
-        $availStmt->execute();
-        $availRes = $availStmt->get_result();
-        $hasAvailability = false;
-        $isAvailable = true;
-        $dayOfWeek = (int)date('N', strtotime($booking['booking_date']));
-        while ($row = $availRes->fetch_assoc()) {
-            $hasAvailability = true;
-            if ((int)$row['day_of_week'] === $dayOfWeek && (int)$row['is_available'] === 1) {
-                $isAvailable = true;
-                break;
-            }
-            $isAvailable = false;
-        }
-        $availStmt->close();
-        if ($hasAvailability && !$isAvailable) {
-            $_SESSION['error'] = 'Cannot assign operator. Operator is not available on the booking date.';
-            header('Location: ../booking-details.php?id=' . $booking_id);
-            exit();
-        }
-
         // Skills rule: if skills exist, operator must match equipment category or service type.
         $skillStmt = $conn->prepare('SELECT skill_name FROM operator_skills WHERE operator_id = ?');
         $skillStmt->bind_param('i', $operator_id);

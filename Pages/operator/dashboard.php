@@ -25,18 +25,17 @@ if (($_SESSION['role'] ?? '') !== 'operator') {
 
 require_once '../../includes/database.php';
 require_once '../../includes/fes_date.php';
+require_once '../../includes/fes_skill_types.php';
 
 $operatorId   = (int)($_SESSION['user_id'] ?? 0);
 $operatorName = $_SESSION['name'] ?? 'Operator';
 
 $equipment    = [];
 $skills       = [];
-$availability = [];
 $completedJobs = [];
 $stats = [
     'assigned'     => 0,
     'active'       => 0,
-    'slots'        => 0,
     'skills'       => 0,
     'jobs_total'   => 0,
     'jobs_pending' => 0,
@@ -95,24 +94,6 @@ try {
         $stmt->close();
     }
     $stats['skills'] = count($skills);
-
-    // Load weekly availability
-    $avSql = '
-        SELECT id, day_of_week, start_time, end_time, is_available
-        FROM operator_availability
-        WHERE operator_id = ?
-        ORDER BY day_of_week ASC, start_time ASC
-    ';
-    if ($stmt = $conn->prepare($avSql)) {
-        $stmt->bind_param('i', $operatorId);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        while ($row = $res->fetch_assoc()) {
-            $availability[] = $row;
-        }
-        $stmt->close();
-    }
-    $stats['slots'] = count($availability);
 
     // Job stats based on bookings assigned to this operator
     $jobSql = "SELECT
@@ -216,31 +197,6 @@ try {
     $loadError = 'Could not load your workload and schedule. Error: ' . $e->getMessage() . '. Please try again later or contact admin.';
 }
 
-$dayNames = [
-    0 => 'Sunday',
-    1 => 'Monday',
-    2 => 'Tuesday',
-    3 => 'Wednesday',
-    4 => 'Thursday',
-    5 => 'Friday',
-    6 => 'Saturday',
-];
-
-$availabilityByDay = array_fill_keys([1, 2, 3, 4, 5, 6, 0], 'none');
-foreach ($availability as $slot) {
-    $d = (int)($slot['day_of_week'] ?? 0);
-    if (!isset($availabilityByDay[$d])) {
-        continue;
-    }
-    $isAvail = (int)($slot['is_available'] ?? 1) === 1;
-    if ($isAvail) {
-        $availabilityByDay[$d] = 'open';
-    } elseif ($availabilityByDay[$d] === 'none') {
-        $availabilityByDay[$d] = 'closed';
-    }
-}
-$weekOrder = [1, 2, 3, 4, 5, 6, 0];
-$weekShort = [1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat', 0 => 'Sun'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -458,9 +414,9 @@ $weekShort = [1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => '
                     </div>
                 </section>
 
-                <!-- Equipment + weekly rhythm — visual, not empty tables -->
+                <!-- Equipment — visual, not a big empty table -->
                 <section class="rounded-2xl bg-white shadow-card border border-gray-100 overflow-hidden">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
+                    <div class="grid grid-cols-1">
                         <div class="p-6 sm:p-8 bg-gradient-to-br from-slate-50 to-white">
                             <div class="flex items-start gap-4">
                                 <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-white text-lg"><i class="fas fa-tractor"></i></span>
@@ -505,47 +461,6 @@ $weekShort = [1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => '
                                 </ul>
                             <?php endif; ?>
                         </div>
-                        <div class="p-6 sm:p-8 bg-gradient-to-br from-emerald-50/80 to-white">
-                            <div class="flex items-start gap-4">
-                                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white text-lg"><i class="fas fa-clock"></i></span>
-                                <div>
-                                    <h2 class="text-lg font-semibold text-gray-900">Weekly rhythm</h2>
-                                    <p class="mt-1 text-sm text-gray-500">When you are usually available for dispatch.</p>
-                                </div>
-                            </div>
-                            <?php if (empty($availability)): ?>
-                                <div class="mt-6 rounded-xl border border-dashed border-emerald-200 bg-white/80 p-6">
-                                    <p class="text-sm font-medium text-gray-800">Your hours are not on file</p>
-                                    <p class="mt-2 text-sm text-gray-600">Your administrator sets weekly availability. Once they do, you will see a green week strip here at a glance.</p>
-                                </div>
-                            <?php else: ?>
-                                <div class="mt-6 flex flex-wrap gap-2">
-                                    <?php foreach ($weekOrder as $d): ?>
-                                        <?php
-                                        $state = $availabilityByDay[$d] ?? 'none';
-                                        $pillCls = 'border-gray-200 bg-white text-gray-400';
-                                        if ($state === 'open') {
-                                            $pillCls = 'border-emerald-300 bg-emerald-500 text-white shadow-sm shadow-emerald-500/20';
-                                        }
-                                        if ($state === 'closed') {
-                                            $pillCls = 'border-gray-200 bg-gray-100 text-gray-500';
-                                        }
-                                        ?>
-                                        <span class="inline-flex min-w-[2.75rem] flex-col items-center rounded-xl border px-2 py-2 text-center text-xs font-semibold <?php echo $pillCls; ?>" title="<?php echo $state === 'open' ? 'Available' : ($state === 'closed' ? 'Marked unavailable' : 'No slot'); ?>">
-                                            <span class="uppercase tracking-wide opacity-80"><?php echo htmlspecialchars($weekShort[$d] ?? ''); ?></span>
-                                            <?php if ($state === 'open'): ?>
-                                                <i class="fas fa-check mt-1 text-[10px]"></i>
-                                            <?php elseif ($state === 'closed'): ?>
-                                                <i class="fas fa-minus mt-1 text-[10px]"></i>
-                                            <?php else: ?>
-                                                <span class="mt-1 h-1 w-1 rounded-full bg-current opacity-40"></span>
-                                            <?php endif; ?>
-                                        </span>
-                                    <?php endforeach; ?>
-                                </div>
-                                <p class="mt-4 text-xs text-gray-500">Green = at least one available slot that day. Gray = unavailable or not set.</p>
-                            <?php endif; ?>
-                        </div>
                     </div>
                     <?php if (!empty($skills)): ?>
                         <div class="px-6 sm:px-8 py-5 bg-gray-50 border-t border-gray-100">
@@ -553,7 +468,7 @@ $weekShort = [1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => '
                             <div class="flex flex-wrap gap-2">
                                 <?php foreach ($skills as $skill): ?>
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-white border border-gray-200 px-3 py-1.5 text-sm text-gray-800">
-                                        <?php echo htmlspecialchars($skill['skill_name']); ?>
+                                        <?php echo htmlspecialchars(fes_operator_skill_type_label($skill['skill_name'] ?? '')); ?>
                                         <span class="text-xs text-gray-400"><?php echo htmlspecialchars(ucfirst($skill['skill_level'] ?? '')); ?></span>
                                     </span>
                                 <?php endforeach; ?>

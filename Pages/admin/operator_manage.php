@@ -21,15 +21,16 @@ if (($_SESSION['role'] ?? '') !== 'admin') {
 }
 
 require_once '../../includes/database.php';
+require_once '../../includes/fes_skill_types.php';
 
 $operator_id = (int)($_GET['id'] ?? 0);
+$skillTypeOptions = fes_operator_skill_types();
 $error = '';
 $success = $_SESSION['success'] ?? '';
 unset($_SESSION['success']);
 
 $operator = null;
 $skills = [];
-$availability = [];
 $assigned_equipment = [];
 $activeCount = 0; // Active bookings count (pending/confirmed/in_progress) for this operator.
 $feedbackAvg = null;
@@ -65,19 +66,6 @@ try {
             $res = $stmt->get_result();
             while ($row = $res->fetch_assoc()) {
                 $skills[] = $row;
-            }
-            $stmt->close();
-        }
-
-        // Load availability
-        $availSql = 'SELECT id, day_of_week, start_time, end_time, is_available, note FROM operator_availability WHERE operator_id = ? ORDER BY day_of_week ASC, start_time ASC';
-        $stmt = $conn->prepare($availSql);
-        if ($stmt) {
-            $stmt->bind_param('i', $operator_id);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            while ($row = $res->fetch_assoc()) {
-                $availability[] = $row;
             }
             $stmt->close();
         }
@@ -151,7 +139,7 @@ try {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -218,6 +206,7 @@ try {
                         </h1>
                         <?php if ($operator): ?>
                             <p class="text-xs text-gray-500 mt-1"><?php echo htmlspecialchars($operator['email']); ?></p>
+                            <p class="text-sm text-gray-600 mt-2 max-w-xl">Update skills and see which jobs and machines this operator is tied to right now.</p>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -244,62 +233,102 @@ try {
                 <?php endif; ?>
 
                 <?php if ($operator): ?>
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                        <section class="bg-white rounded-xl shadow-card p-5 lg:col-span-2">
-                            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <i class="fas fa-briefcase text-fes-red"></i>
-                                Workload
-                            </h2>
-                            <div class="flex flex-wrap gap-4 mb-4">
-                                <div class="px-4 py-3 rounded-lg bg-gray-50 border border-gray-200">
-                                    <div class="text-xs text-gray-500 uppercase">Assigned Equipment</div>
-                                    <div class="mt-1 text-xl font-semibold text-gray-900"><?php echo count($assigned_equipment); ?></div>
-                                </div>
-                                <div class="px-4 py-3 rounded-lg bg-gray-50 border border-gray-200">
-                                    <div class="text-xs text-gray-500 uppercase">Active Jobs</div>
-                                    <div class="mt-1 text-xl font-semibold text-gray-900"><?php echo $activeCount; ?></div>
-                                </div>
-                            </div>
+                    <?php
+                    $skillsCount = count($skills);
+                    $eqOnJobsCount = count($assigned_equipment);
+                    ?>
 
-                            <div class="overflow-x-auto">
+                    <nav class="mb-6 flex flex-wrap gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-sm" aria-label="On this page">
+                        <a href="#snapshot" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900">Overview</a>
+                        <a href="#workload" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900">Equipment on jobs</a>
+                        <a href="#skills" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900">Skills</a>
+                    </nav>
+
+                    <section id="snapshot" class="scroll-mt-24 mb-6 rounded-xl border border-gray-100 bg-white p-5 shadow-card">
+                        <h2 class="display text-lg font-bold text-gray-900">At a glance</h2>
+                        <p class="mt-1 text-sm text-gray-500">Numbers update from live bookings and what you have configured below.</p>
+                        <div class="mt-4 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div class="rounded-lg border border-gray-100 bg-gray-50/80 px-4 py-3">
+                                <div class="text-xs font-medium text-gray-500">Active job bookings</div>
+                                <div class="mt-1 text-2xl font-semibold text-gray-900"><?php echo (int)$activeCount; ?></div>
+                                <div class="mt-0.5 text-[11px] text-gray-400">Pending, confirmed, or in progress</div>
+                            </div>
+                            <div class="rounded-lg border border-gray-100 bg-gray-50/80 px-4 py-3">
+                                <div class="text-xs font-medium text-gray-500">Machines on those jobs</div>
+                                <div class="mt-1 text-2xl font-semibold text-gray-900"><?php echo (int)$eqOnJobsCount; ?></div>
+                                <div class="mt-0.5 text-[11px] text-gray-400">Distinct equipment from bookings</div>
+                            </div>
+                            <div class="rounded-lg border border-gray-100 bg-gray-50/80 px-4 py-3">
+                                <div class="text-xs font-medium text-gray-500">Skills listed</div>
+                                <div class="mt-1 text-2xl font-semibold text-gray-900"><?php echo (int)$skillsCount; ?></div>
+                            </div>
+                            <div class="rounded-lg border border-amber-100 bg-amber-50/50 px-4 py-3">
+                                <div class="text-xs font-medium text-gray-500">Customer rating</div>
+                                <?php if ($feedbackAvg !== null && $feedbackCount > 0): ?>
+                                    <div class="mt-1 text-2xl font-semibold text-amber-700"><?php echo htmlspecialchars((string)$feedbackAvg); ?><span class="text-base font-normal text-gray-500">/5</span></div>
+                                    <div class="mt-0.5 text-xs text-gray-600"><?php echo (int)$feedbackCount; ?> review<?php echo $feedbackCount === 1 ? '' : 's'; ?> · <a href="feedback.php" class="text-fes-red font-medium hover:underline">View all feedback</a></div>
+                                <?php else: ?>
+                                    <div class="mt-1 text-sm text-gray-500">No reviews yet</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                        <section id="workload" class="scroll-mt-24 bg-white rounded-xl shadow-card p-5 lg:col-span-2 border border-gray-100">
+                            <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-fes-red/10 text-fes-red text-sm font-bold">1</span>
+                                Equipment on active jobs
+                            </h2>
+                            <p class="mt-2 text-sm text-gray-600 leading-relaxed">
+                                This list comes from <strong>bookings</strong> that are not finished yet. It shows which machines appear on those jobs (not the same as permanently assigning equipment to the operator in the fleet table).
+                            </p>
+                            <div class="overflow-x-auto mt-4 rounded-lg border border-gray-100">
                                 <table class="min-w-full">
+                                    <caption class="sr-only">Equipment referenced by this operator active bookings</caption>
                                     <thead>
-                                        <tr class="text-left text-xs font-medium text-gray-500 border-b uppercase tracking-wider">
-                                            <th class="py-3 pr-4">Equipment</th>
+                                        <tr class="text-left text-xs font-medium text-gray-500 bg-gray-50 border-b border-gray-100 uppercase tracking-wider">
+                                            <th class="py-3 px-4">Equipment</th>
                                             <th class="py-3 pr-4">Category</th>
-                                            <th class="py-3 pr-4">Status</th>
+                                            <th class="py-3 pr-4">Fleet status</th>
                                             <th class="py-3 pr-4">Location</th>
                                         </tr>
                                     </thead>
                                     <tbody class="text-sm text-gray-900">
                                         <?php if (empty($assigned_equipment)): ?>
                                             <tr>
-                                                <td colspan="4" class="py-8 text-center text-gray-500">
+                                                <td colspan="4" class="py-10 px-4 text-center text-gray-500">
                                                     <i class="fas fa-truck-moving text-2xl mb-2 block text-gray-300"></i>
-                                                    No equipment currently assigned.
+                                                    None right now — this operator has no pending, confirmed, or in-progress bookings tied to equipment.
                                                 </td>
                                             </tr>
                                         <?php else: ?>
                                             <?php foreach ($assigned_equipment as $eq): ?>
-                                                <tr class="border-b hover:bg-gray-50">
-                                                    <td class="py-3 pr-4">
-                                                        <div class="font-medium"><?php echo htmlspecialchars($eq['equipment_id']); ?></div>
+                                                <tr class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80">
+                                                    <td class="py-3 px-4">
+                                                        <div class="font-medium text-gray-900"><?php echo htmlspecialchars($eq['equipment_id']); ?></div>
                                                         <div class="text-xs text-gray-500"><?php echo htmlspecialchars($eq['equipment_name']); ?></div>
                                                     </td>
-                                                    <td class="py-3 pr-4"><?php echo htmlspecialchars(ucfirst($eq['category'])); ?></td>
+                                                    <td class="py-3 pr-4"><?php echo htmlspecialchars(ucfirst($eq['category'] ?? '')); ?></td>
                                                     <td class="py-3 pr-4">
                                                         <?php
-                                                        $status = $eq['status'];
+                                                        $status = $eq['status'] ?? '';
                                                         $cls = 'bg-gray-100 text-gray-700';
-                                                        if ($status === 'available') $cls = 'bg-emerald-50 text-emerald-700';
-                                                        if ($status === 'in_use') $cls = 'bg-amber-50 text-amber-700';
-                                                        if ($status === 'maintenance') $cls = 'bg-red-50 text-red-700';
+                                                        if ($status === 'available') {
+                                                            $cls = 'bg-emerald-50 text-emerald-700';
+                                                        }
+                                                        if ($status === 'in_use') {
+                                                            $cls = 'bg-amber-50 text-amber-700';
+                                                        }
+                                                        if ($status === 'maintenance') {
+                                                            $cls = 'bg-red-50 text-red-700';
+                                                        }
                                                         ?>
                                                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium <?php echo $cls; ?>">
                                                             <?php echo htmlspecialchars(str_replace('_', ' ', ucfirst($status))); ?>
                                                         </span>
                                                     </td>
-                                                    <td class="py-3 pr-4 text-gray-600"><?php echo htmlspecialchars($eq['location']); ?></td>
+                                                    <td class="py-3 pr-4 text-gray-600"><?php echo htmlspecialchars($eq['location'] ?? '—'); ?></td>
                                                 </tr>
                                             <?php endforeach; ?>
                                         <?php endif; ?>
@@ -308,110 +337,103 @@ try {
                             </div>
                         </section>
 
-                        <section class="bg-white rounded-xl shadow-card p-5">
-                            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <i class="fas fa-user-cog text-fes-red"></i>
-                                Quick Info
+                        <section class="bg-white rounded-xl shadow-card p-5 border border-gray-100 flex flex-col">
+                            <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <i class="fas fa-id-card text-fes-red"></i>
+                                Account
                             </h2>
-                            <ul class="space-y-3 text-sm text-gray-700">
-                                <li class="flex items-center justify-between">
-                                    <span class="text-gray-500">Operator ID</span>
-                                    <span class="font-medium">#<?php echo (int)$operator['user_id']; ?></span>
-                                </li>
-                                <li class="flex items-center justify-between">
-                                    <span class="text-gray-500">Created</span>
-                                    <span class="font-medium">
-                                        <?php echo !empty($operator['created_at']) ? htmlspecialchars(date('M d, Y', strtotime($operator['created_at']))) : '-'; ?>
-                                    </span>
-                                </li>
-                                <li class="flex items-center justify-between">
-                                    <span class="text-gray-500">Assigned Equipment</span>
-                                    <span class="font-medium"><?php echo count($assigned_equipment); ?></span>
-                                </li>
-                                <li class="flex items-center justify-between">
-                                    <span class="text-gray-500">Active Jobs</span>
-                                    <span class="font-medium"><?php echo $activeCount; ?></span>
-                                </li>
-                                <li class="flex items-center justify-between">
-                                    <span class="text-gray-500">Customer rating</span>
-                                    <span class="font-medium text-right">
-                                        <?php if ($feedbackAvg !== null && $feedbackCount > 0): ?>
-                                            <span class="text-amber-600"><?php echo htmlspecialchars((string)$feedbackAvg); ?>/5</span>
-                                            <span class="text-gray-500 font-normal text-xs block"><?php echo (int)$feedbackCount; ?> review<?php echo $feedbackCount === 1 ? '' : 's'; ?></span>
-                                        <?php else: ?>
-                                            <span class="text-gray-400">No reviews yet</span>
-                                        <?php endif; ?>
-                                    </span>
-                                </li>
-                            </ul>
+                            <p class="mt-2 text-sm text-gray-500">Read-only details from the user record.</p>
+                            <dl class="mt-4 space-y-4 text-sm flex-1">
+                                <div class="border-b border-gray-100 pb-3">
+                                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Operator ID</dt>
+                                    <dd class="mt-1 font-semibold text-gray-900">#<?php echo (int)$operator['user_id']; ?></dd>
+                                </div>
+                                <div class="border-b border-gray-100 pb-3">
+                                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Email</dt>
+                                    <dd class="mt-1 text-gray-800 break-all"><?php echo htmlspecialchars($operator['email']); ?></dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Member since</dt>
+                                    <dd class="mt-1 font-medium text-gray-900">
+                                        <?php echo !empty($operator['created_at']) ? htmlspecialchars(date('M d, Y', strtotime($operator['created_at']))) : '—'; ?>
+                                    </dd>
+                                </div>
+                            </dl>
+                            <a href="users.php" class="mt-6 inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Back to operator list</a>
                         </section>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <section class="bg-white rounded-xl shadow-card p-5">
-                            <div class="flex items-center justify-between mb-4">
-                                <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                                    <i class="fas fa-tools text-fes-red"></i>
-                                    Skills
-                                </h2>
+                    <section id="skills" class="scroll-mt-24 bg-white rounded-xl shadow-card p-5 sm:p-6 border border-gray-100">
+                            <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-fes-red/10 text-fes-red text-sm font-bold">2</span>
+                                Skills
+                            </h2>
+                            <p class="mt-2 text-sm text-gray-600 max-w-3xl">Skill types match the services customers can book (land prep, planting, harvesting, and so on). Operators see these on their dashboard; assignment checks skills against the booking.</p>
+
+                            <div class="mt-5 rounded-xl border border-gray-200 bg-gray-50/90 p-4 sm:p-5">
+                                <h3 class="text-sm font-semibold text-gray-900">Add a skill</h3>
+                                <p class="text-xs text-gray-500 mt-1 mb-4">Pick a skill type and proficiency, then save.</p>
+                                <form action="include/process_add_operator_skill.php" method="POST" class="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
+                                    <input type="hidden" name="operator_id" value="<?php echo (int)$operator['user_id']; ?>">
+                                    <div class="flex-1 min-w-[200px]">
+                                        <label for="skill_name_input" class="block text-xs font-medium text-gray-600 mb-1">Skill type</label>
+                                        <select id="skill_name_input" name="skill_name" required class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                            <option value="" selected disabled>Select a skill type</option>
+                                            <?php foreach ($skillTypeOptions as $val => $label): ?>
+                                                <option value="<?php echo htmlspecialchars($val); ?>"><?php echo htmlspecialchars($label); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="w-full sm:w-48">
+                                        <label for="skill_level_input" class="block text-xs font-medium text-gray-600 mb-1">Proficiency</label>
+                                        <select id="skill_level_input" name="skill_level" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
+                                            <option value="beginner">Beginner</option>
+                                            <option value="intermediate" selected>Intermediate</option>
+                                            <option value="advanced">Advanced</option>
+                                            <option value="expert">Expert</option>
+                                        </select>
+                                    </div>
+                                    <div class="lg:shrink-0">
+                                        <button type="submit" class="w-full lg:w-auto inline-flex items-center justify-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-5 py-2.5 rounded-lg shadow transition text-sm">
+                                            <i class="fas fa-plus"></i>
+                                            Add skill
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
 
-                            <form action="include/process_add_operator_skill.php" method="POST" class="mb-4 flex flex-col md:flex-row gap-3 items-stretch md:items-end">
-                                <input type="hidden" name="operator_id" value="<?php echo (int)$operator['user_id']; ?>">
-                                <div class="flex-1">
-                                    <label class="block text-xs font-medium text-gray-600 mb-1">Skill</label>
-                                    <input type="text" name="skill_name" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" placeholder="e.g., Tractor operation" required>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-600 mb-1">Level</label>
-                                    <select name="skill_level" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
-                                        <option value="beginner">Beginner</option>
-                                        <option value="intermediate" selected>Intermediate</option>
-                                        <option value="advanced">Advanced</option>
-                                        <option value="expert">Expert</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <button type="submit" class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-4 py-2.5 rounded-lg shadow transition text-sm">
-                                        <i class="fas fa-plus"></i>
-                                        Add
-                                    </button>
-                                </div>
-                            </form>
-
-                            <div class="overflow-x-auto">
+                            <div class="overflow-x-auto mt-5 rounded-lg border border-gray-100">
                                 <table class="min-w-full">
+                                    <caption class="sr-only">Skills for this operator</caption>
                                     <thead>
-                                        <tr class="text-left text-xs font-medium text-gray-500 border-b uppercase tracking-wider">
-                                            <th class="py-3 pr-4">Skill</th>
+                                        <tr class="text-left text-xs font-medium text-gray-500 bg-gray-50 border-b border-gray-100 uppercase tracking-wider">
+                                            <th class="py-3 px-4">Skill type</th>
                                             <th class="py-3 pr-4">Level</th>
                                             <th class="py-3 pr-4">Added</th>
-                                            <th class="py-3 pr-4">Actions</th>
+                                            <th class="py-3 pr-4 w-28">Remove</th>
                                         </tr>
                                     </thead>
                                     <tbody class="text-sm text-gray-900">
                                         <?php if (empty($skills)): ?>
                                             <tr>
-                                                <td colspan="4" class="py-6 text-center text-gray-500">
-                                                    No skills recorded yet.
+                                                <td colspan="4" class="py-8 px-4 text-center text-gray-500">
+                                                    No skills yet. Use the form above to add the first one.
                                                 </td>
                                             </tr>
                                         <?php else: ?>
                                             <?php foreach ($skills as $skill): ?>
-                                                <tr class="border-b hover:bg-gray-50">
-                                                    <td class="py-3 pr-4 font-medium"><?php echo htmlspecialchars($skill['skill_name']); ?></td>
-                                                    <td class="py-3 pr-4 text-gray-700">
-                                                        <?php echo htmlspecialchars(ucfirst($skill['skill_level'])); ?>
-                                                    </td>
+                                                <tr class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80">
+                                                    <td class="py-3 px-4 font-medium"><?php echo htmlspecialchars(fes_operator_skill_type_label($skill['skill_name'] ?? '')); ?></td>
+                                                    <td class="py-3 pr-4 text-gray-700"><?php echo htmlspecialchars(ucfirst($skill['skill_level'])); ?></td>
                                                     <td class="py-3 pr-4 text-gray-600">
-                                                        <?php echo !empty($skill['created_at']) ? htmlspecialchars(date('M d, Y', strtotime($skill['created_at']))) : '-'; ?>
+                                                        <?php echo !empty($skill['created_at']) ? htmlspecialchars(date('M d, Y', strtotime($skill['created_at']))) : '—'; ?>
                                                     </td>
                                                     <td class="py-3 pr-4">
-                                                        <form action="include/process_delete_operator_skill.php" method="POST" onsubmit="return confirm('Remove this skill?');">
+                                                        <form action="include/process_delete_operator_skill.php" method="POST" class="inline" onsubmit="return confirm('Remove this skill?');">
                                                             <input type="hidden" name="operator_id" value="<?php echo (int)$operator['user_id']; ?>">
                                                             <input type="hidden" name="skill_id" value="<?php echo (int)$skill['id']; ?>">
-                                                            <button type="submit" class="text-red-500 hover:text-red-700 text-sm">
-                                                                <i class="fas fa-trash"></i>
+                                                            <button type="submit" class="inline-flex items-center gap-1.5 text-sm text-red-600 hover:text-red-800 hover:underline">
+                                                                <i class="fas fa-trash-alt text-xs"></i> Remove
                                                             </button>
                                                         </form>
                                                     </td>
@@ -421,120 +443,7 @@ try {
                                     </tbody>
                                 </table>
                             </div>
-                        </section>
-
-                        <section class="bg-white rounded-xl shadow-card p-5">
-                            <div class="flex items-center justify-between mb-4">
-                                <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                                    <i class="fas fa-calendar-check text-fes-red"></i>
-                                    Availability
-                                </h2>
-                            </div>
-
-                            <form action="include/process_add_operator_availability.php" method="POST" class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                                <input type="hidden" name="operator_id" value="<?php echo (int)$operator['user_id']; ?>">
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-600 mb-1">Day</label>
-                                    <select name="day_of_week" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
-                                        <option value="1">Monday</option>
-                                        <option value="2">Tuesday</option>
-                                        <option value="3">Wednesday</option>
-                                        <option value="4">Thursday</option>
-                                        <option value="5">Friday</option>
-                                        <option value="6">Saturday</option>
-                                        <option value="0">Sunday</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-600 mb-1">Start</label>
-                                    <input type="time" name="start_time" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" required>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-600 mb-1">End</label>
-                                    <input type="time" name="end_time" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" required>
-                                </div>
-                                <div class="flex items-end justify-between gap-2">
-                                    <label class="inline-flex items-center text-xs text-gray-600">
-                                        <input type="checkbox" name="is_available" value="1" class="mr-2" checked>
-                                        Available
-                                    </label>
-                                    <button type="submit" class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-medium px-4 py-2.5 rounded-lg shadow transition text-sm">
-                                        <i class="fas fa-plus"></i>
-                                        Add
-                                    </button>
-                                </div>
-                            </form>
-
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full">
-                                    <thead>
-                                        <tr class="text-left text-xs font-medium text-gray-500 border-b uppercase tracking-wider">
-                                            <th class="py-3 pr-4">Day</th>
-                                            <th class="py-3 pr-4">Time</th>
-                                            <th class="py-3 pr-4">Status</th>
-                                            <th class="py-3 pr-4">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="text-sm text-gray-900">
-                                        <?php
-                                        $days = [
-                                            0 => 'Sunday',
-                                            1 => 'Monday',
-                                            2 => 'Tuesday',
-                                            3 => 'Wednesday',
-                                            4 => 'Thursday',
-                                            5 => 'Friday',
-                                            6 => 'Saturday',
-                                        ];
-                                        ?>
-                                        <?php if (empty($availability)): ?>
-                                            <tr>
-                                                <td colspan="4" class="py-6 text-center text-gray-500">
-                                                    No availability set. Add working slots for this operator.
-                                                </td>
-                                            </tr>
-                                        <?php else: ?>
-                                            <?php foreach ($availability as $slot): ?>
-                                                <tr class="border-b hover:bg-gray-50">
-                                                    <td class="py-3 pr-4">
-                                                        <?php
-                                                        $d = (int)$slot['day_of_week'];
-                                                        echo htmlspecialchars($days[$d] ?? 'Day ' . $d);
-                                                        ?>
-                                                    </td>
-                                                    <td class="py-3 pr-4 text-gray-700">
-                                                        <?php echo htmlspecialchars(substr($slot['start_time'], 0, 5)); ?>
-                                                        –
-                                                        <?php echo htmlspecialchars(substr($slot['end_time'], 0, 5)); ?>
-                                                    </td>
-                                                    <td class="py-3 pr-4">
-                                                        <?php if ((int)$slot['is_available'] === 1): ?>
-                                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
-                                                                Available
-                                                            </span>
-                                                        <?php else: ?>
-                                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                                                Unavailable
-                                                            </span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td class="py-3 pr-4">
-                                                        <form action="include/process_delete_operator_availability.php" method="POST" onsubmit="return confirm('Remove this availability slot?');">
-                                                            <input type="hidden" name="operator_id" value="<?php echo (int)$operator['user_id']; ?>">
-                                                            <input type="hidden" name="slot_id" value="<?php echo (int)$slot['id']; ?>">
-                                                            <button type="submit" class="text-red-500 hover:text-red-700 text-sm">
-                                                                <i class="fas fa-trash"></i>
-                                                            </button>
-                                                        </form>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </section>
-                    </div>
+                    </section>
                 <?php endif; ?>
             </main>
         </div>
