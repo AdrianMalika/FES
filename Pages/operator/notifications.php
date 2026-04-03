@@ -20,6 +20,44 @@ if (($_SESSION['role'] ?? '') !== 'operator') {
 }
 
 $operatorName = $_SESSION['name'] ?? 'Operator';
+require_once __DIR__ . '/../../includes/database.php';
+
+$operatorId = (int)($_SESSION['user_id'] ?? 0);
+$notifications = [];
+
+try {
+    $conn = getDBConnection();
+    $sql = "SELECT 
+                b.booking_id,
+                b.status,
+                b.service_type,
+                b.service_location,
+                b.booking_date,
+                b.updated_at,
+                b.created_at,
+                e.equipment_name,
+                u.name AS customer_name
+            FROM bookings b
+            LEFT JOIN equipment e 
+                ON e.equipment_id COLLATE utf8mb4_unicode_ci = b.equipment_id COLLATE utf8mb4_unicode_ci
+            LEFT JOIN users u ON u.user_id = b.customer_id
+            WHERE b.operator_id = ?
+            ORDER BY b.updated_at DESC
+            LIMIT 30";
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        $stmt->bind_param('i', $operatorId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $notifications[] = $row;
+        }
+        $stmt->close();
+    }
+    $conn->close();
+} catch (Throwable $e) {
+    error_log('Operator notifications load error: ' . $e->getMessage());
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -53,7 +91,7 @@ $operatorName = $_SESSION['name'] ?? 'Operator';
                 <div>
                     <div class="text-sm text-gray-500">Operator</div>
                     <h1 class="text-xl font-semibold text-gray-900">Notifications</h1>
-                    <p class="text-xs text-gray-500 mt-1">Static examples — connect to jobs/notifications later.</p>
+                    <p class="text-xs text-gray-500 mt-1">Live updates from your assigned bookings appear here.</p>
                 </div>
             </div>
         </header>
@@ -63,39 +101,43 @@ $operatorName = $_SESSION['name'] ?? 'Operator';
                 <h2 class="text-base font-semibold text-gray-900 mb-4">All notifications</h2>
                 <p class="text-sm text-gray-500 mb-4">New job assignments, booking updates, and admin messages.</p>
                 <ul class="divide-y divide-gray-200">
-                    <li class="py-4 flex items-start gap-3 bg-red-50/50">
-                        <span class="mt-1.5 h-2.5 w-2.5 rounded-full bg-fes-red flex-shrink-0" title="Unread"></span>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm text-gray-900 font-medium">
-                                New job <span class="font-semibold">JOB-2026-004</span> has been assigned to you.
-                            </p>
-                            <p class="text-sm text-gray-700 mt-1">
-                                Agri-Co Central · Service date: Mar 15, 2026 · 07:30
-                            </p>
-                            <p class="text-xs text-gray-500 mt-2">Mar 8, 2026 · 09:15</p>
-                        </div>
-                        <span class="text-xs font-medium text-fes-red flex-shrink-0">Unread</span>
-                    </li>
-                    <li class="py-4 flex items-start gap-3">
-                        <span class="mt-1.5 h-2.5 w-2.5 rounded-full bg-gray-300 flex-shrink-0" title="Read"></span>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm text-gray-700">
-                                Booking update for <span class="font-semibold">JOB-2026-002</span>: status set to <span class="font-semibold">Approved</span>. You can start at the scheduled time.
-                            </p>
-                            <p class="text-xs text-gray-500 mt-2">Mar 7, 2026 · 14:00</p>
-                        </div>
-                        <span class="text-xs text-gray-500 flex-shrink-0">Read</span>
-                    </li>
-                    <li class="py-4 flex items-start gap-3 bg-red-50/50">
-                        <span class="mt-1.5 h-2.5 w-2.5 rounded-full bg-fes-red flex-shrink-0" title="Unread"></span>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm text-gray-900 font-medium">
-                                Admin message: Please record hours and update status for <span class="font-semibold">JOB-2026-001</span> (still In Progress).
-                            </p>
-                            <p class="text-xs text-gray-500 mt-2">Mar 9, 2026 · 08:00</p>
-                        </div>
-                        <span class="text-xs font-medium text-fes-red flex-shrink-0">Unread</span>
-                    </li>
+                    <?php if (empty($notifications)): ?>
+                        <li class="py-4">
+                            <p class="text-sm text-gray-500">No notifications yet. New job assignments will appear here.</p>
+                        </li>
+                    <?php else: ?>
+                        <?php foreach ($notifications as $n): ?>
+                            <?php
+                            $status = (string)($n['status'] ?? '');
+                            $isUnread = in_array($status, ['pending', 'confirmed'], true);
+                            $dotClass = $isUnread ? 'bg-fes-red' : 'bg-gray-300';
+                            $rowClass = $isUnread ? ' bg-red-50/50' : '';
+                            $textClass = $isUnread ? 'text-gray-900 font-medium' : 'text-gray-700';
+                            $badgeClass = $isUnread ? 'text-fes-red font-medium' : 'text-gray-500';
+                            $serviceType = ucfirst(str_replace('_', ' ', (string)($n['service_type'] ?? 'service')));
+                            $serviceLocation = (string)($n['service_location'] ?? 'N/A');
+                            $equipmentName = (string)($n['equipment_name'] ?? 'Unknown equipment');
+                            $customerName = (string)($n['customer_name'] ?? 'Unknown customer');
+                            $updatedAtRaw = (string)($n['updated_at'] ?? '');
+                            $timestamp = $updatedAtRaw !== '' ? date('M d, Y · H:i', strtotime($updatedAtRaw)) : '—';
+                            $statusLabel = str_replace('_', ' ', $status);
+                            ?>
+                            <li class="py-4 flex items-start gap-3<?php echo $rowClass; ?>">
+                                <span class="mt-1.5 h-2.5 w-2.5 rounded-full <?php echo $dotClass; ?> flex-shrink-0" title="<?php echo $isUnread ? 'Unread' : 'Read'; ?>"></span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm <?php echo $textClass; ?>">
+                                        You have been assigned to booking <span class="font-semibold">#<?php echo htmlspecialchars((string)$n['booking_id']); ?></span>
+                                        for <?php echo htmlspecialchars($serviceType); ?> at <?php echo htmlspecialchars($serviceLocation); ?>
+                                    </p>
+                                    <p class="text-sm text-gray-700 mt-1">
+                                        <?php echo htmlspecialchars($equipmentName); ?> · <?php echo htmlspecialchars($customerName); ?>
+                                    </p>
+                                    <p class="text-xs text-gray-500 mt-2"><?php echo htmlspecialchars($timestamp); ?></p>
+                                </div>
+                                <span class="text-xs <?php echo $badgeClass; ?> flex-shrink-0"><?php echo htmlspecialchars($statusLabel); ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </ul>
             </section>
         </main>
