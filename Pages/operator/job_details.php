@@ -23,9 +23,6 @@ require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/equipment_status_from_bookings.php';
 require_once __DIR__ . '/../../includes/fes_date.php';
 
-/** Minimum damage reports (this booking + operator) before status can be set to Completed. */
-$fesMinDamageReportsToComplete = 3;
-
 $operatorId = (int)($_SESSION['user_id'] ?? 0);
 $operatorName = $_SESSION['name'] ?? 'Operator';
 $bookingId = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -56,31 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
             $fullOk = false;
             $fullError = '';
             $equipmentId = '';
-
-            if ($newStatus === 'completed') {
-                $drc = 0;
-                $cntStmt = $conn->prepare('SELECT COUNT(*) AS c FROM damage_reports WHERE booking_id = ? AND operator_id = ?');
-                if ($cntStmt) {
-                    $cntStmt->bind_param('ii', $postBookingId, $operatorId);
-                    $cntStmt->execute();
-                    $cr = $cntStmt->get_result();
-                    if ($cr && ($crow = $cr->fetch_assoc())) {
-                        $drc = (int)($crow['c'] ?? 0);
-                    }
-                    $cntStmt->close();
-                }
-                if ($drc < $fesMinDamageReportsToComplete) {
-                    $conn->close();
-                    header('Location: job_details.php?' . http_build_query([
-                        'id' => $postBookingId,
-                        'status_updated' => 0,
-                        'new_status' => $newStatus,
-                        'damage_reports_required' => $fesMinDamageReportsToComplete,
-                        'damage_reports_have' => $drc,
-                    ]));
-                    exit();
-                }
-            }
 
             // Fetch equipment_id for equipment status updates.
             $equipStmt = $conn->prepare("SELECT equipment_id FROM bookings WHERE booking_id = ? AND operator_id = ? LIMIT 1");
@@ -458,16 +430,7 @@ function fes_operator_dr_status_badge(string $s): string
                     <section class="bg-white rounded-xl shadow-card p-6">
                         <h2 class="text-base font-semibold text-gray-900 mb-4">Job Actions</h2>
                         <div class="space-y-4">
-                            <?php if (isset($_GET['damage_reports_required'])): ?>
-                                <?php
-                                $needDr = (int)($_GET['damage_reports_required'] ?? $fesMinDamageReportsToComplete);
-                                $haveDr = (int)($_GET['damage_reports_have'] ?? 0);
-                                ?>
-                                <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                                    Complete is blocked: you need at least <?php echo (int)$needDr; ?> damage report<?php echo $needDr === 1 ? '' : 's'; ?> for this job before marking it completed. You currently have <?php echo (int)$haveDr; ?>.
-                                    <a href="job_damage.php?id=<?php echo (int)$bookingId; ?>" class="font-semibold text-fes-red hover:underline">Submit damage reports</a>
-                                </div>
-                            <?php elseif (isset($_GET['status_updated'])): ?>
+                            <?php if (isset($_GET['status_updated'])): ?>
                                 <?php if ($statusUpdated === 1): ?>
                                     <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
                                         Job status updated.
@@ -486,9 +449,7 @@ function fes_operator_dr_status_badge(string $s): string
                             $selCompleted = ($jobStatus === 'completed');
                             ?>
                             <?php if ($booking && $canEditJobStatus): ?>
-                                <form method="post" id="fes-job-status-form" class="space-y-3"
-                                      data-min-damage-reports="<?php echo (int)$fesMinDamageReportsToComplete; ?>"
-                                      data-damage-report-count="<?php echo (int)$damageReportCount; ?>">
+                                <form method="post" id="fes-job-status-form" class="space-y-3">
                                     <input type="hidden" name="booking_id" value="<?php echo htmlspecialchars((string)$bookingId); ?>">
                                     <div>
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Booking status</label>
@@ -593,13 +554,6 @@ function fes_operator_dr_status_badge(string $s): string
         if (!form || !sel) return;
         form.addEventListener('submit', function (e) {
             if (sel.value !== 'completed') return;
-            var min = parseInt(form.getAttribute('data-min-damage-reports') || '0', 10);
-            var cnt = parseInt(form.getAttribute('data-damage-report-count') || '0', 10);
-            if (min > 0 && cnt < min) {
-                e.preventDefault();
-                window.alert('You must submit at least ' + min + ' damage report' + (min === 1 ? '' : 's') + ' for this job before marking it completed. You currently have ' + cnt + '.');
-                return;
-            }
             var msg = 'Are you sure you want to mark this job as completed?\n\nThis will confirm completion, record the end time, and update equipment availability.';
             if (!window.confirm(msg)) {
                 e.preventDefault();

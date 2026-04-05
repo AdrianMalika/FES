@@ -26,7 +26,8 @@ require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/equipment_status_from_bookings.php';
 
 $message = '';
-$bookings = [];
+$activeBookings = [];
+$historyBookings = [];
 $bookingStats = [
     'pending' => 0,
     'confirmed' => 0,
@@ -91,22 +92,34 @@ try {
         $stmt->close();
     }
 
-    $sql = "SELECT b.booking_id, b.booking_date, b.service_days, b.service_type,
+    $bookingSelect = "SELECT b.booking_id, b.booking_date, b.service_days, b.service_type,
                    COALESCE(NULLIF(b.service_location, ''), b.field_address) AS service_location,
                    b.status, b.estimated_total_cost, b.operator_id,
+                   b.created_at, b.updated_at, b.operator_end_time, b.payment_status,
                    e.equipment_name,
                    u.name AS customer_name,
                    op.name AS operator_name
             FROM bookings b
             JOIN equipment e ON e.equipment_id = b.equipment_id
             JOIN users u ON u.user_id = b.customer_id
-            LEFT JOIN users op ON op.user_id = b.operator_id
-            ORDER BY b.created_at DESC";
-    if ($stmt = $conn->prepare($sql)) {
+            LEFT JOIN users op ON op.user_id = b.operator_id";
+
+    $sqlActive = $bookingSelect . " WHERE b.status IN ('pending','confirmed','in_progress') ORDER BY b.booking_date ASC, b.booking_id DESC";
+    if ($stmt = $conn->prepare($sqlActive)) {
         $stmt->execute();
         $res = $stmt->get_result();
         while ($row = $res->fetch_assoc()) {
-            $bookings[] = $row;
+            $activeBookings[] = $row;
+        }
+        $stmt->close();
+    }
+
+    $sqlHistory = $bookingSelect . " WHERE b.status IN ('completed','cancelled') ORDER BY COALESCE(b.operator_end_time, b.updated_at) DESC, b.booking_id DESC";
+    if ($stmt = $conn->prepare($sqlHistory)) {
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $historyBookings[] = $row;
         }
         $stmt->close();
     }
@@ -186,7 +199,7 @@ try {
                     </div>
                 <?php endif; ?>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-6">
                     <div class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between">
                         <div>
                             <div class="text-sm text-gray-500">Pending</div>
@@ -223,12 +236,40 @@ try {
                             <i class="fas fa-check-circle"></i>
                         </div>
                     </div>
+                    <div class="bg-white rounded-xl shadow-card p-5 flex items-start justify-between">
+                        <div>
+                            <div class="text-sm text-gray-500">Cancelled</div>
+                            <div class="mt-1 text-2xl font-semibold text-gray-900"><?php echo htmlspecialchars((string)$bookingStats['cancelled']); ?></div>
+                        </div>
+                        <div class="h-11 w-11 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center">
+                            <i class="fas fa-ban"></i>
+                        </div>
+                    </div>
                 </div>
 
-                <section class="bg-white rounded-xl shadow-card p-5">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-base font-semibold text-gray-900">All Bookings</h2>
-                        <span class="text-xs text-gray-500"><?php echo count($bookings); ?> total</span>
+                <?php
+                $badgeClasses = [
+                    'pending' => 'bg-amber-50 text-amber-700',
+                    'confirmed' => 'bg-blue-50 text-blue-700',
+                    'in_progress' => 'bg-purple-50 text-purple-700',
+                    'completed' => 'bg-emerald-50 text-emerald-700',
+                    'cancelled' => 'bg-gray-100 text-gray-700',
+                ];
+                $paymentBadge = [
+                    'paid' => 'bg-emerald-50 text-emerald-800',
+                    'unpaid' => 'bg-gray-100 text-gray-700',
+                    'pending' => 'bg-amber-50 text-amber-800',
+                    'failed' => 'bg-red-50 text-red-800',
+                ];
+                ?>
+
+                <section class="bg-white rounded-xl shadow-card p-5 mb-6">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                        <div>
+                            <h2 class="text-base font-semibold text-gray-900">Active bookings</h2>
+                            <p class="text-xs text-gray-500 mt-0.5">Pending, confirmed, and in progress — ordered by service date.</p>
+                        </div>
+                        <span class="text-xs text-gray-500"><?php echo count($activeBookings); ?> active</span>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -238,37 +279,33 @@ try {
                                     <th class="py-3 pr-4">Booking ID</th>
                                     <th class="py-3 pr-4">Customer</th>
                                     <th class="py-3 pr-4">Equipment</th>
-                                    <th class="py-3 pr-4">Date</th>
+                                    <th class="py-3 pr-4">Service date</th>
                                     <th class="py-3 pr-4">Location</th>
                                     <th class="py-3 pr-4">Days</th>
                                     <th class="py-3 pr-4">Operator</th>
                                     <th class="py-3 pr-4">Total</th>
+                                    <th class="py-3 pr-4">Payment</th>
                                     <th class="py-3 pr-4">Status</th>
                                     <th class="py-3 pr-4">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="text-sm text-gray-900">
-                                <?php if (!empty($bookings)): ?>
-                                    <?php foreach ($bookings as $row): ?>
+                                <?php if (!empty($activeBookings)): ?>
+                                    <?php foreach ($activeBookings as $row): ?>
                                         <?php
                                             $status = $row['status'] ?? 'pending';
-                                            $badgeClasses = [
-                                                'pending' => 'bg-amber-50 text-amber-700',
-                                                'confirmed' => 'bg-blue-50 text-blue-700',
-                                                'in_progress' => 'bg-purple-50 text-purple-700',
-                                                'completed' => 'bg-emerald-50 text-emerald-700',
-                                                'cancelled' => 'bg-gray-100 text-gray-700'
-                                            ];
                                             $badgeClass = $badgeClasses[$status] ?? 'bg-gray-100 text-gray-700';
+                                            $pay = (string)($row['payment_status'] ?? 'unpaid');
+                                            $payClass = $paymentBadge[$pay] ?? 'bg-gray-100 text-gray-700';
                                         ?>
                                         <tr class="border-b hover:bg-gray-50 cursor-pointer" onclick="window.location.href='booking-details.php?id=<?php echo urlencode((string)$row['booking_id']); ?>'">
                                             <td class="py-3 pr-4 font-medium">#BK-<?php echo htmlspecialchars((string)$row['booking_id']); ?></td>
                                             <td class="py-3 pr-4"><?php echo htmlspecialchars($row['customer_name'] ?? 'N/A'); ?></td>
                                             <td class="py-3 pr-4"><?php echo htmlspecialchars($row['equipment_name'] ?? 'N/A'); ?></td>
                                             <td class="py-3 pr-4">
-                                                <?php echo !empty($row['booking_date']) ? htmlspecialchars(date('M d, Y', strtotime($row['booking_date']))) : 'N/A'; ?>
+                                                <?php echo !empty($row['booking_date']) ? htmlspecialchars(date('M d, Y', strtotime((string)$row['booking_date']))) : 'N/A'; ?>
                                             </td>
-                                            <td class="py-3 pr-4"><?php echo htmlspecialchars($row['service_location'] ?? 'N/A'); ?></td>
+                                            <td class="py-3 pr-4 max-w-[200px] truncate" title="<?php echo htmlspecialchars((string)($row['service_location'] ?? '')); ?>"><?php echo htmlspecialchars($row['service_location'] ?? 'N/A'); ?></td>
                                             <td class="py-3 pr-4"><?php echo htmlspecialchars((string)($row['service_days'] ?? 1)); ?></td>
                                             <td class="py-3 pr-4">
                                                 <?php if (!empty($row['operator_name'])): ?>
@@ -285,28 +322,115 @@ try {
                                             </td>
                                             <td class="py-3 pr-4">MK <?php echo number_format((float)($row['estimated_total_cost'] ?? 0)); ?></td>
                                             <td class="py-3 pr-4">
+                                                <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium capitalize <?php echo $payClass; ?>"><?php echo htmlspecialchars($pay); ?></span>
+                                            </td>
+                                            <td class="py-3 pr-4">
                                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium <?php echo $badgeClass; ?>">
                                                     <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $status))); ?>
                                                 </span>
                                             </td>
                                             <td class="py-3 pr-4">
-                                                <form method="post" class="flex items-center gap-2" onclick="event.stopPropagation();">
+                                                <form method="post" class="flex flex-wrap items-center gap-2" onclick="event.stopPropagation();">
                                                     <input type="hidden" name="booking_id" value="<?php echo htmlspecialchars((string)$row['booking_id']); ?>">
-                                                    <select name="new_status" class="border border-gray-200 rounded-lg px-2 py-1 text-xs" onclick="event.stopPropagation();">
+                                                    <select name="new_status" class="border border-gray-200 rounded-lg px-2 py-1 text-xs max-w-[130px]" onclick="event.stopPropagation();">
                                                         <option value="pending" <?php if ($status === 'pending') echo 'selected'; ?>>Pending</option>
                                                         <option value="confirmed" <?php if ($status === 'confirmed') echo 'selected'; ?>>Confirmed</option>
                                                         <option value="in_progress" <?php if ($status === 'in_progress') echo 'selected'; ?>>In Progress</option>
                                                         <option value="completed" <?php if ($status === 'completed') echo 'selected'; ?>>Completed</option>
                                                         <option value="cancelled" <?php if ($status === 'cancelled') echo 'selected'; ?>>Cancelled</option>
                                                     </select>
-                                                    <button type="submit" class="px-3 py-1 rounded-lg bg-fes-red text-white text-xs font-semibold hover:bg-red-700" onclick="event.stopPropagation();">Update</button>
+                                                    <button type="submit" class="px-3 py-1 rounded-lg bg-fes-red text-white text-xs font-semibold hover:bg-red-700 shrink-0" onclick="event.stopPropagation();">Update</button>
                                                 </form>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td class="py-6 text-center text-sm text-gray-500" colspan="10">No bookings found.</td>
+                                        <td class="py-6 text-center text-sm text-gray-500" colspan="11">No active bookings.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="bg-white rounded-xl shadow-card p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                        <div>
+                            <h2 class="text-base font-semibold text-gray-900">Booking history</h2>
+                            <p class="text-xs text-gray-500 mt-0.5">Completed and cancelled jobs, newest closure first (operator finish time or last update).</p>
+                        </div>
+                        <span class="text-xs text-gray-500"><?php echo count($historyBookings); ?> in history</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="text-left text-xs font-medium text-gray-500 border-b uppercase tracking-wider">
+                                    <th class="py-3 pr-4">Booking ID</th>
+                                    <th class="py-3 pr-4">Customer</th>
+                                    <th class="py-3 pr-4">Equipment</th>
+                                    <th class="py-3 pr-4">Service date</th>
+                                    <th class="py-3 pr-4">Type</th>
+                                    <th class="py-3 pr-4">Total</th>
+                                    <th class="py-3 pr-4">Payment</th>
+                                    <th class="py-3 pr-4">Status</th>
+                                    <th class="py-3 pr-4">Booked</th>
+                                    <th class="py-3 pr-4">Finished</th>
+                                    <th class="py-3 pr-4">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm text-gray-900">
+                                <?php if (!empty($historyBookings)): ?>
+                                    <?php foreach ($historyBookings as $row): ?>
+                                        <?php
+                                            $status = $row['status'] ?? 'completed';
+                                            $badgeClass = $badgeClasses[$status] ?? 'bg-gray-100 text-gray-700';
+                                            $pay = (string)($row['payment_status'] ?? 'unpaid');
+                                            $payClass = $paymentBadge[$pay] ?? 'bg-gray-100 text-gray-700';
+                                            $createdTs = !empty($row['created_at']) ? strtotime((string)$row['created_at']) : false;
+                                            $created = ($createdTs !== false) ? date('M j, Y g:i A', $createdTs) : '—';
+                                            $finishedRaw = !empty($row['operator_end_time']) ? (string)$row['operator_end_time'] : (string)($row['updated_at'] ?? '');
+                                            $finishedTs = $finishedRaw !== '' ? strtotime($finishedRaw) : false;
+                                            $finished = ($finishedTs !== false) ? date('M j, Y g:i A', $finishedTs) : '—';
+                                        ?>
+                                        <tr class="border-b hover:bg-gray-50 cursor-pointer" onclick="window.location.href='booking-details.php?id=<?php echo urlencode((string)$row['booking_id']); ?>'">
+                                            <td class="py-3 pr-4 font-medium">#BK-<?php echo htmlspecialchars((string)$row['booking_id']); ?></td>
+                                            <td class="py-3 pr-4"><?php echo htmlspecialchars($row['customer_name'] ?? 'N/A'); ?></td>
+                                            <td class="py-3 pr-4"><?php echo htmlspecialchars($row['equipment_name'] ?? 'N/A'); ?></td>
+                                            <td class="py-3 pr-4 whitespace-nowrap">
+                                                <?php echo !empty($row['booking_date']) ? htmlspecialchars(date('M d, Y', strtotime((string)$row['booking_date']))) : 'N/A'; ?>
+                                            </td>
+                                            <td class="py-3 pr-4 capitalize"><?php echo htmlspecialchars(str_replace('_', ' ', (string)($row['service_type'] ?? '—'))); ?></td>
+                                            <td class="py-3 pr-4">MK <?php echo number_format((float)($row['estimated_total_cost'] ?? 0)); ?></td>
+                                            <td class="py-3 pr-4">
+                                                <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium capitalize <?php echo $payClass; ?>"><?php echo htmlspecialchars($pay); ?></span>
+                                            </td>
+                                            <td class="py-3 pr-4">
+                                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium <?php echo $badgeClass; ?>">
+                                                    <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $status))); ?>
+                                                </span>
+                                            </td>
+                                            <td class="py-3 pr-4 whitespace-nowrap text-gray-600 text-xs"><?php echo htmlspecialchars($created); ?></td>
+                                            <td class="py-3 pr-4 whitespace-nowrap text-gray-600 text-xs"><?php echo htmlspecialchars($finished); ?></td>
+                                            <td class="py-3 pr-4">
+                                                <form method="post" class="flex flex-wrap items-center gap-2" onclick="event.stopPropagation();">
+                                                    <input type="hidden" name="booking_id" value="<?php echo htmlspecialchars((string)$row['booking_id']); ?>">
+                                                    <select name="new_status" class="border border-gray-200 rounded-lg px-2 py-1 text-xs max-w-[130px]" onclick="event.stopPropagation();">
+                                                        <option value="pending" <?php if ($status === 'pending') echo 'selected'; ?>>Pending</option>
+                                                        <option value="confirmed" <?php if ($status === 'confirmed') echo 'selected'; ?>>Confirmed</option>
+                                                        <option value="in_progress" <?php if ($status === 'in_progress') echo 'selected'; ?>>In Progress</option>
+                                                        <option value="completed" <?php if ($status === 'completed') echo 'selected'; ?>>Completed</option>
+                                                        <option value="cancelled" <?php if ($status === 'cancelled') echo 'selected'; ?>>Cancelled</option>
+                                                    </select>
+                                                    <button type="submit" class="px-3 py-1 rounded-lg bg-fes-red text-white text-xs font-semibold hover:bg-red-700 shrink-0" onclick="event.stopPropagation();">Update</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td class="py-6 text-center text-sm text-gray-500" colspan="11">No booking history yet (no completed or cancelled bookings).</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>

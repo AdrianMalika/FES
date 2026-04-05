@@ -23,6 +23,7 @@ if ($_SESSION['role'] !== 'admin') {
 }
 
 require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/equipment_status_from_bookings.php';
 
 $bookingId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $message = '';
@@ -159,12 +160,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
     if ($updateId > 0 && in_array($newStatus, $allowed, true)) {
         try {
             $conn = getDBConnection();
+
+            $equipmentId = '';
+            $eqStmt = $conn->prepare('SELECT equipment_id FROM bookings WHERE booking_id = ?');
+            if ($eqStmt) {
+                $eqStmt->bind_param('i', $updateId);
+                $eqStmt->execute();
+                $eqRes = $eqStmt->get_result();
+                $eqRow = $eqRes ? $eqRes->fetch_assoc() : null;
+                $equipmentId = (string)($eqRow['equipment_id'] ?? '');
+                $eqStmt->close();
+            }
+
             $sql = "UPDATE bookings SET status = ?, updated_at = NOW() WHERE booking_id = ?";
             if ($stmt = $conn->prepare($sql)) {
                 $stmt->bind_param('si', $newStatus, $updateId);
-                $stmt->execute();
+                if ($stmt->execute()) {
+                    $message = 'Booking status updated.';
+                    try {
+                        recalculate_equipment_status_from_bookings($conn, $equipmentId);
+                    } catch (Exception $eqEx) {
+                        error_log('Equipment status recalc after admin booking-details update: ' . $eqEx->getMessage());
+                    }
+                }
                 $stmt->close();
-                $message = 'Booking status updated.';
             }
             $conn->close();
         } catch (Exception $e) {
@@ -213,10 +232,12 @@ if ($booking) {
             }
         }
 
+        // Only active jobs tie up an operator; completed/cancelled frees them for new assignments.
         $busySql = "SELECT b.operator_id, b.booking_id, b.equipment_id, e.equipment_name
                     FROM bookings b
                     LEFT JOIN equipment e ON e.equipment_id = b.equipment_id
-                    WHERE b.operator_id IS NOT NULL";
+                    WHERE b.operator_id IS NOT NULL
+                      AND b.status IN ('pending','confirmed','in_progress')";
         $busyRes = $conn->query($busySql);
         if ($busyRes) {
             while ($row = $busyRes->fetch_assoc()) {
