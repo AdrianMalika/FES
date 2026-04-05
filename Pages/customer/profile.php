@@ -1,12 +1,14 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['user_id'])) 
+{
     header('Location: ../auth/signin.php');
     exit();
 }
 
-if (($_SESSION['role'] ?? '') !== 'customer') {
+if (($_SESSION['role'] ?? '') !== 'customer') 
+{
     switch ($_SESSION['role']) {
         case 'admin':
             header('Location: ../admin/dashboard.php');
@@ -125,7 +127,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile - FES</title>
+    <title>My Profile | FES</title>
     <link rel="icon" type="image/png" href="../../assets/images/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -136,12 +138,21 @@ try {
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: { fes: { red: '#D32F2F', dark: '#424242' } },
+                    colors: { 
+                        fes: { 
+                            red: '#D32F2F', 
+                            dark: '#1F2937',
+                            light: '#F9FAFB'
+                        } 
+                    },
                     fontFamily: {
                         display: ['"Barlow Condensed"', 'sans-serif'],
                         body: ['Barlow', 'sans-serif'],
                     },
-                    boxShadow: { card: '0 4px 15px rgba(0,0,0,0.05)' }
+                    boxShadow: { 
+                        card: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                    }
                 }
             }
         };
@@ -149,88 +160,195 @@ try {
     <style>
         * { font-family: 'Barlow', sans-serif; }
         h1, h2, h3, h4, .display { font-family: 'Barlow Condensed', sans-serif; }
+        .input-focus:focus {
+            border-color: #D32F2F;
+            box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+        }
     </style>
 </head>
-<body>
-    <div class="min-h-screen w-full bg-gray-100">
-        <div class="flex min-h-screen">
-            <?php include __DIR__ . '/include/sidebar.php'; ?>
-            <div id="fes-dashboard-overlay" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
+<body class="bg-gray-50 text-gray-900">
+    <div class="min-h-screen flex">
+        <!-- Sidebar -->
+        <?php include __DIR__ . '/include/sidebar.php'; ?>
+        
+        <!-- Mobile Overlay -->
+        <div id="fes-dashboard-overlay" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
 
-            <div class="flex-1 flex flex-col min-w-0 md:ml-64">
-                <header class="bg-white px-6 py-7 flex items-center justify-between shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <button id="fes-dashboard-menu-btn" class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-600" aria-label="Open menu" aria-controls="fes-dashboard-sidebar" aria-expanded="false">
-                            <i class="fas fa-bars"></i>
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col min-w-0 md:ml-64">
+            <!-- Header -->
+            <header class="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-20">
+                <div class="flex items-center justify-between max-w-5xl mx-auto">
+                    <div class="flex items-center gap-4">
+                        <button id="fes-dashboard-menu-btn" class="md:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-bars text-lg"></i>
                         </button>
                         <div>
-                            <div class="text-sm text-gray-500">Customer</div>
-                            <h1 class="text-xl font-semibold text-gray-900">Profile</h1>
-                            <p class="text-xs text-gray-500 mt-1">Manage your account details</p>
+                            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Account Settings</h1>
+                            <p class="text-sm text-gray-500">Manage your personal information and preferences</p>
                         </div>
                     </div>
-                </header>
+                    <div class="hidden sm:flex items-center gap-3">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Customer Account
+                        </span>
+                    </div>
+                </div>
+            </header>
 
-                <main class="flex-1 overflow-y-auto p-6">
+            <!-- Main Body -->
+            <main class="flex-1 p-6 md:p-10">
+                <div class="max-w-4xl mx-auto">
+                    
+                    <!-- Notifications -->
                     <?php if ($msg !== null): ?>
-                        <?php $box = $msgType === 'success'
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-                            : 'border-red-200 bg-red-50 text-red-900'; ?>
-                        <div class="mb-5 rounded-xl border px-4 py-3 text-sm <?php echo $box; ?>">
-                            <?php echo htmlspecialchars($msg); ?>
+                        <div class="mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                            <?php if ($msgType === 'success'): ?>
+                                <div class="flex items-center p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800">
+                                    <i class="fas fa-check-circle mr-3 text-emerald-500"></i>
+                                    <span class="text-sm font-medium"><?php echo htmlspecialchars($msg); ?></span>
+                                </div>
+                            <?php else: ?>
+                                <div class="flex items-center p-4 rounded-lg bg-red-50 border border-red-200 text-red-800">
+                                    <i class="fas fa-exclamation-circle mr-3 text-red-500"></i>
+                                    <span class="text-sm font-medium"><?php echo htmlspecialchars($msg); ?></span>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
 
-                    <section class="bg-white rounded-xl shadow-card p-6 max-w-3xl">
-                        <h2 class="text-base font-semibold text-gray-900 mb-5">Your information</h2>
-                        <form method="post" class="space-y-5">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="name" class="block text-xs text-gray-500 uppercase tracking-wider mb-2">Full name</label>
-                                    <input id="name" name="name" required value="<?php echo htmlspecialchars($profile['name']); ?>" class="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-fes-red/25 focus:border-fes-red">
+                    <!-- Profile Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        
+                        <!-- Left Column: Profile Summary -->
+                        <div class="lg:col-span-1">
+                            <div class="bg-white rounded-2xl shadow-card border border-gray-100 p-6 text-center">
+                                <div class="relative inline-block mb-4">
+                                    <div class="h-24 w-24 rounded-full bg-gray-100 border-4 border-white shadow-sm flex items-center justify-center text-gray-400 mx-auto overflow-hidden">
+                                        <i class="fas fa-user text-4xl"></i>
+                                    </div>
+                                    <div class="absolute bottom-0 right-0 h-6 w-6 bg-emerald-500 border-2 border-white rounded-full"></div>
                                 </div>
-                                <div>
-                                    <label for="email" class="block text-xs text-gray-500 uppercase tracking-wider mb-2">Email</label>
-                                    <input id="email" value="<?php echo htmlspecialchars($profile['email']); ?>" disabled class="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-500 bg-gray-50 cursor-not-allowed">
+                                <h2 class="text-xl font-bold text-gray-900"><?php echo htmlspecialchars($profile['name']); ?></h2>
+                                <p class="text-sm text-gray-500 mb-6"><?php echo htmlspecialchars($profile['email']); ?></p>
+                                
+                                <div class="pt-6 border-t border-gray-50 flex flex-col gap-2">
+                                    <div class="flex items-center justify-between text-xs">
+                                        <span class="text-gray-400 uppercase font-semibold tracking-wider">Member Since</span>
+                                        <span class="text-gray-700 font-medium">Active</span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-xs">
+                                        <span class="text-gray-400 uppercase font-semibold tracking-wider">Account Type</span>
+                                        <span class="text-gray-700 font-medium">Customer</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="phone" class="block text-xs text-gray-500 uppercase tracking-wider mb-2">Phone</label>
-                                    <input id="phone" name="phone" value="<?php echo htmlspecialchars($profile['phone']); ?>" class="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-fes-red/25 focus:border-fes-red">
+                        </div>
+
+                        <!-- Right Column: Edit Form -->
+                        <div class="lg:col-span-2">
+                            <div class="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden">
+                                <div class="px-6 py-5 border-b border-gray-50">
+                                    <h3 class="text-lg font-bold text-gray-900">Personal Information</h3>
+                                    <p class="text-xs text-gray-500">Update your contact details and location</p>
                                 </div>
-                                <div>
-                                    <label for="city" class="block text-xs text-gray-500 uppercase tracking-wider mb-2">City</label>
-                                    <input id="city" name="city" value="<?php echo htmlspecialchars($profile['city']); ?>" class="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-fes-red/25 focus:border-fes-red">
-                                </div>
+                                
+                                <form method="post" class="p-6 space-y-6">
+                                    <!-- Name & Email -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-2">
+                                            <label for="name" class="block text-sm font-semibold text-gray-700">Full Name</label>
+                                            <div class="relative">
+                                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                                    <i class="fas fa-user text-xs"></i>
+                                                </span>
+                                                <input type="text" id="name" name="name" required 
+                                                    value="<?php echo htmlspecialchars($profile['name']); ?>" 
+                                                    class="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm transition-all outline-none input-focus"
+                                                    placeholder="Enter your full name">
+                                            </div>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="email" class="block text-sm font-semibold text-gray-700">Email Address</label>
+                                            <div class="relative">
+                                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                                    <i class="fas fa-envelope text-xs"></i>
+                                                </span>
+                                                <input type="email" id="email" disabled 
+                                                    value="<?php echo htmlspecialchars($profile['email']); ?>" 
+                                                    class="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-400 cursor-not-allowed">
+                                            </div>
+                                            <p class="text-[10px] text-gray-400 italic">Email cannot be changed</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Phone & City -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-2">
+                                            <label for="phone" class="block text-sm font-semibold text-gray-700">Phone Number</label>
+                                            <div class="relative">
+                                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                                    <i class="fas fa-phone text-xs"></i>
+                                                </span>
+                                                <input type="tel" id="phone" name="phone" 
+                                                    value="<?php echo htmlspecialchars($profile['phone']); ?>" 
+                                                    class="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm transition-all outline-none input-focus"
+                                                    placeholder="+1 (555) 000-0000">
+                                            </div>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="city" class="block text-sm font-semibold text-gray-700">City</label>
+                                            <div class="relative">
+                                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                                    <i class="fas fa-map-marker-alt text-xs"></i>
+                                                </span>
+                                                <input type="text" id="city" name="city" 
+                                                    value="<?php echo htmlspecialchars($profile['city']); ?>" 
+                                                    class="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm transition-all outline-none input-focus"
+                                                    placeholder="e.g. New York">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Address -->
+                                    <div class="space-y-2">
+                                        <label for="address" class="block text-sm font-semibold text-gray-700">Residential Address</label>
+                                        <textarea id="address" name="address" rows="3" 
+                                            class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm transition-all outline-none input-focus resize-none"
+                                            placeholder="Enter your full street address"><?php echo htmlspecialchars($profile['address']); ?></textarea>
+                                    </div>
+
+                                    <!-- Actions -->
+                                    <div class="pt-4 flex items-center justify-end gap-3 border-t border-gray-50">
+                                        <button type="reset" class="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors">
+                                            Discard Changes
+                                        </button>
+                                        <button type="submit" class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-bold px-6 py-2.5 rounded-xl text-sm shadow-sm transition-all hover:shadow-md active:scale-95">
+                                            <i class="fas fa-save"></i> Save Profile
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
-                            <div>
-                                <label for="address" class="block text-xs text-gray-500 uppercase tracking-wider mb-2">Address</label>
-                                <textarea id="address" name="address" rows="4" class="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-fes-red/25 focus:border-fes-red"><?php echo htmlspecialchars($profile['address']); ?></textarea>
-                            </div>
-                            <div class="pt-2">
-                                <button type="submit" class="inline-flex items-center gap-2 bg-fes-red hover:bg-[#b71c1c] text-white font-semibold px-4 py-2 rounded-lg text-sm">
-                                    <i class="fas fa-save"></i> Save changes
-                                </button>
-                            </div>
-                        </form>
-                    </section>
-                </main>
-            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
     <script>
         (function () {
-            var btn = document.getElementById('fes-dashboard-menu-btn');
-            var sidebar = document.getElementById('fes-dashboard-sidebar');
-            var overlay = document.getElementById('fes-dashboard-overlay');
+            const btn = document.getElementById    ('fes-dashboard-menu-btn');
+            const sidebar = document.getElementById('fes-dashboard-sidebar');
+            const overlay = document.getElementById('fes-dashboard-overlay');
+            
             if (!btn || !sidebar || !overlay) return;
 
             function openSidebar() {
                 sidebar.classList.remove('-translate-x-full');
                 sidebar.classList.add('translate-x-0');
                 overlay.classList.remove('hidden');
+                overlay.classList.add('opacity-100');
                 btn.setAttribute('aria-expanded', 'true');
             }
 
@@ -238,16 +356,18 @@ try {
                 sidebar.classList.add('-translate-x-full');
                 sidebar.classList.remove('translate-x-0');
                 overlay.classList.add('hidden');
+                overlay.classList.remove('opacity-100');
                 btn.setAttribute('aria-expanded', 'false');
             }
 
             btn.addEventListener('click', function () {
-                var isOpen = sidebar.classList.contains('translate-x-0');
+                const isOpen = sidebar.classList.contains('translate-x-0');
                 if (isOpen) closeSidebar();
                 else openSidebar();
             });
 
             overlay.addEventListener('click', closeSidebar);
+            
             window.addEventListener('resize', function () {
                 if (window.matchMedia('(min-width: 768px)').matches) {
                     overlay.classList.add('hidden');
