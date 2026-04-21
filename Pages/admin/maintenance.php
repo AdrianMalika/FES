@@ -62,6 +62,7 @@ $todayYmd = (new DateTimeImmutable('today'))->format('Y-m-d');
 $flashSuccess = null;
 $flashError = null;
 $equipmentList = [];
+$costHints = [];
 $maintenanceRows = [];
 $overdueEquipment = [];
 $statScheduled = 0;
@@ -261,6 +262,30 @@ try {
         $eqRes->close();
     } else {
         throw new RuntimeException($conn->error ?: 'equipment query failed');
+    }
+
+    try {
+        $chRes = $conn->query('SELECT * FROM maintenance_cost_hints');
+        if ($chRes) {
+            $costHints = [];
+            while ($row = $chRes->fetch_assoc()) {
+                $tk = (string)($row['maintenance_type'] ?? '');
+                if ($tk === '') {
+                    continue;
+                }
+                $costHints[$tk] = [
+                    'min_cost' => (int)($row['min_cost'] ?? 0),
+                    'max_cost' => (int)($row['max_cost'] ?? 0),
+                    'notes' => $row['notes'] !== null ? (string)$row['notes'] : '',
+                ];
+            }
+            $chRes->close();
+        } else {
+            $costHints = [];
+        }
+    } catch (Throwable $e) {
+        error_log('maintenance_cost_hints: ' . $e->getMessage());
+        $costHints = [];
     }
 
     $maintenanceRows = [];
@@ -633,6 +658,7 @@ function fes_equipment_service_timing(?string $lastMaintenance, string $equipSta
                                         'maintenance_id' => (int)$m['maintenance_id'],
                                         'equipment_name' => (string)($m['equipment_name'] ?? ''),
                                         'equipment_id' => (string)($m['equipment_id'] ?? ''),
+                                        'maintenance_type' => (string)($m['maintenance_type'] ?? ''),
                                         'status' => $st,
                                         'completed_date' => $m['completed_date'] ? substr((string)$m['completed_date'], 0, 10) : '',
                                         'cost' => $m['cost'] !== null && $m['cost'] !== '' ? (string)$m['cost'] : '',
@@ -762,6 +788,7 @@ function fes_equipment_service_timing(?string $lastMaintenance, string $equipSta
                         <option value="overhaul">Overhaul</option>
                         <option value="inspection">Inspection</option>
                     </select>
+                    <div id="cost_hint" class="hidden mt-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5 text-xs text-blue-900" role="status" aria-live="polite"></div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1.5" for="add_scheduled">Scheduled date</label>
@@ -809,6 +836,7 @@ function fes_equipment_service_timing(?string $lastMaintenance, string $equipSta
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
                     </select>
+                    <div id="cost_hint_upd" class="hidden mt-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5 text-xs text-blue-900" role="status" aria-live="polite"></div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1.5" for="upd_completed">Completion date</label>
@@ -835,6 +863,41 @@ function fes_equipment_service_timing(?string $lastMaintenance, string $equipSta
 
 <script>
 (function () {
+    var costHintsByType = <?php echo json_encode($costHints, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+
+    function formatCostHintMessage(type) {
+        var h = costHintsByType[type];
+        if (!h) {
+            return null;
+        }
+        var min = Number(h.min_cost);
+        var max = Number(h.max_cost);
+        if (!isFinite(min) || !isFinite(max)) {
+            return null;
+        }
+        var notes = (h.notes || '').trim();
+        var msg = 'Typical: MWK ' + min.toLocaleString() + ' – MWK ' + max.toLocaleString();
+        if (notes) {
+            msg += ' (' + notes + ')';
+        }
+        msg += ' — enter actual quote or invoice';
+        return msg;
+    }
+
+    function setCostHintElement(el, type) {
+        if (!el) {
+            return;
+        }
+        var msg = formatCostHintMessage(type);
+        if (!msg) {
+            el.classList.add('hidden');
+            el.textContent = '';
+            return;
+        }
+        el.textContent = msg;
+        el.classList.remove('hidden');
+    }
+
     var btn = document.getElementById('fes-dashboard-menu-btn');
     var sidebar = document.getElementById('fes-dashboard-sidebar');
     var overlay = document.getElementById('fes-dashboard-overlay');
@@ -866,6 +929,8 @@ function fes_equipment_service_timing(?string $lastMaintenance, string $equipSta
         if (!modalAdd) return;
         modalAdd.classList.remove('hidden');
         modalAdd.setAttribute('aria-hidden', 'false');
+        var addType = document.getElementById('add_type');
+        setCostHintElement(document.getElementById('cost_hint'), addType ? addType.value : '');
     }
     function closeAddModal() {
         if (!modalAdd) return;
@@ -879,6 +944,12 @@ function fes_equipment_service_timing(?string $lastMaintenance, string $equipSta
     }
 
     if (btnAdd) btnAdd.addEventListener('click', openAddModal);
+    var addTypeEl = document.getElementById('add_type');
+    if (addTypeEl) {
+        addTypeEl.addEventListener('change', function () {
+            setCostHintElement(document.getElementById('cost_hint'), addTypeEl.value);
+        });
+    }
     if (modalAdd) {
         modalAdd.querySelectorAll('[data-close-add]').forEach(function (el) {
             el.addEventListener('click', closeAddModal);
@@ -906,6 +977,7 @@ function fes_equipment_service_timing(?string $lastMaintenance, string $equipSta
         document.getElementById('upd_completed').value = rec.completed_date || '';
         document.getElementById('upd_cost').value = rec.cost || '';
         document.getElementById('upd_notes').value = rec.admin_notes || '';
+        setCostHintElement(document.getElementById('cost_hint_upd'), rec.maintenance_type || '');
         modalUpd.classList.remove('hidden');
         modalUpd.setAttribute('aria-hidden', 'false');
     };
