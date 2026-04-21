@@ -180,22 +180,7 @@ try {
                                     <input type="email" name="email" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red" required>
                                 </div>
                             </div>
-                            <p class="text-sm text-gray-600">
-                                <i class="fas fa-shield-halved text-fes-red mr-1"></i>
-                                A secure activation link will be sent by email. The operator will set their own password via that link (expires in 24 hours).
-                            </p>
 
-                            <div>
-                                <label class="block text-base font-medium text-gray-700 mb-2">Assign Equipment (Optional)</label>
-                                <select name="assign_equipment_id" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-fes-red focus:border-fes-red">
-                                    <option value="">-- Select equipment --</option>
-                                    <?php foreach ($available_equipment as $eq): ?>
-                                        <option value="<?php echo (int)$eq['id']; ?>">
-                                            <?php echo htmlspecialchars($eq['equipment_id'] . ' - ' . $eq['equipment_name']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
 
                             <div class="flex items-center justify-between pt-2">
                                 <a href="users.php" class="inline-flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium px-5 py-3 rounded-lg transition">
