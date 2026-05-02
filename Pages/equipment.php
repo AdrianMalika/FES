@@ -365,6 +365,7 @@ try {
 
                     <!-- RIGHT: Details -->
                     <div class="space-y-6">
+                        <!-- Quick Info Grid -->
                         <div class="grid grid-cols-2 gap-4">
                             <?php
                             $fields = [
@@ -384,12 +385,15 @@ try {
                             <?php endforeach; ?>
                         </div>
 
+                        <!-- Detailed Specifications -->
                         <div>
                             <div class="text-xs uppercase tracking-widest text-gray-500 mb-3 flex items-center gap-2">
                                 <i class="fas fa-cogs text-fes-red text-xs"></i>
-                                Specifications
+                                Technical Specifications
                             </div>
-                            <div class="flex flex-wrap gap-2" id="mSpecs"></div>
+                            <div class="space-y-3" id="mSpecs">
+                                <!-- Specs will be injected here with labels -->
+                            </div>
                         </div>
 
                         <div>
@@ -437,11 +441,20 @@ try {
                 'icon'     => htmlspecialchars($item['icon'] ?? 'fa-tractor'),
                 'status'   => htmlspecialchars($item['status']),
                 'rate'     => floatval($item['daily_rate']),
-                'operator' => !empty($item['operator_id']) ? 'Operator ' . htmlspecialchars($item['operator_id']) : 'Unassigned',
-                'location' => htmlspecialchars($item['location']),
-                'lastService' => !empty($item['last_maintenance']) ? date('M Y', strtotime($item['last_maintenance'])) : 'N/A',
+                'operator' => !empty($item['operator_id']) ? 'Assigned (ID: ' . htmlspecialchars($item['operator_id']) . ')' : 'Not Assigned',
+                'location' => htmlspecialchars($item['location'] ?? 'Main Depot'),
+                'lastService' => !empty($item['last_maintenance']) ? date('M d, Y', strtotime($item['last_maintenance'])) : 'Never Serviced',
                 'specs'    => $specs,
-                'desc'     => htmlspecialchars($item['description']),
+                'specDetails' => [
+                    'Model' => !empty($item['model']) ? htmlspecialchars($item['model']) : 'N/A',
+                    'Year' => !empty($item['year_manufactured']) ? htmlspecialchars($item['year_manufactured']) : 'N/A',
+                    'Weight' => !empty($item['weight_kg']) ? number_format($item['weight_kg'], 1) . ' kg' : 'N/A',
+                    'Fuel Type' => !empty($item['fuel_type']) ? ucfirst(htmlspecialchars($item['fuel_type'])) : 'N/A',
+                    'Hourly Rate' => !empty($item['hourly_rate']) ? 'MK ' . number_format($item['hourly_rate']) : 'N/A',
+                    'Per Hectare Rate' => !empty($item['per_hectare_rate']) ? 'MK ' . number_format($item['per_hectare_rate']) . '/hectare' : 'N/A',
+                    'Daily Rate' => 'MK ' . number_format($item['daily_rate']),
+                ],
+                'desc'     => htmlspecialchars($item['description'] ?? 'No description provided.'),
                 'image'    => !empty($item['image_path']) ? '../' . htmlspecialchars($item['image_path']) : null,
             ];
         }
@@ -606,9 +619,18 @@ try {
             : `<div class="w-full h-full flex items-center justify-center">
                    <i class="fas ${item.icon} text-7xl text-gray-300"></i></div>`;
 
-        document.getElementById('mSpecs').innerHTML = item.specs.map(s=>
-            `<span class="spec-tag px-3 py-1.5 rounded-sm text-gray-700">${s}</span>`
-        ).join('') || '<span class="text-sm text-gray-400">No specifications listed.</span>';
+        // Render detailed specifications with labels
+        const specsContainer = document.getElementById('mSpecs');
+        if (item.specDetails && Object.keys(item.specDetails).length > 0) {
+            specsContainer.innerHTML = Object.entries(item.specDetails).map(([key, value]) => `
+                <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                    <span class="text-xs uppercase tracking-wider text-gray-500 font-semibold">${key}</span>
+                    <span class="text-sm font-medium text-gray-900">${value}</span>
+                </div>
+            `).join('');
+        } else {
+            specsContainer.innerHTML = '<p class="text-sm text-gray-400 italic">No specifications available for this equipment.</p>';
+        }
 
         const btn = document.getElementById('mBookBtn');
         if (item.status === 'available') {

@@ -22,6 +22,7 @@ if (($_SESSION['role'] ?? '') !== 'operator') {
 require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/equipment_status_from_bookings.php';
 require_once __DIR__ . '/../../includes/fes_date.php';
+require_once __DIR__ . '/../../includes/fes_operational_emails.php';
 
 $operatorId = (int)($_SESSION['user_id'] ?? 0);
 $operatorName = $_SESSION['name'] ?? 'Operator';
@@ -151,6 +152,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
                     recalculate_equipment_status_from_bookings($conn, $equipmentId);
                 } catch (Exception $e) {
                     error_log('Equipment lifecycle update error: ' . $e->getMessage());
+                }
+            }
+            
+            // Send email notification to admin when job is completed
+            if ($updated && $newStatus === 'completed') {
+                try {
+                    fes_send_job_completed_email($conn, $postBookingId, $operatorId);
+                } catch (Exception $e) {
+                    error_log('Job completed email notification failed: ' . $e->getMessage());
                 }
             }
         } catch (Exception $e) {

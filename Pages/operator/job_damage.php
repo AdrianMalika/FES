@@ -21,6 +21,7 @@ if (($_SESSION['role'] ?? '') !== 'operator') {
 
 require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/fes_date.php';
+require_once __DIR__ . '/../../includes/fes_operational_emails.php';
 
 $operatorId = (int)($_SESSION['user_id'] ?? 0);
 $bookingId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -98,7 +99,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
                         }
                     }
                     if (!empty($ins) && $ins->execute()) {
+                        $damageReportId = $conn->insert_id;
                         $ins->close();
+                        
+                        // Send email notification to admin
+                        try {
+                            fes_send_damage_report_email(
+                                $conn,
+                                $damageReportId,
+                                $postBid,
+                                $operatorId,
+                                $severity,
+                                $description
+                            );
+                        } catch (Exception $e) {
+                            error_log('Damage report email notification failed: ' . $e->getMessage());
+                        }
+                        
                         $conn->close();
                         header('Location: job_damage.php?id=' . $postBid . '&saved=1');
                         exit();
